@@ -1,0 +1,28 @@
+node_modules
+dist
+build
+.turbo
+.env
+.env.local
+*.env
+
+# Prisma
+apps/api/prisma/migrations/*.sql
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea
+
+# Test coverage
+coverage
+
+# pnpm
+.pnpm-store

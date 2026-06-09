@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum Rol {
+  ADMIN
+  SECRETARIA
+  DOCTOR
+  CAJA
+}
+
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  LLEGO
+  EN_ATENCION
+  ATENDIDA
+  COBRADO
+  CON_DEUDA
+  CANCELADA
+  NO_ASISTIO
+  REPROGRAMADA
+}
+
+enum EstadoCobro {
+  PENDIENTE
+  PARCIAL
+  COMPLETO
+}
+
+enum FormaPago {
+  EFECTIVO
+  QR
+  TRANSFERENCIA
+  TARJETA
+}
+
+enum AccionLog {
+  CREATE
+  UPDATE
+  DELETE
+  STATE_CHANGE
+  PAYMENT
+}
+
+// ─── TENANCY ─────────────────────────────────────────────────────────────────
+
+model Consultorio {
+  id        String   @id @default(cuid())
+  nombre    String
+  logoUrl   String?
+  moneda    String   @default("ARS")
+  timezone  String   @default("America/Argentina/Buenos_Aires")
+  plan      String   @default("free")
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios   Usuario[]
+  servicios  Servicio[]
+  doctores   Doctor[]
+  pacientes  Paciente[]
+  citas      Cita[]
+  cobros     Cobro[]
+  cajaDiaria CajaDiaria[]
+  logs       Log[]
+
+  @@map("consultorios")
+}
+
+model Usuario {
+  id            String      @id @default(cuid())
+  consultorioId String
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  email         String
+  passwordHash  String
+  rol           Rol
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  citasCreadas     Cita[]       @relation("CitaCreatedBy")
+  pagosRegistrados Pago[]       @relation("PagoCreatedBy")
+  cajasAbiertas    CajaDiaria[] @relation("CajaAbiertaPor")
+  cajasCerradas    CajaDiaria[] @relation("CajaCerradaPor")
+  logs             Log[]
+  doctor           Doctor?
+
+  @@unique([email, consultorioId])
+  @@index([consultorioId])
+  @@map("usuarios")
+}
+
+// ─── CATALOGO ────────────────────────────────────────────────────────────────
+
+model Servicio {
+  id            String      @id @default(cuid())
+  consultorioId String
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  descripcion   String?
+  duracionMin   Int
+  precioBase    Decimal     @db.Decimal(10, 2)
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  citas Cita[]
+
+  @@index([consultorioId])
+  @@map("servicios")
+}
+
+model Doctor {
+  id            String      @id @default(cuid())
+  consultorioId String
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  usuarioId     String?     @unique
+  usuario       Usuario?    @relation(fields: [usuarioId], references: [id])
+  nombre        String
+  especialidad  String?
+  colorAgenda   String      @default("#3B82F6")
+  activo        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  horarios HorarioAtencion[]
+  citas    Cita[]
+
+  @@index([consultorioId])
+  @@map("doctores")
+}
+
+model HorarioAtencion {
+  id         String  @id @default(cuid())
+  doctorId   String
+  doctor     Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  diaSemana  Int     // 0=domingo ... 6=sabado
+  horaInicio String  // "08:00"
+  horaFin    String  // "18:00"
+  activo     Boolean @default(true)
+
+  @@index([doctorId])
+  @@map("horarios_atencion")
+}
+
+// ─── PACIENTES ───────────────────────────────────────────────────────────────
+
+model Paciente {
+  id              String      @id @default(cuid())
+  consultorioId   String
+  consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre          String
+  apellido        String
+  dni             String?
+  telefono        String?
+  whatsapp        String?
+  email           String?
+  fechaNacimiento DateTime?   @db.Date
+  notas           String?
+  deudaTotal      Decimal     @default(0) @db.Decimal(10, 2)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  citas Cita[]
+
+  @@index([consultorioId, apellido, nombre])
+  @@index([consultorioId, dni])
+  @@index([consultorioId, whatsapp])
+  @@map("pacientes")
+}
+
+// ─── AGENDA ──────────────────────────────────────────────────────────────────
+
+model Cita {
+  id              String      @id @default(cuid())
+  consultorioId   String
+  consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
+  pacienteId      String
+  paciente        Paciente    @relation(fields: [pacienteId], references: [id])
+  doctorId        String
+  doctor          Doctor      @relation(fields: [doctorId], references: [id])
+  servicioId      String
+  servicio        Servicio    @relation(fields: [servicioId], references: [id])
+  fechaHora       DateTime
+  duracionMin     Int
+  estado          EstadoCita  @default(PENDIENTE)
+  notasSecretaria String?
+  createdById     String
+  createdBy       Usuario     @relation("CitaCreatedBy", fields: [createdById], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  atencion Atencion?
+  cobro    Cobro?
+
+  @@index([consultorioId, fechaHora])
+  @@index([consultorioId, doctorId, fechaHora])
+  @@index([consultorioId, pacienteId])
+  @@index([consultorioId, estado])
+  @@map("citas")
+}
+
+// ─── CLINICO ─────────────────────────────────────────────────────────────────
+
+model Atencion {
+  id             String    @id @default(cuid())
+  citaId         String    @unique
+  cita           Cita      @relation(fields: [citaId], references: [id])
+  motivo         String?
+  diagnostico    String?
+  evolucion      String?
+  proximoControl DateTime? @db.Date
+  adjuntos       Json?     // [{ url, nombre, tipo, tamano }]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  recetas Receta[]
+
+  @@map("atenciones")
+}
+
+model Receta {
+  id         String   @id @default(cuid())
+  atencionId String
+  atencion   Atencion @relation(fields: [atencionId], references: [id])
+  contenido  Json     // { medicamentos: [...], indicaciones: string }
+  pdfUrl     String?
+  createdAt  DateTime @default(now())
+
+  @@map("recetas")
+}
+
+// ─── FINANCIERO ──────────────────────────────────────────────────────────────
+
+model Cobro {
+  id             String      @id @default(cuid())
+  citaId         String      @unique
+  cita           Cita        @relation(fields: [citaId], references: [id])
+  consultorioId  String
+  consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
+  total          Decimal     @db.Decimal(10, 2)
+  saldoPendiente Decimal     @db.Decimal(10, 2)
+  estado         EstadoCobro @default(PENDIENTE)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  pagos Pago[]
+
+  @@index([consultorioId])
+  @@index([consultorioId, estado])
+  @@map("cobros")
+}
+
+model Pago {
+  id          String    @id @default(cuid())
+  cobroId     String
+  cobro       Cobro     @relation(fields: [cobroId], references: [id])
+  formaPago   FormaPago
+  monto       Decimal   @db.Decimal(10, 2)
+  referencia  String?
+  createdById String
+  createdBy   Usuario   @relation("PagoCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([cobroId])
+  @@map("pagos")
+}
+
+model CajaDiaria {
+  id                String      @id @default(cuid())
+  consultorioId     String
+  consultorio       Consultorio @relation(fields: [consultorioId], references: [id])
+  fecha             DateTime    @db.Date
+  usuarioAperturaId String
+  usuarioApertura   Usuario     @relation("CajaAbiertaPor", fields: [usuarioAperturaId], references: [id])
+  usuarioCierreId   String?
+  usuarioCierre     Usuario?    @relation("CajaCerradaPor", fields: [usuarioCierreId], references: [id])
+  totalEfectivo     Decimal     @default(0) @db.Decimal(10, 2)
+  totalQr           Decimal     @default(0) @db.Decimal(10, 2)
+  totalTransferencia Decimal    @default(0) @db.Decimal(10, 2)
+  totalTarjeta      Decimal     @default(0) @db.Decimal(10, 2)
+  totalGeneral      Decimal     @default(0) @db.Decimal(10, 2)
+  cerrada           Boolean     @default(false)
+  cierreAt          DateTime?
+  createdAt         DateTime    @default(now())
+
+  @@unique([consultorioId, fecha])
+  @@index([consultorioId])
+  @@map("caja_diaria")
+}
+
+// ─── AUDITORIA ───────────────────────────────────────────────────────────────
+
+model Log {
+  id             String      @id @default(cuid())
+  consultorioId  String
+  consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
+  usuarioId      String?
+  usuario        Usuario?    @relation(fields: [usuarioId], references: [id])
+  entidad        String      // "Cita" | "Cobro" | "Pago" | "Paciente"
+  entidadId      String
+  accion         AccionLog
+  payloadAntes   Json?
+  payloadDespues Json?
+  ip             String?
+  createdAt      DateTime    @default(now())
+
+  @@index([consultorioId, entidad, entidadId])
+  @@index([consultorioId, createdAt])
+  @@map("logs")
+}
