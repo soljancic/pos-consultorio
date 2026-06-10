@@ -61,6 +61,8 @@ export interface Paciente {
   whatsapp?: string
   email?: string
   fechaNacimiento?: Date
+  sexo?: string | null
+  direccion?: string | null
   notas?: string
   deudaTotal: number
   createdAt: Date

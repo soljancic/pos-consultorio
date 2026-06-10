@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601 } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreatePacienteDto {
@@ -23,6 +23,12 @@ export class CreatePacienteDto {
 
   @IsISO8601() @IsOptional()
   fechaNacimiento?: string
+
+  @IsIn(['M', 'F', 'X']) @IsOptional()
+  sexo?: string
+
+  @IsString() @IsOptional()
+  direccion?: string
 
   @IsString() @IsOptional()
   notas?: string

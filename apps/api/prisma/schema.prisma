@@ -165,6 +165,8 @@ model Paciente {
   whatsapp        String?
   email           String?
   fechaNacimiento DateTime?   @db.Date
+  sexo            String?     // "M" | "F" | "X"
+  direccion       String?
   notas           String?
   deudaTotal      Decimal     @default(0) @db.Decimal(10, 2)
   createdAt       DateTime    @default(now())

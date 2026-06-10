@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Search, Plus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda } from '../../lib/utils'
+import { PacienteModal } from './PacienteModal'
 import type { Paciente } from '@pos/types'
 
 export function PacientesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [modalNuevo, setModalNuevo] = useState(false)
 
   function handleSearch(value: string) {
     setSearch(value)
@@ -25,7 +29,10 @@ export function PacientesPage() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
         <h1 className="text-lg font-semibold text-slate-800">Pacientes</h1>
-        <button className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700">
+        <button
+          onClick={() => setModalNuevo(true)}
+          className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700"
+        >
           <Plus className="h-4 w-4" />
           Nuevo paciente
         </button>
@@ -57,7 +64,11 @@ export function PacientesPage() {
               </thead>
               <tbody>
                 {pacientes.map((p) => (
-                  <tr key={p.id} className="border-b last:border-0 hover:bg-slate-50 cursor-pointer">
+                  <tr
+                    key={p.id}
+                    onClick={() => navigate(`/pacientes/${p.id}`)}
+                    className="border-b last:border-0 hover:bg-slate-50 cursor-pointer"
+                  >
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {p.apellido}, {p.nombre}
                     </td>
@@ -86,6 +97,8 @@ export function PacientesPage() {
           </div>
         )}
       </div>
+
+      {modalNuevo && <PacienteModal onClose={() => setModalNuevo(false)} />}
     </div>
   )
 }
