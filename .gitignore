@@ -26,3 +26,7 @@ coverage
 
 # pnpm
 .pnpm-store
+
+apps/web/test-results/
+apps/web/playwright-report/
+*.tsbuildinfo
