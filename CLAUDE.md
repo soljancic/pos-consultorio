@@ -138,6 +138,13 @@ y refactors (el conocimiento que NO se deduce del codigo).
   `types: decision,bugfix,refactor,security_note`, `limit: 500`).
 - Para busquedas puntuales sin corpus: `search` / `get_observations`.
 
+## Grafo de conocimiento (graphify)
+
+`graphify-out/graph.json` existe (683 nodos, 51 comunidades; regenerable, no
+versionado). Para preguntas de arquitectura/relaciones usar primero:
+`graphify query "<pregunta>"` · `graphify path "A" "B"` · `graphify explain "Nodo"`
+Tras cambios grandes: `/graphify . --update` (incremental, usa el manifest).
+
 ## Comandos
 
 ```bash

@@ -30,3 +30,5 @@ coverage
 apps/web/test-results/
 apps/web/playwright-report/
 *.tsbuildinfo
+
+graphify-out/
