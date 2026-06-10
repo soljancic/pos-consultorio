@@ -34,13 +34,13 @@ export function CajaPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-slate-800">Caja</h1>
+          <h1 className="text-lg font-semibold text-foreground">Caja</h1>
           <div className="flex gap-1">
             {(['hoy', 'historial'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}>
                 {t}
               </button>
             ))}
@@ -50,7 +50,7 @@ export function CajaPage() {
           <button
             onClick={() => cerrar.mutate()}
             disabled={cerrar.isPending}
-            className="flex items-center gap-1 border border-slate-300 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="flex items-center gap-1 border border-input px-3 py-2 rounded-md text-sm text-foreground hover:bg-muted/60 disabled:opacity-50"
           >
             <Lock className="h-4 w-4" />
             Cerrar caja
@@ -71,10 +71,10 @@ export function CajaPage() {
             ].map((item) => (
               <div
                 key={item.label}
-                className={`bg-white rounded-lg border p-4 ${item.highlight ? 'border-blue-400 bg-blue-50' : ''}`}
+                className={`bg-card rounded-lg border p-4 ${item.highlight ? 'border-primary/60 bg-primary/10' : ''}`}
               >
-                <div className="text-xs text-slate-500 mb-1">{item.label}</div>
-                <div className={`text-xl font-bold ${item.highlight ? 'text-blue-700' : 'text-slate-800'}`}>
+                <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
+                <div className={`text-xl font-bold ${item.highlight ? 'text-primary' : 'text-foreground'}`}>
                   {formatMoneda(Number(item.value || 0))}
                 </div>
               </div>
@@ -83,36 +83,36 @@ export function CajaPage() {
 
           {/* Desglose deuda (MVP: Nuevas deudas / Pagos de deuda) */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-lg border border-green-200 p-4">
-              <div className="text-xs text-slate-500 mb-1">Pagos de deuda anterior</div>
-              <div className="text-xl font-bold text-green-700">
+            <div className="bg-card rounded-lg border border-green-200 p-4">
+              <div className="text-xs text-muted-foreground mb-1">Pagos de deuda anterior</div>
+              <div className="text-xl font-bold text-accent">
                 {formatMoneda(Number(data?.pagosDeudaAnterior || 0))}
               </div>
             </div>
-            <div className="bg-white rounded-lg border border-red-200 p-4">
-              <div className="text-xs text-slate-500 mb-1">Nuevas deudas de hoy</div>
-              <div className="text-xl font-bold text-red-600">
+            <div className="bg-card rounded-lg border border-destructive/30 p-4">
+              <div className="text-xs text-muted-foreground mb-1">Nuevas deudas de hoy</div>
+              <div className="text-xl font-bold text-destructive">
                 {formatMoneda(Number(data?.nuevasDeudas || 0))}
               </div>
             </div>
           </div>
 
           {/* Movimientos */}
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <div className="px-4 py-3 border-b bg-slate-50">
-              <h2 className="text-sm font-medium text-slate-700">
+          <div className="bg-card rounded-lg border overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/50">
+              <h2 className="text-sm font-medium text-foreground">
                 Movimientos ({pagos.length})
               </h2>
             </div>
             <table className="w-full text-sm">
               <thead className="border-b">
                 <tr>
-                  <th className="text-left px-4 py-2 text-slate-500 font-medium">Hora</th>
-                  <th className="text-left px-4 py-2 text-slate-500 font-medium">Paciente</th>
-                  <th className="text-left px-4 py-2 text-slate-500 font-medium">Servicio</th>
-                  <th className="text-left px-4 py-2 text-slate-500 font-medium">Doctor</th>
-                  <th className="text-left px-4 py-2 text-slate-500 font-medium">Forma</th>
-                  <th className="text-right px-4 py-2 text-slate-500 font-medium">Monto</th>
+                  <th className="text-left px-4 py-2 text-muted-foreground font-medium">Hora</th>
+                  <th className="text-left px-4 py-2 text-muted-foreground font-medium">Paciente</th>
+                  <th className="text-left px-4 py-2 text-muted-foreground font-medium">Servicio</th>
+                  <th className="text-left px-4 py-2 text-muted-foreground font-medium">Doctor</th>
+                  <th className="text-left px-4 py-2 text-muted-foreground font-medium">Forma</th>
+                  <th className="text-right px-4 py-2 text-muted-foreground font-medium">Monto</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,17 +121,17 @@ export function CajaPage() {
                   const esDeudaVieja = fechaCita.toDateString() !== hoyStr && fechaCita < new Date()
                   return (
                     <tr key={p.id} className="border-b last:border-0">
-                      <td className="px-4 py-2 text-slate-500">{formatHora(p.createdAt)}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{formatHora(p.createdAt)}</td>
                       <td className="px-4 py-2 font-medium">
                         {p.cobro.cita.paciente.apellido}, {p.cobro.cita.paciente.nombre}
                         {esDeudaVieja && (
-                          <span className="ml-2 text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium">Deuda</span>
+                          <span className="ml-2 text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">Deuda</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-slate-500">{p.cobro.cita.servicio.nombre}</td>
-                      <td className="px-4 py-2 text-slate-500">{p.cobro.cita.doctor.nombre}</td>
-                      <td className="px-4 py-2 text-slate-500">{p.formaPago}</td>
-                      <td className="px-4 py-2 text-right font-medium text-green-700">
+                      <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.servicio.nombre}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.doctor.nombre}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{p.formaPago}</td>
+                      <td className="px-4 py-2 text-right font-medium text-accent">
                         {formatMoneda(Number(p.monto))}
                       </td>
                     </tr>
@@ -139,7 +139,7 @@ export function CajaPage() {
                 })}
                 {pagos.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground/70">
                       No hay movimientos hoy
                     </td>
                   </tr>
@@ -155,21 +155,21 @@ export function CajaPage() {
           <div className="flex items-center gap-2">
             <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
               className="px-3 py-2 border rounded-md text-sm" />
-            <span className="text-slate-400">a</span>
+            <span className="text-muted-foreground/70">a</span>
             <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
               className="px-3 py-2 border rounded-md text-sm" />
           </div>
-          <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="bg-card rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
+              <thead className="bg-muted/50 border-b">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Fecha</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Efectivo</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">QR</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Transf.</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Tarjeta</th>
-                  <th className="text-right px-4 py-3 font-medium text-slate-600">Total</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-600">Estado</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Efectivo</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">QR</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Transf.</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Tarjeta</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,19 +182,19 @@ export function CajaPage() {
                     <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalTarjeta))}</td>
                     <td className="px-4 py-3 text-right font-semibold">{formatMoneda(Number(c.totalGeneral))}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.cerrada ? 'bg-slate-100 text-slate-600' : 'bg-green-50 text-green-700'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.cerrada ? 'bg-muted text-muted-foreground' : 'bg-accent/10 text-accent'}`}>
                         {c.cerrada ? 'Cerrada' : 'Abierta'}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {historial.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Sin cajas en el periodo</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground/70">Sin cajas en el periodo</td></tr>
                 )}
               </tbody>
-              <tfoot className="bg-slate-50 border-t">
+              <tfoot className="bg-muted/50 border-t">
                 <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm text-slate-500">Total del periodo</td>
+                  <td colSpan={5} className="px-4 py-3 text-sm text-muted-foreground">Total del periodo</td>
                   <td className="px-4 py-3 text-right font-bold">
                     {formatMoneda(historial.reduce((acc, c) => acc + Number(c.totalGeneral), 0))}
                   </td>

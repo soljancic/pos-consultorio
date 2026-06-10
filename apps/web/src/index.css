@@ -30,6 +30,27 @@
     --radius: 0.5rem;
   }
 
+  /* Dark mode: teal profundo, mismo sistema (toggle en el sidebar) */
+  .dark {
+    --background: 196 60% 7%;
+    --foreground: 166 30% 92%;
+    --card: 196 50% 10%;
+    --card-foreground: 166 30% 92%;
+    --primary: 189 80% 48%;
+    --primary-foreground: 196 60% 8%;
+    --secondary: 196 40% 16%;
+    --secondary-foreground: 166 30% 92%;
+    --muted: 196 40% 14%;
+    --muted-foreground: 190 15% 65%;
+    --accent: 142 60% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 196 35% 18%;
+    --input: 196 35% 24%;
+    --ring: 189 80% 48%;
+  }
+
   * {
     @apply border-border;
   }

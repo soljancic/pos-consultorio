@@ -77,16 +77,16 @@ export function ConfiguracionPage() {
   })
 
   const inputClass =
-    'w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+    'w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 border-b bg-white">
-        <h1 className="text-lg font-semibold text-slate-800">Configuracion</h1>
+      <div className="px-6 py-4 border-b bg-card">
+        <h1 className="text-lg font-semibold text-foreground">Configuracion</h1>
         <div className="flex gap-1 mt-3">
           {(['usuarios', 'consultorio'] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}>
               {t}
             </button>
           ))}
@@ -98,18 +98,18 @@ export function ConfiguracionPage() {
           <div>
             <div className="flex justify-end mb-4">
               <button onClick={() => { setUsuarioEdit(null); setUsuarioModal(true) }}
-                className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700">
+                className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
                 <Plus className="h-3.5 w-3.5" /> Nuevo usuario
               </button>
             </div>
-            <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
+                <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Nombre</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Email</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Rol</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Estado</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Rol</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -117,20 +117,20 @@ export function ConfiguracionPage() {
                   {usuarios.map((u) => (
                     <tr key={u.id} className="border-b last:border-0">
                       <td className="px-4 py-3 font-medium">{u.nombre}</td>
-                      <td className="px-4 py-3 text-slate-500">{u.email}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                       <td className="px-4 py-3">
-                        <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
                           {ROL_LABEL[u.rol] ?? u.rol}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.activo ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.activo ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'}`}>
                           {u.activo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => { setUsuarioEdit(u); setUsuarioModal(true) }}
-                          className="text-slate-400 hover:text-slate-700">
+                          className="text-muted-foreground/70 hover:text-foreground">
                           <Pencil className="h-4 w-4" />
                         </button>
                       </td>
@@ -143,40 +143,40 @@ export function ConfiguracionPage() {
         )}
 
         {tab === 'consultorio' && (
-          <div className="bg-white rounded-lg border p-6 space-y-4">
+          <div className="bg-card rounded-lg border p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del consultorio</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Nombre del consultorio</label>
               <input value={consForm.nombre} onChange={(e) => setConsForm((f) => ({ ...f, nombre: e.target.value }))}
                 className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Logo (URL)</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Logo (URL)</label>
               <input value={consForm.logoUrl} placeholder="https://..."
                 onChange={(e) => setConsForm((f) => ({ ...f, logoUrl: e.target.value }))}
                 className={inputClass} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Telefono</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Telefono</label>
                 <input value={consForm.telefono} onChange={(e) => setConsForm((f) => ({ ...f, telefono: e.target.value }))}
                   className={inputClass} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Direccion</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Direccion</label>
                 <input value={consForm.direccion} onChange={(e) => setConsForm((f) => ({ ...f, direccion: e.target.value }))}
                   className={inputClass} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Moneda</label>
                 <select value={consForm.moneda} onChange={(e) => setConsForm((f) => ({ ...f, moneda: e.target.value }))}
                   className={inputClass}>
                   {MONEDAS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Timezone</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Timezone</label>
                 <select value={consForm.timezone} onChange={(e) => setConsForm((f) => ({ ...f, timezone: e.target.value }))}
                   className={inputClass}>
                   {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
@@ -185,10 +185,10 @@ export function ConfiguracionPage() {
             </div>
             <div className="flex items-center gap-3 pt-2">
               <button onClick={() => updateConsultorio.mutate(consForm)} disabled={updateConsultorio.isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-60">
+                className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60">
                 {updateConsultorio.isPending ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              {guardado && <span className="text-sm text-green-600">Guardado</span>}
+              {guardado && <span className="text-sm text-accent">Guardado</span>}
             </div>
           </div>
         )}

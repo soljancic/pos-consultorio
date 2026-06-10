@@ -58,19 +58,19 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
 
   return (
     <div
-      className="bg-white rounded-lg border shadow-sm p-4 flex items-start gap-3"
+      className="bg-card rounded-lg border shadow-sm p-4 flex items-start gap-3"
       style={{ borderLeftWidth: 4, borderLeftColor: color }}
     >
       {/* Hora */}
       <div className="text-center min-w-[48px]">
-        <div className="text-lg font-bold text-slate-800">{formatHora(cita.fechaHora)}</div>
-        <div className="text-xs text-slate-400">{cita.duracionMin}min</div>
+        <div className="text-lg font-bold text-foreground">{formatHora(cita.fechaHora)}</div>
+        <div className="text-xs text-muted-foreground/70">{cita.duracionMin}min</div>
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-800 truncate">
+          <span className="font-semibold text-foreground truncate">
             {cita.paciente?.apellido}, {cita.paciente?.nombre}
           </span>
           <span
@@ -80,11 +80,11 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
             {LABEL_ESTADO[cita.estado]}
           </span>
         </div>
-        <div className="text-sm text-slate-500 mt-0.5">
+        <div className="text-sm text-muted-foreground mt-0.5">
           {cita.servicio?.nombre} &bull; {cita.doctor?.nombre}
         </div>
         {tieneSaldo && (
-          <div className="text-xs text-red-600 font-medium mt-1">
+          <div className="text-xs text-destructive font-medium mt-1">
             Deuda: {formatMoneda(Number(cita.cobro?.saldoPendiente))}
           </div>
         )}
@@ -95,7 +95,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
         {cita.paciente?.whatsapp && (
           <button
             onClick={handleWhatsApp}
-            className="p-2 rounded hover:bg-green-50 text-green-600"
+            className="p-2 rounded hover:bg-accent/10 text-accent"
             title="Enviar WhatsApp"
           >
             <MessageCircle className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
         {muestraAtencion && (
           <button
             onClick={onAtencion}
-            className="p-2 rounded hover:bg-violet-50 text-violet-600"
+            className="p-2 rounded hover:bg-violet-500/10 text-violet-600"
             title="Atencion"
           >
             <Stethoscope className="h-4 w-4" />
@@ -115,7 +115,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
         {(cita.estado === EstadoCita.ATENDIDA || cita.estado === EstadoCita.CON_DEUDA) && (
           <button
             onClick={onCobrar}
-            className="p-2 rounded hover:bg-blue-50 text-blue-600"
+            className="p-2 rounded hover:bg-primary/10 text-primary"
             title="Cobrar"
           >
             <DollarSign className="h-4 w-4" />
@@ -125,7 +125,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
         {proximaTransicion && (
           <button
             onClick={() => onCambiarEstado(proximaTransicion)}
-            className="flex items-center gap-1 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1.5 rounded text-slate-700"
+            className="flex items-center gap-1 text-xs bg-muted hover:bg-slate-200 px-2 py-1.5 rounded text-foreground"
           >
             {LABEL_ESTADO[proximaTransicion]}
             <ChevronRight className="h-3 w-3" />

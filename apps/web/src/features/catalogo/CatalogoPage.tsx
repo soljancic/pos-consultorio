@@ -30,27 +30,27 @@ export function CatalogoPage() {
 
   return (
     <div className="p-6 space-y-8 max-w-4xl mx-auto">
-      <h1 className="text-lg font-semibold text-slate-800">Catalogo</h1>
+      <h1 className="text-lg font-semibold text-foreground">Catalogo</h1>
 
       {/* Servicios */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide">Servicios</h2>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Servicios</h2>
           {esAdmin && (
             <button onClick={() => { setServicioEdit(null); setServicioModal(true) }}
-              className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700">
+              className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
               <Plus className="h-3.5 w-3.5" /> Nuevo servicio
             </button>
           )}
         </div>
-        <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="bg-card rounded-lg border overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
+            <thead className="bg-muted/50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Duracion</th>
-                <th className="text-right px-4 py-3 font-medium text-slate-600">Precio base</th>
-                <th className="text-left px-4 py-3 font-medium text-slate-600">Estado</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Duracion</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Precio base</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
                 {esAdmin && <th className="px-4 py-3" />}
               </tr>
             </thead>
@@ -58,17 +58,17 @@ export function CatalogoPage() {
               {(servicios as any[]).map((s) => (
                 <tr key={s.id} className="border-b last:border-0">
                   <td className="px-4 py-3 font-medium">{s.nombre}</td>
-                  <td className="px-4 py-3 text-slate-500">{s.duracionMin} min</td>
+                  <td className="px-4 py-3 text-muted-foreground">{s.duracionMin} min</td>
                   <td className="px-4 py-3 text-right">{formatMoneda(Number(s.precioBase))}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.activo ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.activo ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'}`}>
                       {s.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   {esAdmin && (
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => { setServicioEdit(s); setServicioModal(true) }}
-                        className="text-slate-400 hover:text-slate-700">
+                        className="text-muted-foreground/70 hover:text-foreground">
                         <Pencil className="h-4 w-4" />
                       </button>
                     </td>
@@ -76,7 +76,7 @@ export function CatalogoPage() {
                 </tr>
               ))}
               {(servicios as any[]).length === 0 && (
-                <tr><td colSpan={esAdmin ? 5 : 4} className="px-4 py-8 text-center text-slate-400">Sin servicios</td></tr>
+                <tr><td colSpan={esAdmin ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground/70">Sin servicios</td></tr>
               )}
             </tbody>
           </table>
@@ -86,37 +86,37 @@ export function CatalogoPage() {
       {/* Doctores */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide">Doctores</h2>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Doctores</h2>
           {esAdmin && (
             <button onClick={() => { setDoctorEdit(null); setDoctorModal(true) }}
-              className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700">
+              className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
               <Plus className="h-3.5 w-3.5" /> Nuevo doctor
             </button>
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(doctores as any[]).map((d) => (
-            <div key={d.id} className="bg-white rounded-lg border p-4 flex items-center gap-3">
+            <div key={d.id} className="bg-card rounded-lg border p-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: d.colorAgenda }} />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-slate-800 truncate">{d.nombre}</div>
-                <div className="text-sm text-slate-500">{d.especialidad || 'Sin especialidad'}</div>
+                <div className="font-medium text-foreground truncate">{d.nombre}</div>
+                <div className="text-sm text-muted-foreground">{d.especialidad || 'Sin especialidad'}</div>
                 {!d.activo && (
-                  <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
                     Inactivo
                   </span>
                 )}
               </div>
               {esAdmin && (
                 <button onClick={() => { setDoctorEdit(d); setDoctorModal(true) }}
-                  className="text-slate-400 hover:text-slate-700 shrink-0">
+                  className="text-muted-foreground/70 hover:text-foreground shrink-0">
                   <Pencil className="h-4 w-4" />
                 </button>
               )}
             </div>
           ))}
           {(doctores as any[]).length === 0 && (
-            <div className="text-sm text-slate-400 py-4">Sin doctores</div>
+            <div className="text-sm text-muted-foreground/70 py-4">Sin doctores</div>
           )}
         </div>
       </section>

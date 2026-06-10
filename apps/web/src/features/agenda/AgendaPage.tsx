@@ -85,29 +85,29 @@ export function AgendaPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navegarDia(-1)}
-            className="p-1 rounded hover:bg-slate-100"
+            className="p-1 rounded hover:bg-muted"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div>
-            <h2 className="text-lg font-semibold text-slate-800 capitalize">
+            <h2 className="text-lg font-semibold text-foreground capitalize">
               {format(fecha, "EEEE d 'de' MMMM", { locale: es })}
             </h2>
-            <p className="text-xs text-slate-500">{citas.length} citas</p>
+            <p className="text-xs text-muted-foreground">{citas.length} citas</p>
           </div>
           <button
             onClick={() => navegarDia(1)}
-            className="p-1 rounded hover:bg-slate-100"
+            className="p-1 rounded hover:bg-muted"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
           <button
             onClick={() => setFecha(new Date())}
-            className="ml-2 text-xs text-blue-600 hover:underline"
+            className="ml-2 text-xs text-primary hover:underline"
           >
             Hoy
           </button>
@@ -118,7 +118,7 @@ export function AgendaPage() {
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Todos los doctores</option>
               {doctores.map((d) => (
@@ -128,7 +128,7 @@ export function AgendaPage() {
           )}
           <button
             onClick={() => setModalNuevaCita(true)}
-            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700"
+            className="flex items-center gap-1 bg-primary text-white px-3 py-2 rounded-md text-sm hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
             Nueva cita
@@ -139,9 +139,9 @@ export function AgendaPage() {
       {/* Citas */}
       <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
-          <div className="text-center text-slate-500 py-12">Cargando agenda...</div>
+          <div className="text-center text-muted-foreground py-12">Cargando agenda...</div>
         ) : citasOrdenadas.length === 0 ? (
-          <div className="text-center text-slate-400 py-12">
+          <div className="text-center text-muted-foreground/70 py-12">
             No hay citas para este dia
           </div>
         ) : (

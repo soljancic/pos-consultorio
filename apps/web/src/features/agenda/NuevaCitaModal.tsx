@@ -87,10 +87,10 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+      <div className="bg-card rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-slate-800">Nueva cita</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100">
+          <h2 className="text-lg font-semibold text-foreground">Nueva cita</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-muted">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -98,9 +98,9 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Paciente */}
           <div ref={searchRef} className="relative">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Paciente</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Paciente</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
               <input
                 value={pacienteQuery}
                 onChange={(e) => {
@@ -110,18 +110,18 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
                 }}
                 onFocus={() => setShowPacienteList(true)}
                 placeholder="Buscar paciente..."
-                className="w-full pl-9 pr-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
             {showPacienteList && pacientesResultado.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-auto">
+              <div className="absolute z-10 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-auto">
                 {pacientesResultado.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => seleccionarPaciente(p)}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-primary/10"
                   >
                     {p.apellido}, {p.nombre}
                   </button>
@@ -132,11 +132,11 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
 
           {/* Doctor */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Doctor</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Doctor</label>
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Seleccionar doctor...</option>
@@ -148,11 +148,11 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
 
           {/* Servicio */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Servicio</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Servicio</label>
             <select
               value={servicioId}
               onChange={(e) => setServicioId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Seleccionar servicio...</option>
@@ -167,22 +167,22 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
           {/* Fecha y hora */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Fecha</label>
               <input
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Hora</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora</label>
               <input
                 type="time"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
@@ -190,34 +190,34 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Notas <span className="text-slate-400 font-normal">(opcional)</span>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
             </label>
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               rows={2}
               placeholder="Observaciones para la cita..."
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">{error}</p>
+            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">{error}</p>
           )}
 
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-md text-sm text-slate-700 hover:bg-slate-50"
+              className="flex-1 px-4 py-2 border rounded-md text-sm text-foreground hover:bg-muted/60"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={crearCita.isPending}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-60"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60"
             >
               {crearCita.isPending ? 'Guardando...' : 'Crear cita'}
             </button>

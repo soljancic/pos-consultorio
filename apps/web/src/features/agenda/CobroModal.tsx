@@ -50,43 +50,43 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+      <div className="bg-card rounded-xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b">
           <div>
-            <h2 className="font-semibold text-slate-800">Registrar Cobro</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="font-semibold text-foreground">Registrar Cobro</h2>
+            <p className="text-sm text-muted-foreground">
               {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-slate-100">
+          <button onClick={onClose} className="p-1 rounded hover:bg-muted">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {isLoading ? (
-          <div className="p-6 text-center text-slate-500">Cargando cobro...</div>
+          <div className="p-6 text-center text-muted-foreground">Cargando cobro...</div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div className="bg-slate-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-muted/50 rounded-lg p-3 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <div className="text-slate-500">Total servicio</div>
+                <div className="text-muted-foreground">Total servicio</div>
                 <div className="font-semibold">{formatMoneda(Number(cobro?.total))}</div>
               </div>
               <div>
-                <div className="text-slate-500">Saldo pendiente</div>
-                <div className="font-semibold text-red-600">{formatMoneda(saldo)}</div>
+                <div className="text-muted-foreground">Saldo pendiente</div>
+                <div className="font-semibold text-destructive">{formatMoneda(saldo)}</div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Monto que paga
               </label>
               <input
                 type="number"
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder={saldo.toString()}
                 min="1"
                 max={saldo}
@@ -96,14 +96,14 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               <button
                 type="button"
                 onClick={() => setMonto(saldo.toString())}
-                className="text-xs text-blue-600 hover:underline mt-1"
+                className="text-xs text-primary hover:underline mt-1"
               >
                 Pagar total ({formatMoneda(saldo)})
               </button>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Forma de pago
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -114,8 +114,8 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                     onClick={() => setFormaPago(fp.value)}
                     className={`py-2 px-3 rounded-md text-sm border transition-colors ${
                       formaPago === fp.value
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-card text-foreground border-input hover:border-primary/60'
                     }`}
                   >
                     {fp.label}
@@ -126,35 +126,35 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
 
             {(formaPago === FormaPago.TRANSFERENCIA || formaPago === FormaPago.QR) && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Referencia (opcional)
                 </label>
                 <input
                   type="text"
                   value={referencia}
                   onChange={(e) => setReferencia(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Numero de comprobante"
                 />
               </div>
             )}
 
             {montoNum > 0 && (
-              <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
                 {vuelto > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Vuelto</span>
-                    <span className="font-semibold text-green-600">{formatMoneda(vuelto)}</span>
+                    <span className="text-muted-foreground">Vuelto</span>
+                    <span className="font-semibold text-accent">{formatMoneda(vuelto)}</span>
                   </div>
                 )}
                 {quedaDeuda > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Queda de deuda</span>
-                    <span className="font-semibold text-red-600">{formatMoneda(quedaDeuda)}</span>
+                    <span className="text-muted-foreground">Queda de deuda</span>
+                    <span className="font-semibold text-destructive">{formatMoneda(quedaDeuda)}</span>
                   </div>
                 )}
                 {quedaDeuda === 0 && montoNum > 0 && (
-                  <div className="text-green-600 font-medium text-center">Cobro completo</div>
+                  <div className="text-accent font-medium text-center">Cobro completo</div>
                 )}
               </div>
             )}
@@ -163,14 +163,14 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2 border rounded-md text-sm text-slate-700 hover:bg-slate-50"
+                className="flex-1 py-2 border rounded-md text-sm text-foreground hover:bg-muted/60"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={registrarPago.isPending || montoNum <= 0}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-50"
               >
                 {registrarPago.isPending ? 'Guardando...' : 'Registrar pago'}
               </button>

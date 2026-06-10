@@ -51,8 +51,8 @@ export function PacienteDetallePage() {
     enabled: !!id,
   })
 
-  if (isLoading) return <div className="p-6 text-slate-500">Cargando...</div>
-  if (!paciente) return <div className="p-6 text-slate-500">Paciente no encontrado</div>
+  if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>
+  if (!paciente) return <div className="p-6 text-muted-foreground">Paciente no encontrado</div>
 
   const edad = paciente.fechaNacimiento
     ? differenceInYears(new Date(), new Date(paciente.fechaNacimiento))
@@ -65,17 +65,17 @@ export function PacienteDetallePage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/pacientes')} className="p-1 rounded hover:bg-slate-100">
+          <button onClick={() => navigate('/pacientes')} className="p-1 rounded hover:bg-muted">
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-slate-800">
+            <h1 className="text-lg font-semibold text-foreground">
               {paciente.apellido}, {paciente.nombre}
             </h1>
             {Number(paciente.deudaTotal) > 0 && (
-              <span className="text-xs text-red-600 font-medium">
+              <span className="text-xs text-destructive font-medium">
                 {formatMoneda(Number(paciente.deudaTotal))} en deuda
               </span>
             )}
@@ -87,7 +87,7 @@ export function PacienteDetallePage() {
               href={buildWhatsAppUrl(paciente.whatsapp, `Hola ${paciente.nombre}, le contactamos desde el consultorio.`)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+              className="flex items-center gap-1 px-3 py-2 bg-accent text-white rounded-md text-sm hover:bg-accent/90"
             >
               <MessageCircle className="h-4 w-4" />
               WhatsApp
@@ -95,7 +95,7 @@ export function PacienteDetallePage() {
           )}
           <button
             onClick={() => setEditando(true)}
-            className="flex items-center gap-1 px-3 py-2 border rounded-md text-sm hover:bg-slate-50"
+            className="flex items-center gap-1 px-3 py-2 border rounded-md text-sm hover:bg-muted/60"
           >
             <Pencil className="h-4 w-4" />
             Editar
@@ -105,28 +105,28 @@ export function PacienteDetallePage() {
 
       <div className="flex-1 overflow-auto p-6 space-y-6 max-w-4xl mx-auto w-full">
         {/* Datos personales */}
-        <div className="bg-white rounded-lg border p-5 grid grid-cols-2 gap-4 text-sm">
-          {paciente.dni && <div><span className="text-slate-500">DNI:</span> <span className="font-medium">{paciente.dni}</span></div>}
-          {paciente.telefono && <div><span className="text-slate-500">Telefono:</span> <span className="font-medium">{paciente.telefono}</span></div>}
-          {paciente.whatsapp && <div><span className="text-slate-500">WhatsApp:</span> <span className="font-medium">{paciente.whatsapp}</span></div>}
-          {paciente.email && <div><span className="text-slate-500">Email:</span> <span className="font-medium">{paciente.email}</span></div>}
+        <div className="bg-card rounded-lg border p-5 grid grid-cols-2 gap-4 text-sm">
+          {paciente.dni && <div><span className="text-muted-foreground">DNI:</span> <span className="font-medium">{paciente.dni}</span></div>}
+          {paciente.telefono && <div><span className="text-muted-foreground">Telefono:</span> <span className="font-medium">{paciente.telefono}</span></div>}
+          {paciente.whatsapp && <div><span className="text-muted-foreground">WhatsApp:</span> <span className="font-medium">{paciente.whatsapp}</span></div>}
+          {paciente.email && <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{paciente.email}</span></div>}
           {paciente.fechaNacimiento && (
             <div>
-              <span className="text-slate-500">Nacimiento:</span>{' '}
+              <span className="text-muted-foreground">Nacimiento:</span>{' '}
               <span className="font-medium">
                 {formatFecha(paciente.fechaNacimiento)}{edad !== null ? ` (${edad} anos)` : ''}
               </span>
             </div>
           )}
           {paciente.sexo && (
-            <div><span className="text-slate-500">Sexo:</span> <span className="font-medium">{LABEL_SEXO[paciente.sexo] ?? paciente.sexo}</span></div>
+            <div><span className="text-muted-foreground">Sexo:</span> <span className="font-medium">{LABEL_SEXO[paciente.sexo] ?? paciente.sexo}</span></div>
           )}
           {paciente.direccion && (
-            <div><span className="text-slate-500">Direccion:</span> <span className="font-medium">{paciente.direccion}</span></div>
+            <div><span className="text-muted-foreground">Direccion:</span> <span className="font-medium">{paciente.direccion}</span></div>
           )}
           {paciente.notas && (
             <div className="col-span-2">
-              <span className="text-slate-500">Notas:</span>{' '}
+              <span className="text-muted-foreground">Notas:</span>{' '}
               <span className="font-medium">{paciente.notas}</span>
             </div>
           )}
@@ -134,24 +134,24 @@ export function PacienteDetallePage() {
 
         {/* Historial de citas */}
         <div>
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             Historial de citas
           </h2>
           {citasOrdenadas.length === 0 ? (
-            <div className="bg-white rounded-lg border p-8 text-center text-slate-400 text-sm">
+            <div className="bg-card rounded-lg border p-8 text-center text-muted-foreground/70 text-sm">
               Sin citas registradas
             </div>
           ) : (
-            <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
+                <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Fecha</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Doctor</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Servicio</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-600">Estado</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Total</th>
-                    <th className="text-right px-4 py-3 font-medium text-slate-600">Saldo</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Doctor</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Servicio</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Saldo</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -159,7 +159,7 @@ export function PacienteDetallePage() {
                   {citasOrdenadas.map((cita) => (
                     <Fragment key={cita.id}>
                     <tr className="border-b last:border-0">
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-foreground">
                         <span className="inline-flex items-center gap-1">
                           {cita.atencion && (
                             <button
@@ -175,8 +175,8 @@ export function PacienteDetallePage() {
                           {format(new Date(cita.fechaHora), 'dd/MM/yyyy HH:mm', { locale: es })}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{cita.doctor.nombre}</td>
-                      <td className="px-4 py-3 text-slate-600">{cita.servicio.nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{cita.doctor.nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{cita.servicio.nombre}</td>
                       <td className="px-4 py-3">
                         <span
                           className="px-2 py-0.5 rounded-full text-xs font-medium"
@@ -188,23 +188,23 @@ export function PacienteDetallePage() {
                           {LABEL_ESTADO[cita.estado as EstadoCita] ?? cita.estado}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-slate-700">
+                      <td className="px-4 py-3 text-right text-foreground">
                         {cita.cobro ? formatMoneda(Number(cita.cobro.total)) : '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {cita.cobro && Number(cita.cobro.saldoPendiente) > 0 ? (
-                          <span className="text-red-600 font-medium">
+                          <span className="text-destructive font-medium">
                             {formatMoneda(Number(cita.cobro.saldoPendiente))}
                           </span>
                         ) : (
-                          <span className="text-slate-400">-</span>
+                          <span className="text-muted-foreground/70">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {cita.cobro && Number(cita.cobro.saldoPendiente) > 0 && (
                           <button
                             onClick={() => setCitaCobro(cita as unknown as Cita)}
-                            className="text-xs text-blue-600 hover:underline"
+                            className="text-xs text-primary hover:underline"
                           >
                             Cobrar
                           </button>
@@ -212,8 +212,8 @@ export function PacienteDetallePage() {
                       </td>
                     </tr>
                     {citaExpandida === cita.id && cita.atencion && (
-                      <tr className="bg-violet-50/50 border-b last:border-0">
-                        <td colSpan={7} className="px-6 py-3 text-sm text-slate-600 space-y-1">
+                      <tr className="bg-violet-500/5 border-b last:border-0">
+                        <td colSpan={7} className="px-6 py-3 text-sm text-muted-foreground space-y-1">
                           {cita.atencion.motivo && <p><span className="font-medium">Motivo:</span> {cita.atencion.motivo}</p>}
                           {cita.atencion.diagnostico && <p><span className="font-medium">Diagnostico:</span> {cita.atencion.diagnostico}</p>}
                           {cita.atencion.tratamiento && <p><span className="font-medium">Tratamiento:</span> {cita.atencion.tratamiento}</p>}

@@ -22,8 +22,8 @@ type StatTone = 'primary' | 'warning' | 'info' | 'success' | 'danger'
 
 const TONOS: Record<StatTone, string> = {
   primary: 'bg-primary/10 text-primary',
-  warning: 'bg-amber-100 text-amber-700',
-  info: 'bg-cyan-100 text-cyan-700',
+  warning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  info: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400',
   success: 'bg-accent/10 text-accent',
   danger: 'bg-destructive/10 text-destructive',
 }
