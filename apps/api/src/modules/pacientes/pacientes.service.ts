@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn } from 'class-validator'
+import { PartialType } from '@nestjs/swagger'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreatePacienteDto {
@@ -34,7 +35,7 @@ export class CreatePacienteDto {
   notas?: string
 }
 
-export class UpdatePacienteDto extends CreatePacienteDto {}
+export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {}
 
 @Injectable()
 export class PacientesService {
