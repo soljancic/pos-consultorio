@@ -11,6 +11,7 @@
     "target": "ES2022",
     "sourceMap": true,
     "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "skipLibCheck": true,
     "strictNullChecks": true,
     "noImplicitAny": true,

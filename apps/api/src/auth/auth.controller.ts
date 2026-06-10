@@ -5,6 +5,7 @@ import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { RefreshDto } from './dto/refresh.dto'
+import { GoogleLoginDto } from './dto/google-login.dto'
 import { IS_PUBLIC_KEY } from '../common/guards/jwt-auth.guard'
 
 const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
@@ -46,5 +47,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Refrescar access token' })
   refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken)
+  }
+
+  @Public()
+  @Post('google')
+  @Throttle({ default: { ttl: 60_000, limit: LOGIN_LIMIT } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login con Google OAuth' })
+  loginGoogle(@Body() dto: GoogleLoginDto) {
+    return this.authService.loginGoogle(dto.credential)
   }
 }

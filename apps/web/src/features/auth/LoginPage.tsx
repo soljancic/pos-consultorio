@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
 import { api } from '../../lib/api-client'
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { Stethoscope, CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
 
 const BENEFICIOS = [
@@ -9,6 +10,8 @@ const BENEFICIOS = [
   { icon: Wallet, texto: 'Cobros, deudas y caja siempre cuadrados' },
   { icon: BellRing, texto: 'Recordatorios por WhatsApp en un click' },
 ]
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -32,6 +35,29 @@ export function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleGoogleSuccess(response: CredentialResponse) {
+    if (!response.credential) {
+      setError('Google no devolvio credencial valida')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await api.post('/auth/google', { credential: response.credential })
+      setTokens(data.accessToken, data.refreshToken)
+      setUser(data.user)
+      navigate('/agenda')
+    } catch {
+      setError('No se pudo iniciar sesion con Google. Verificar que tu cuenta este registrada.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleGoogleError() {
+    setError('No se pudo iniciar sesion con Google')
   }
 
   return (
@@ -129,6 +155,25 @@ export function LoginPage() {
               >
                 {loading ? 'Ingresando...' : 'Ingresar'}
               </button>
+
+              {googleClientId && (
+                <>
+                  <div className="flex items-center gap-3 my-1">
+                    <span className="h-px flex-1 bg-border" />
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">o</span>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      width="100%"
+                      text="signin_with"
+                      locale="es"
+                    />
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </div>

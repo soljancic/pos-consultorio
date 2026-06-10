@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
+import { OAuth2Client } from 'google-auth-library'
 import { PrismaService } from '../prisma/prisma.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
@@ -46,9 +47,58 @@ export class AuthService {
     })
 
     if (!usuario) throw new UnauthorizedException('Credenciales invalidas')
+    if (!usuario.passwordHash) throw new UnauthorizedException('Credenciales invalidas')
 
     const passwordValido = await argon2.verify(usuario.passwordHash, dto.password)
     if (!passwordValido) throw new UnauthorizedException('Credenciales invalidas')
+
+    const tokens = await this.buildTokens(
+      usuario.id,
+      usuario.email,
+      usuario.rol,
+      usuario.consultorioId,
+    )
+
+    return {
+      ...tokens,
+      user: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+        consultorioId: usuario.consultorioId,
+        consultorioNombre: usuario.consultorio.nombre,
+      },
+    }
+  }
+
+  async loginGoogle(credential: string) {
+    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')
+    if (!clientId) {
+      throw new UnauthorizedException('Google login no esta configurado')
+    }
+
+    let email: string
+    let nombre: string
+    try {
+      const client = new OAuth2Client(clientId)
+      const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId })
+      const payload = ticket.getPayload()
+      if (!payload?.email) throw new Error('Payload invalido')
+      email = payload.email
+      nombre = payload.name ?? payload.email
+    } catch {
+      throw new UnauthorizedException('Token de Google invalido')
+    }
+
+    const usuario = await this.prisma.usuario.findFirst({
+      where: { email, activo: true },
+      include: { consultorio: { select: { nombre: true } } },
+    })
+
+    if (!usuario) {
+      throw new UnauthorizedException(`No existe una cuenta activa para ${email}. Solicita al administrador que cree tu usuario.`)
+    }
 
     const tokens = await this.buildTokens(
       usuario.id,
