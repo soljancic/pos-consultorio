@@ -223,6 +223,7 @@ model Atencion {
   cita           Cita      @relation(fields: [citaId], references: [id])
   motivo         String?
   diagnostico    String?
+  tratamiento    String?
   evolucion      String?
   proximoControl DateTime? @db.Date
   adjuntos       Json?     // [{ url, nombre, tipo, tamano }]

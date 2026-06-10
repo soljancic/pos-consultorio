@@ -82,7 +82,10 @@ export class PacientesService {
           include: {
             doctor: { select: { nombre: true } },
             servicio: { select: { nombre: true } },
-            cobro: { select: { total: true, saldoPendiente: true, estado: true } },
+            cobro: { select: { id: true, total: true, saldoPendiente: true, estado: true } },
+            atencion: {
+              select: { motivo: true, diagnostico: true, tratamiento: true, evolucion: true, proximoControl: true },
+            },
           },
         },
       },

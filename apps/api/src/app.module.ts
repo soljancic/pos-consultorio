@@ -8,6 +8,7 @@ import { PacientesModule } from './modules/pacientes/pacientes.module'
 import { ServiciosModule } from './modules/servicios/servicios.module'
 import { DoctoresModule } from './modules/doctores/doctores.module'
 import { CitasModule } from './modules/citas/citas.module'
+import { AtencionesModule } from './modules/atenciones/atenciones.module'
 import { CobrosModule } from './modules/cobros/cobros.module'
 import { CajaModule } from './modules/caja/caja.module'
 
@@ -22,6 +23,7 @@ import { CajaModule } from './modules/caja/caja.module'
     ServiciosModule,
     DoctoresModule,
     CitasModule,
+    AtencionesModule,
     CobrosModule,
     CajaModule,
   ],

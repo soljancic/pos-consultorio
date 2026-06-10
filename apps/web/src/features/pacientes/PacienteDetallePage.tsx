@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, MessageCircle, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
@@ -20,11 +20,20 @@ const LABEL_ESTADO: Record<EstadoCita, string> = {
 
 const LABEL_SEXO: Record<string, string> = { M: 'Masculino', F: 'Femenino', X: 'Otro' }
 
+type Atencion = {
+  motivo: string | null
+  diagnostico: string | null
+  tratamiento: string | null
+  evolucion: string | null
+  proximoControl: string | null
+}
+
 type PacienteDetalle = Paciente & {
   citas: Array<Cita & {
     doctor: { nombre: string }
     servicio: { nombre: string; precioBase: number }
     cobro: { id: string; total: number; saldoPendiente: number; estado: string } | null
+    atencion: Atencion | null
   }>
 }
 
@@ -34,6 +43,7 @@ export function PacienteDetallePage() {
   const qc = useQueryClient()
   const [editando, setEditando] = useState(false)
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
+  const [citaExpandida, setCitaExpandida] = useState<string | null>(null)
 
   const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
@@ -147,9 +157,23 @@ export function PacienteDetallePage() {
                 </thead>
                 <tbody>
                   {citasOrdenadas.map((cita) => (
-                    <tr key={cita.id} className="border-b last:border-0">
+                    <Fragment key={cita.id}>
+                    <tr className="border-b last:border-0">
                       <td className="px-4 py-3 text-slate-700">
-                        {format(new Date(cita.fechaHora), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        <span className="inline-flex items-center gap-1">
+                          {cita.atencion && (
+                            <button
+                              onClick={() => setCitaExpandida(citaExpandida === cita.id ? null : cita.id)}
+                              className="text-violet-500 hover:text-violet-700"
+                              title="Ver atencion"
+                            >
+                              {citaExpandida === cita.id
+                                ? <ChevronDown className="h-4 w-4" />
+                                : <Stethoscope className="h-4 w-4" />}
+                            </button>
+                          )}
+                          {format(new Date(cita.fechaHora), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{cita.doctor.nombre}</td>
                       <td className="px-4 py-3 text-slate-600">{cita.servicio.nombre}</td>
@@ -187,6 +211,18 @@ export function PacienteDetallePage() {
                         )}
                       </td>
                     </tr>
+                    {citaExpandida === cita.id && cita.atencion && (
+                      <tr className="bg-violet-50/50 border-b last:border-0">
+                        <td colSpan={7} className="px-6 py-3 text-sm text-slate-600 space-y-1">
+                          {cita.atencion.motivo && <p><span className="font-medium">Motivo:</span> {cita.atencion.motivo}</p>}
+                          {cita.atencion.diagnostico && <p><span className="font-medium">Diagnostico:</span> {cita.atencion.diagnostico}</p>}
+                          {cita.atencion.tratamiento && <p><span className="font-medium">Tratamiento:</span> {cita.atencion.tratamiento}</p>}
+                          {cita.atencion.evolucion && <p><span className="font-medium">Evolucion:</span> {cita.atencion.evolucion}</p>}
+                          {cita.atencion.proximoControl && <p><span className="font-medium">Proximo control:</span> {formatFecha(cita.atencion.proximoControl)}</p>}
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

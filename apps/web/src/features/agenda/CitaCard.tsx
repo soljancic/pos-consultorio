@@ -1,6 +1,14 @@
-import { MessageCircle, DollarSign, ChevronRight } from 'lucide-react'
+import { MessageCircle, DollarSign, ChevronRight, Stethoscope } from 'lucide-react'
 import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, buildWhatsAppUrl } from '../../lib/utils'
+import { useAuthStore } from '../../stores/auth.store'
+
+const ESTADOS_CON_ATENCION = [
+  EstadoCita.EN_ATENCION,
+  EstadoCita.ATENDIDA,
+  EstadoCita.COBRADO,
+  EstadoCita.CON_DEUDA,
+]
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
   [EstadoCita.PENDIENTE]: 'Pendiente',
@@ -19,12 +27,19 @@ interface CitaCardProps {
   cita: Cita
   onCambiarEstado: (estado: EstadoCita) => void
   onCobrar: () => void
+  onAtencion: () => void
 }
 
-export function CitaCard({ cita, onCambiarEstado, onCobrar }: CitaCardProps) {
+export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCardProps) {
+  const user = useAuthStore((s) => s.user)
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
   const tieneSaldo = cita.cobro && Number(cita.cobro.saldoPendiente) > 0
+
+  // Registrar (EN_ATENCION) es del doctor/admin; consultar (estados posteriores) es de todos
+  const muestraAtencion =
+    ESTADOS_CON_ATENCION.includes(cita.estado) &&
+    (cita.estado !== EstadoCita.EN_ATENCION || user?.rol === 'DOCTOR' || user?.rol === 'ADMIN')
 
   const proximaTransicion = transicionesDisponibles.find(
     (t) => t !== EstadoCita.CANCELADA && t !== EstadoCita.NO_ASISTIO,
@@ -79,6 +94,16 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar }: CitaCardProps) {
             title="Enviar WhatsApp"
           >
             <MessageCircle className="h-4 w-4" />
+          </button>
+        )}
+
+        {muestraAtencion && (
+          <button
+            onClick={onAtencion}
+            className="p-2 rounded hover:bg-violet-50 text-violet-600"
+            title="Atencion"
+          >
+            <Stethoscope className="h-4 w-4" />
           </button>
         )}
 

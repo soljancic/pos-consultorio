@@ -1,33 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { useAuthStore } from '../../stores/auth.store'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
+import { AtencionModal } from './AtencionModal'
 import type { Cita } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 
 export function AgendaPage() {
+  const user = useAuthStore((s) => s.user)
   const [fecha, setFecha] = useState(new Date())
+  const [doctorId, setDoctorId] = useState('')
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null)
   const [modalCobro, setModalCobro] = useState(false)
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
+  const [modalAtencion, setModalAtencion] = useState(false)
   const queryClient = useQueryClient()
 
   const fechaStr = format(fecha, 'yyyy-MM-dd')
 
+  const { data: doctores = [] } = useQuery<any[]>({
+    queryKey: ['doctores'],
+    queryFn: () => api.get('/doctores').then((r) => r.data),
+  })
+
+  // Rol DOCTOR: ve solo su agenda (guard de UX; el backend filtra por consultorio)
+  const doctorPropio = user?.rol === 'DOCTOR'
+    ? doctores.find((d) => d.usuarioId === user.id)
+    : undefined
+
+  useEffect(() => {
+    if (doctorPropio) setDoctorId(doctorPropio.id)
+  }, [doctorPropio?.id])
+
   const { data: citas = [], isLoading } = useQuery<Cita[]>({
-    queryKey: ['citas', fechaStr],
-    queryFn: () => api.get(`/citas?fecha=${fechaStr}`).then((r) => r.data),
+    queryKey: ['citas', fechaStr, doctorId],
+    queryFn: () =>
+      api
+        .get(`/citas?fecha=${fechaStr}${doctorId ? `&doctorId=${doctorId}` : ''}`)
+        .then((r) => r.data),
   })
 
   const cambiarEstado = useMutation({
     mutationFn: ({ citaId, estado }: { citaId: string; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['citas', fechaStr] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['citas'] }),
   })
 
   function navegarDia(dias: number) {
@@ -91,13 +113,27 @@ export function AgendaPage() {
           </button>
         </div>
 
-        <button
-          onClick={() => setModalNuevaCita(true)}
-          className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva cita
-        </button>
+        <div className="flex items-center gap-2">
+          {user?.rol !== 'DOCTOR' && (
+            <select
+              value={doctorId}
+              onChange={(e) => setDoctorId(e.target.value)}
+              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Todos los doctores</option>
+              {doctores.map((d) => (
+                <option key={d.id} value={d.id}>{d.nombre}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={() => setModalNuevaCita(true)}
+            className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva cita
+          </button>
+        </div>
       </div>
 
       {/* Citas */}
@@ -118,6 +154,10 @@ export function AgendaPage() {
                   cambiarEstado.mutate({ citaId: cita.id, estado })
                 }
                 onCobrar={() => abrirCobro(cita)}
+                onAtencion={() => {
+                  setCitaSeleccionada(cita)
+                  setModalAtencion(true)
+                }}
               />
             ))}
           </div>
@@ -142,7 +182,19 @@ export function AgendaPage() {
           onClose={() => {
             setModalCobro(false)
             setCitaSeleccionada(null)
-            queryClient.invalidateQueries({ queryKey: ['citas', fechaStr] })
+            queryClient.invalidateQueries({ queryKey: ['citas'] })
+          }}
+        />
+      )}
+
+      {/* Modal atencion */}
+      {modalAtencion && citaSeleccionada && (
+        <AtencionModal
+          cita={citaSeleccionada}
+          onClose={() => {
+            setModalAtencion(false)
+            setCitaSeleccionada(null)
+            queryClient.invalidateQueries({ queryKey: ['citas'] })
           }}
         />
       )}

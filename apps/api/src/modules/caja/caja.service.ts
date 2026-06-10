@@ -33,7 +33,29 @@ export class CajaService {
       orderBy: { createdAt: 'asc' },
     })
 
-    return { caja, pagos }
+    // MVP: "Total del dia. Total por forma de pago. Nuevas deudas. Pagos de deuda"
+    // Pago cuya cita es de una fecha anterior a hoy = cobro de deuda vieja
+    const pagosDeudaAnterior = pagos
+      .filter((p) => new Date(p.cobro.cita.fechaHora) < hoy)
+      .reduce((acc, p) => acc + Number(p.monto), 0)
+
+    // Nuevas deudas: saldo pendiente de cobros de citas de HOY ya prestadas
+    const finDia = new Date(hoy.getTime() + 24 * 60 * 60 * 1000)
+    const cobrosHoy = await this.prisma.cobro.findMany({
+      where: {
+        consultorioId,
+        saldoPendiente: { gt: 0 },
+        cita: {
+          fechaHora: { gte: hoy, lt: finDia },
+          estado: { in: ['ATENDIDA', 'CON_DEUDA'] },
+          deletedAt: null,
+        },
+      },
+      select: { saldoPendiente: true },
+    })
+    const nuevasDeudas = cobrosHoy.reduce((acc, c) => acc + Number(c.saldoPendiente), 0)
+
+    return { caja, pagos, pagosDeudaAnterior, nuevasDeudas }
   }
 
   async cerrar(consultorioId: string, usuarioId: string) {
