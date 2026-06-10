@@ -92,6 +92,7 @@ model Usuario {
 
   citasCreadas     Cita[]       @relation("CitaCreatedBy")
   pagosRegistrados Pago[]       @relation("PagoCreatedBy")
+  pagosAnulados    Pago[]       @relation("PagoAnuladoPor")
   cajasAbiertas    CajaDiaria[] @relation("CajaAbiertaPor")
   cajasCerradas    CajaDiaria[] @relation("CajaCerradaPor")
   logs             Log[]
@@ -278,6 +279,15 @@ model Pago {
   createdById Int
   createdBy   Usuario   @relation("PagoCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime  @default(now())
+
+  // Anulacion con asiento de reversa (E2-M1): el original nunca se borra
+  anuladoAt       DateTime?
+  anuladoPorId    Int?
+  anuladoPor      Usuario?  @relation("PagoAnuladoPor", fields: [anuladoPorId], references: [id])
+  motivoAnulacion String?
+  reversaDeId     Int?      @unique
+  reversaDe       Pago?     @relation("PagoReversa", fields: [reversaDeId], references: [id])
+  reversa         Pago?     @relation("PagoReversa")
 
   @@index([cobroId])
   @@map("pagos")
