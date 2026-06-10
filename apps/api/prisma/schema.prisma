@@ -33,6 +33,7 @@ enum EstadoCobro {
   PENDIENTE
   PARCIAL
   COMPLETO
+  ANULADO
 }
 
 enum FormaPago {
