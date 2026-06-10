@@ -1,5 +1,6 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, SetMetadata } from '@nestjs/common'
+import { Controller, Post, Body, HttpCode, HttpStatus, SetMetadata, ForbiddenException } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
@@ -15,13 +16,19 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Registrar nuevo consultorio con usuario admin' })
   register(@Body() dto: RegisterDto) {
+    // Para el piloto el registro publico se cierra con REGISTRO_ABIERTO=false
+    if (process.env.REGISTRO_ABIERTO === 'false') {
+      throw new ForbiddenException('El registro publico esta deshabilitado')
+    }
     return this.authService.register(dto)
   }
 
   @Public()
   @Post('login')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login de usuario' })
   login(@Body() dto: LoginDto) {
