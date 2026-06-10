@@ -1,16 +1,35 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsBoolean, Matches } from 'class-validator'
+import { PartialType } from '@nestjs/swagger'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreateDoctorDto {
+  @IsString() @IsNotEmpty()
   nombre: string
+
+  @IsString() @IsOptional()
   especialidad?: string
+
+  @IsString() @IsOptional()
   colorAgenda?: string
+
+  @IsString() @IsOptional()
   usuarioId?: string
 }
 
+export class UpdateDoctorDto extends PartialType(CreateDoctorDto) {
+  @IsBoolean() @IsOptional()
+  activo?: boolean
+}
+
 export class CreateHorarioDto {
+  @IsInt() @Min(0) @Max(6)
   diaSemana: number
+
+  @Matches(/^\d{2}:\d{2}$/)
   horaInicio: string
+
+  @Matches(/^\d{2}:\d{2}$/)
   horaFin: string
 }
 

@@ -1,11 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsNumber, IsBoolean } from 'class-validator'
+import { PartialType } from '@nestjs/swagger'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreateServicioDto {
+  @IsString() @IsNotEmpty()
   nombre: string
+
+  @IsString() @IsOptional()
   descripcion?: string
+
+  @IsInt() @Min(5)
   duracionMin: number
+
+  @IsNumber() @Min(0)
   precioBase: number
+}
+
+export class UpdateServicioDto extends PartialType(CreateServicioDto) {
+  @IsBoolean() @IsOptional()
+  activo?: boolean
 }
 
 @Injectable()
@@ -20,7 +34,7 @@ export class ServiciosService {
     return this.prisma.servicio.create({ data: { ...dto, consultorioId } })
   }
 
-  async update(consultorioId: string, id: string, dto: Partial<CreateServicioDto>) {
+  async update(consultorioId: string, id: string, dto: UpdateServicioDto) {
     const s = await this.prisma.servicio.findFirst({ where: { id, consultorioId } })
     if (!s) throw new NotFoundException()
     return this.prisma.servicio.update({ where: { id }, data: dto })

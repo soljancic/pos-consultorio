@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { IsNumber, Min, IsEnum, IsString, IsOptional } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCobro, EstadoCita, FormaPago } from '@pos/types'
 import { Decimal } from '@prisma/client/runtime/library'
 
 export class RegistrarPagoDto {
+  @IsNumber() @Min(0.01)
   monto: number
+
+  @IsEnum(FormaPago)
   formaPago: FormaPago
+
+  @IsString() @IsOptional()
   referencia?: string
 }
 

@@ -78,7 +78,9 @@ export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
       pacienteId: pacienteSeleccionado.id,
       doctorId,
       servicioId,
-      fechaHora: `${fecha}T${hora}:00`,
+      // El navegador opera en el timezone del consultorio: new Date interpreta
+      // hora local y toISOString la convierte al instante UTC correcto.
+      fechaHora: new Date(`${fecha}T${hora}:00`).toISOString(),
       notasSecretaria: notas || undefined,
     })
   }

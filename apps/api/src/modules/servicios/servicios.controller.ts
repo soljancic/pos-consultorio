@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
-import { ServiciosService, CreateServicioDto } from './servicios.service'
+import { ServiciosService, CreateServicioDto, UpdateServicioDto } from './servicios.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Servicios')
@@ -18,7 +18,7 @@ export class ServiciosController {
   }
 
   @Put(':id')
-  update(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: Partial<CreateServicioDto>) {
+  update(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdateServicioDto) {
     return this.service.update(user.consultorioId, id, dto)
   }
 

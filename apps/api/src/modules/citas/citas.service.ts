@@ -7,17 +7,30 @@ import {
 import { PrismaService } from '../../prisma/prisma.service'
 import { transicionValida } from '@pos/types'
 import { EstadoCita, Prisma } from '@prisma/client'
+import { IsString, IsNotEmpty, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
+  @IsString() @IsNotEmpty()
   pacienteId: string
+
+  @IsString() @IsNotEmpty()
   doctorId: string
+
+  @IsString() @IsNotEmpty()
   servicioId: string
+
+  @IsISO8601()
   fechaHora: string
+
+  @IsString() @IsOptional()
   notasSecretaria?: string
 }
 
 export class CambiarEstadoDto {
+  @IsEnum(EstadoCita)
   estado: EstadoCita
+
+  @IsString() @IsOptional()
   motivo?: string
 }
 
@@ -96,6 +109,7 @@ export class CitasService {
   ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
+      include: { cobro: { select: { saldoPendiente: true } } },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
 
@@ -105,12 +119,22 @@ export class CitasService {
       )
     }
 
-    const [citaActualizada] = await this.prisma.$transaction([
-      this.prisma.cita.update({
+    const citaActualizada = await this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.cita.update({
         where: { id: citaId },
         data: { estado: dto.estado },
-      }),
-      this.prisma.log.create({
+      })
+
+      // La deuda del paciente nace cuando el servicio fue prestado (ATENDIDA).
+      // La maquina de estados garantiza que ATENDIDA se alcanza una sola vez.
+      if (dto.estado === EstadoCita.ATENDIDA && cita.cobro) {
+        await tx.paciente.update({
+          where: { id: cita.pacienteId },
+          data: { deudaTotal: { increment: cita.cobro.saldoPendiente } },
+        })
+      }
+
+      await tx.log.create({
         data: {
           consultorioId,
           usuarioId,
@@ -120,8 +144,10 @@ export class CitasService {
           payloadAntes: { estado: cita.estado },
           payloadDespues: { estado: dto.estado, motivo: dto.motivo },
         },
-      }),
-    ])
+      })
+
+      return actualizada
+    })
 
     return citaActualizada
   }
