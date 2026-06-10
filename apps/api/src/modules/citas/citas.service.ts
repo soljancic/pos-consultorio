@@ -122,6 +122,19 @@ export class CitasService {
       )
     }
 
+    // COBRADO solo lo alcanza registrarPago cuando el saldo llega a cero;
+    // marcarlo a mano con saldo pendiente dejaria la cita fuera de Deudores
+    // con plata sin cobrar.
+    if (
+      dto.estado === EstadoCita.COBRADO &&
+      cita.cobro &&
+      cita.cobro.saldoPendiente.gt(0)
+    ) {
+      throw new BadRequestException(
+        'El cobro tiene saldo pendiente: registre el pago en lugar de marcar Cobrado',
+      )
+    }
+
     const citaActualizada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },

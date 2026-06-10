@@ -41,8 +41,13 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
     ESTADOS_CON_ATENCION.includes(cita.estado) &&
     (cita.estado !== EstadoCita.EN_ATENCION || user?.rol === 'DOCTOR' || user?.rol === 'ADMIN')
 
+  // COBRADO no se ofrece como boton de estado: se llega cobrando (boton $).
+  // Desde ATENDIDA el boton ofrece "Con deuda" (se fue sin pagar).
   const proximaTransicion = transicionesDisponibles.find(
-    (t) => t !== EstadoCita.CANCELADA && t !== EstadoCita.NO_ASISTIO,
+    (t) =>
+      t !== EstadoCita.CANCELADA &&
+      t !== EstadoCita.NO_ASISTIO &&
+      t !== EstadoCita.COBRADO,
   )
 
   function handleWhatsApp() {

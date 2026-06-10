@@ -68,6 +68,12 @@ try {
 foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
   Invoke-RestMethod -Uri "$base/citas/$($citaA.id)/estado" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ estado = $e } | ConvertTo-Json) | Out-Null
 }
+
+# COBRADO manual con saldo pendiente -> 400 (solo registrarPago llega a COBRADO)
+try {
+  Invoke-RestMethod -Uri "$base/citas/$($citaA.id)/estado" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ estado = "COBRADO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+  Write-Output "COBRADO MANUAL: FALLO (acepto COBRADO con saldo pendiente)"
+} catch { Write-Output "COBRADO MANUAL: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 $cobroA = Invoke-RestMethod -Uri "$base/cobros/cita/$($citaA.id)" -Headers $hA
 try {
   Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 99999; formaPago = "EFECTIVO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null
