@@ -26,14 +26,14 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO (hoy):** commitear el working tree (pase UI/UX + Google auth con su fix de tsc) → **E2-M7 Cancelar/Reprogramar** (primer hito del plan maestro de Etapa 2) y seguir avanzando hitos en orden. El deploy en Railway + piloto queda diferido a decision del owner (no bloquea el desarrollo).
+**➡️ SIGUIENTE PASO:** **E2-M1 Anulacion de pagos con reversa** (siguiente hito del plan maestro de Etapa 2; E2-M7 quedo hecho el 2026-06-10). El deploy en Railway + piloto queda diferido a decision del owner (no bloquea el desarrollo).
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
 2. ✅ Vistas dia (columnas por doctor, estilo Pabau) y semana
 3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
 4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
-5. ⬜ Cancelar / No asistio / Reprogramar desde la UI (E2-M7)
+5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
 6. ⬜ Calendario de Atencion: horarios por doctor, recurrencias, plantillas, bloqueos (E2.5a)
 7. ⬜ Portal publico de agendamiento tipo Calendly (E2.5b)
 
@@ -333,7 +333,7 @@ Prefijo global: `/api/v1`
 
 | Modulo | Rutas |
 |---|---|
-| Citas (E2-M7) | PUT /citas/:id (reprogramar: editar fecha/hora en el lugar) |
+| Citas (E2-M7) | ✔ PUT /citas/:id implementado (2026-06-10): reprogramar en el lugar, solape revalidado, estado a PENDIENTE; cancelar/no-asistio anulan el cobro |
 | Gastos (E2-M8) | GET/POST /gastos, PUT/DELETE /gastos/:id, GET /gastos/resumen |
 | Atenciones | POST /atenciones, GET /atenciones/:citaId |
 | Recetas | POST /recetas, GET /recetas/:id (PDF) |
@@ -439,7 +439,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - Historia clinica completa sobre la atencion basica de Etapa 1: linea de tiempo cronologica, adjuntos (fotos, estudios), guard duro por rol en endpoints de atenciones y agenda DOCTOR
 - Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
 - Historia clinica cronologica en la ficha del paciente
-- **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7): menu de acciones en CitaCard/CitaDetalleModal; reprogramar = editar fecha/hora en el lugar via `PUT /citas/:id` (decision owner 2026-06-10); cancelar anula el cobro sin pagos; agrega transicion `PENDIENTE → NO_ASISTIO`
+- ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
 - **Gastos administrativos** (E2-M8): tabla `gastos` con categoria, fecha, personal, monto y cuenta de origen; los gastos en efectivo descuentan de la caja diaria (afectan el arqueo); KPI "Gastos del mes" + "Resultado neto" en el dashboard
 - **Anulacion de pagos con asiento de reversa**: campos `anuladoAt/anuladoPor/motivo` + pago espejo negativo; nunca se borra el original (patron probado en produccion en otro proyecto del usuario)
 - **Arqueo de caja ciego**: al cerrar, la secretaria declara el efectivo contado SIN ver el esperado; el sistema calcula la diferencia y notifica al admin si no es cero (campos `montoDeclarado`, `montoEsperado`, `diferencia`, revision admin)

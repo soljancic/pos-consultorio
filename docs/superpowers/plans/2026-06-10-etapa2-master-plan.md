@@ -71,9 +71,11 @@ Sobre la atencion basica de Etapa 1:
 - `POST /atenciones/:citaId/recetas` + descarga; boton en AtencionModal.
 - Para WhatsApp manual: link de descarga copiable (wa.me con el link).
 
-## E2-M7 — Cancelar / No asistio / Reprogramar (UI + API)
+## E2-M7 — Cancelar / No asistio / Reprogramar (UI + API) — ✔ EJECUTADO 2026-06-10
 
-Hoy la UI no expone CANCELADA ni NO_ASISTIO (CitaCard las excluye del boton de transicion) y no existe forma de cambiar la fecha de una cita. Decision del owner (2026-06-10): reprogramar = **editar fecha/hora en el lugar**, no crear cita nueva.
+Plan detallado: `2026-06-10-e2-m7-cancelar-reprogramar-plan.md`. Verificado: jest 10/10, `gate-e2m7.ps1` 8/8, Playwright 12/12. Commits dae337b..d171035. De paso: falso negativo historico de gate-m2 corregido (PS 5.1 y arrays vacios) y suite E2E reparada (selectores rotos por Google auth + role="tab" del pase de UI).
+
+Decision del owner (2026-06-10): reprogramar = **editar fecha/hora en el lugar**, no crear cita nueva.
 
 Mini-spec:
 - Maquina de estados (`@pos/types`): agregar `PENDIENTE → NO_ASISTIO` (tambien lo exige el cron NO-SHOW de Etapa 3). `REPROGRAMADA` queda documentado como estado sin uso (no se elimina del enum por compatibilidad con datos existentes).
