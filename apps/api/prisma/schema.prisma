@@ -38,8 +38,8 @@ enum EstadoCobro {
 enum FormaPago {
   EFECTIVO
   QR
-  TRANSFERENCIA
   TARJETA
+  VALES
 }
 
 enum AccionLog {
@@ -293,7 +293,7 @@ model CajaDiaria {
   usuarioCierre     Usuario?    @relation("CajaCerradaPor", fields: [usuarioCierreId], references: [id])
   totalEfectivo     Decimal     @default(0) @db.Decimal(10, 2)
   totalQr           Decimal     @default(0) @db.Decimal(10, 2)
-  totalTransferencia Decimal    @default(0) @db.Decimal(10, 2)
+  totalVales        Decimal     @default(0) @db.Decimal(10, 2)
   totalTarjeta      Decimal     @default(0) @db.Decimal(10, 2)
   totalGeneral      Decimal     @default(0) @db.Decimal(10, 2)
   cerrada           Boolean     @default(false)

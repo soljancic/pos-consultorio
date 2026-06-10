@@ -24,11 +24,13 @@ export enum EstadoCobro {
   COMPLETO = 'COMPLETO',
 }
 
+// QR cubre tambien transferencias (mismo canal en la practica); VALES para
+// ordenes de empresas/obras sociales
 export enum FormaPago {
   EFECTIVO = 'EFECTIVO',
   QR = 'QR',
-  TRANSFERENCIA = 'TRANSFERENCIA',
   TARJETA = 'TARJETA',
+  VALES = 'VALES',
 }
 
 export enum AccionLog {

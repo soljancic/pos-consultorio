@@ -100,8 +100,8 @@ export class CobrosService {
       const campoMonto = {
         [FormaPago.EFECTIVO]: 'totalEfectivo',
         [FormaPago.QR]: 'totalQr',
-        [FormaPago.TRANSFERENCIA]: 'totalTransferencia',
         [FormaPago.TARJETA]: 'totalTarjeta',
+        [FormaPago.VALES]: 'totalVales',
       }[dto.formaPago]
 
       await tx.cajaDiaria.upsert({

@@ -64,9 +64,9 @@ export function CajaPage() {
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {[
               { label: 'Efectivo', value: caja?.totalEfectivo },
-              { label: 'QR', value: caja?.totalQr },
-              { label: 'Transferencia', value: caja?.totalTransferencia },
+              { label: 'QR / Transferencia', value: caja?.totalQr },
               { label: 'Tarjeta', value: caja?.totalTarjeta },
+              { label: 'Vales', value: caja?.totalVales },
               { label: 'TOTAL', value: caja?.totalGeneral, highlight: true },
             ].map((item) => (
               <div
@@ -166,7 +166,7 @@ export function CajaPage() {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Efectivo</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">QR</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Transf.</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Vales</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Tarjeta</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
@@ -178,7 +178,7 @@ export function CajaPage() {
                     <td className="px-4 py-3 font-medium">{formatFecha(c.fecha)}</td>
                     <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalEfectivo))}</td>
                     <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalQr))}</td>
-                    <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalTransferencia))}</td>
+                    <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalVales))}</td>
                     <td className="px-4 py-3 text-right">{formatMoneda(Number(c.totalTarjeta))}</td>
                     <td className="px-4 py-3 text-right font-semibold">{formatMoneda(Number(c.totalGeneral))}</td>
                     <td className="px-4 py-3">

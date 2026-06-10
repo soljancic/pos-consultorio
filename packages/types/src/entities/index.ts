@@ -114,7 +114,7 @@ export interface CajaDiaria {
   fecha: Date
   totalEfectivo: number
   totalQr: number
-  totalTransferencia: number
+  totalVales: number
   totalTarjeta: number
   totalGeneral: number
   cerrada: boolean

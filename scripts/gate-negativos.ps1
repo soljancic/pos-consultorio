@@ -58,6 +58,14 @@ try {
   Write-Output "SOLAPAMIENTO: FALLO (acepto cita solapada)"
 } catch { Write-Output "SOLAPAMIENTO: OK ($($_.Exception.Response.StatusCode.value__) esp 409)" }
 
+# Cita NO solapada mismo doctor mismo dia -> debe crearse (bug: la ventana
+# de 24h marcaba ocupado al doctor con cualquier cita previa del dia)
+try {
+  $fh3 = (Get-Date -Hour 17 -Minute 0 -Second 0).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+  $citaLibre = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ pacienteId = $pacA.id; doctorId = $docA.id; servicioId = $srvA.id; fechaHora = $fh3 } | ConvertTo-Json) -ErrorAction Stop
+  Write-Output "CITA NO SOLAPADA: OK (creada $($citaLibre.id))"
+} catch { Write-Output "CITA NO SOLAPADA: FALLO ($($_.Exception.Response.StatusCode.value__) - el doctor libre figura ocupado)" }
+
 # Transicion invalida PENDIENTE -> COBRADO -> 400
 try {
   Invoke-RestMethod -Uri "$base/citas/$($citaA.id)/estado" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ estado = "COBRADO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null

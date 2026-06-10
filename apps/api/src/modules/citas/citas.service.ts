@@ -175,19 +175,28 @@ export class CitasService {
     fin: Date,
     excludeCitaId?: string,
   ) {
-    const conflicto = await this.prisma.cita.findFirst({
+    // El fin de cada cita existente depende de su duracion, que Prisma no
+    // puede sumar en el where: traemos las candidatas de una ventana acotada
+    // y verificamos el solapamiento real (inicioA < finB && finA > inicioB).
+    const VENTANA_MS = 12 * 60 * 60 * 1000 // ninguna cita dura mas de 12h
+    const candidatas = await this.prisma.cita.findMany({
       where: {
         consultorioId,
         doctorId,
         deletedAt: null,
         estado: { notIn: [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO] },
         id: excludeCitaId ? { not: excludeCitaId } : undefined,
-        AND: [{ fechaHora: { lt: fin } }, {
-          fechaHora: {
-            gte: new Date(inicio.getTime() - 24 * 60 * 60 * 1000),
-          },
-        }],
+        fechaHora: {
+          lt: fin,
+          gte: new Date(inicio.getTime() - VENTANA_MS),
+        },
       } as Prisma.CitaWhereInput,
+      select: { fechaHora: true, duracionMin: true },
+    })
+
+    const conflicto = candidatas.some((c) => {
+      const finExistente = new Date(c.fechaHora.getTime() + c.duracionMin * 60 * 1000)
+      return c.fechaHora < fin && finExistente > inicio
     })
 
     if (conflicto) {

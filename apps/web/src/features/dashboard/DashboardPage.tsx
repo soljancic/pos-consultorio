@@ -103,7 +103,7 @@ export function DashboardPage() {
     ? [
         ['Efectivo', Number(caja.totalEfectivo)],
         ['QR', Number(caja.totalQr)],
-        ['Transferencia', Number(caja.totalTransferencia)],
+        ['Vales', Number(caja.totalVales)],
         ['Tarjeta', Number(caja.totalTarjeta)],
       ]
     : []

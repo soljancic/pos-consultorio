@@ -12,9 +12,9 @@ interface CobroModalProps {
 
 const FORMAS_PAGO = [
   { value: FormaPago.EFECTIVO, label: 'Efectivo' },
-  { value: FormaPago.QR, label: 'QR / Transferencia QR' },
-  { value: FormaPago.TRANSFERENCIA, label: 'Transferencia' },
+  { value: FormaPago.QR, label: 'QR / Transferencia' },
   { value: FormaPago.TARJETA, label: 'Tarjeta' },
+  { value: FormaPago.VALES, label: 'Vales' },
 ]
 
 export function CobroModal({ cita, onClose }: CobroModalProps) {
@@ -224,7 +224,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               </div>
             </div>
 
-            {(formaPago === FormaPago.TRANSFERENCIA || formaPago === FormaPago.QR) && (
+            {(formaPago === FormaPago.QR || formaPago === FormaPago.VALES) && (
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
                   Referencia (opcional)
