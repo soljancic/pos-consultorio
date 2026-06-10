@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Calendar, Users, DollarSign, Settings, LogOut, Stethoscope, AlertCircle, LayoutDashboard } from 'lucide-react'
+import { Calendar, Users, DollarSign, Settings, LogOut, Stethoscope, AlertCircle, LayoutDashboard, Cog } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
 
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },
   { to: '/catalogo', icon: Settings, label: 'Catalogo' },
+  { to: '/configuracion', icon: Cog, label: 'Configuracion', soloAdmin: true },
 ]
 
 export function AppShell() {
@@ -33,7 +34,7 @@ export function AppShell() {
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-2">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => (
+          {NAV_ITEMS.filter((item) => !item.soloAdmin || user?.rol === 'ADMIN').map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}

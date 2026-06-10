@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { ServiciosService, CreateServicioDto, UpdateServicioDto } from './servicios.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -10,7 +10,9 @@ export class ServiciosController {
   constructor(private service: ServiciosService) {}
 
   @Get()
-  findAll(@CurrentUser() user: JwtPayload) { return this.service.findAll(user.consultorioId) }
+  findAll(@CurrentUser() user: JwtPayload, @Query('todos') todos?: string) {
+    return this.service.findAll(user.consultorioId, todos === 'true')
+  }
 
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateServicioDto) {

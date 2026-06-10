@@ -26,8 +26,11 @@ export class UpdateServicioDto extends PartialType(CreateServicioDto) {
 export class ServiciosService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(consultorioId: string) {
-    return this.prisma.servicio.findMany({ where: { consultorioId, activo: true }, orderBy: { nombre: 'asc' } })
+  findAll(consultorioId: string, incluirInactivos = false) {
+    return this.prisma.servicio.findMany({
+      where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
+      orderBy: { nombre: 'asc' },
+    })
   }
 
   create(consultorioId: string, dto: CreateServicioDto) {

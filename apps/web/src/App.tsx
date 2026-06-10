@@ -8,11 +8,18 @@ import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
 import { CajaPage } from './features/caja/CajaPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
+import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken)
   return token ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+// Guard de UX: la seguridad real es el @Roles(ADMIN) del backend
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+  return user?.rol === 'ADMIN' ? <>{children}</> : <Navigate to="/agenda" replace />
 }
 
 export default function App() {
@@ -34,6 +41,7 @@ export default function App() {
         <Route path="caja" element={<CajaPage />} />
         <Route path="deudores" element={<DeudoresPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
+        <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
       </Route>
     </Routes>
   )

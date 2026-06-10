@@ -37,9 +37,9 @@ export class CreateHorarioDto {
 export class DoctoresService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(consultorioId: string) {
+  findAll(consultorioId: string, incluirInactivos = false) {
     return this.prisma.doctor.findMany({
-      where: { consultorioId, activo: true },
+      where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
       include: { horarios: { where: { activo: true }, orderBy: { diaSemana: 'asc' } } },
       orderBy: { nombre: 'asc' },
     })
@@ -47,6 +47,12 @@ export class DoctoresService {
 
   create(consultorioId: string, dto: CreateDoctorDto) {
     return this.prisma.doctor.create({ data: { ...dto, consultorioId } })
+  }
+
+  async update(consultorioId: string, id: string, dto: UpdateDoctorDto) {
+    const d = await this.prisma.doctor.findFirst({ where: { id, consultorioId } })
+    if (!d) throw new NotFoundException()
+    return this.prisma.doctor.update({ where: { id }, data: dto })
   }
 
   async addHorario(consultorioId: string, doctorId: string, dto: CreateHorarioDto) {
