@@ -169,7 +169,6 @@ export function LoginPage() {
                       onError={handleGoogleError}
                       width="100%"
                       text="signin_with"
-                      locale="es"
                     />
                   </div>
                 </>

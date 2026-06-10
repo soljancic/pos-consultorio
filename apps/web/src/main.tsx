@@ -33,7 +33,7 @@ const appContent = (
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {googleClientId ? (
-      <GoogleOAuthProvider clientId={googleClientId}>
+      <GoogleOAuthProvider clientId={googleClientId} locale="es">
         {appContent}
       </GoogleOAuthProvider>
     ) : (
