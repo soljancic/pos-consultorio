@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+﻿import { test, expect } from '@playwright/test'
 
 // Smoke E2E de Etapa 1: recorre el flujo completo del consultorio en browser
 // real contra la API real. Requiere: API en :3000 (con PostgreSQL) y
@@ -40,7 +40,7 @@ async function login(page: any) {
   await page.goto('/login')
   await page.getByPlaceholder(/email|correo/i).or(page.locator('input[type="email"]')).first().fill(EMAIL)
   await page.locator('input[type="password"]').fill(PASS)
-  await page.getByRole('button', { name: /ingresar|entrar|login|iniciar/i }).click()
+  await page.getByRole('button', { name: /^ingresar$/i }).click()
   await page.waitForURL(/\/(agenda)?$/, { timeout: 10_000 })
 }
 
@@ -118,8 +118,8 @@ test('deudores lista a Elena y la caja registra el cobro', async ({ page }) => {
   await page.goto('/caja')
   await expect(page.getByText(/2\.?000/).first()).toBeVisible()
   await expect(page.getByText('Nuevas deudas de hoy')).toBeVisible()
-  // Tab historial
-  await page.getByRole('button', { name: 'historial' }).click()
+  // Tab historial (los tabs de Caja exponen role="tab" desde el pase de UI)
+  await page.getByRole('tab', { name: 'historial' }).click()
   await expect(page.getByText('Total del periodo')).toBeVisible()
 })
 
@@ -130,8 +130,9 @@ test('catalogo y configuracion (ADMIN ve CRUD; ficha muestra atencion)', async (
   await expect(page.getByText('Dr. Smoke')).toBeVisible()
 
   await page.goto('/configuracion')
-  await expect(page.getByRole('cell', { name: 'Admin Smoke' })).toBeVisible()
-  await page.getByRole('button', { name: 'consultorio' }).click()
+  // exact: el aria-label del boton editar ("Editar usuario Admin Smoke") tambien matchea
+  await expect(page.getByRole('cell', { name: 'Admin Smoke', exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'consultorio' }).click()
   await expect(page.getByText('Nombre del consultorio')).toBeVisible()
 
   // Ficha de Elena: la atencion registrada es legible (criterio MVP #3)

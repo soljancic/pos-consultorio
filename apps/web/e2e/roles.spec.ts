@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+﻿import { test, expect } from '@playwright/test'
 
 // Verifica que la UI respeta los roles (la seguridad real es el backend,
 // ya cubierta por scripts/gate-m3.ps1 y gate-negativos.ps1).
@@ -25,7 +25,7 @@ async function loginAs(page: any, email: string) {
   await page.goto('/login')
   await page.locator('input[type="email"]').fill(email)
   await page.locator('input[type="password"]').fill(PASS)
-  await page.getByRole('button', { name: /ingresar|entrar|login|iniciar/i }).click()
+  await page.getByRole('button', { name: /^ingresar$/i }).click()
   await page.waitForURL(/\/agenda$/, { timeout: 10_000 })
 }
 
