@@ -50,6 +50,10 @@ describe('maquina de estados de citas', () => {
     expect(transicionValida(EstadoCita.NO_ASISTIO, EstadoCita.PENDIENTE)).toBe(true)
   })
 
+  it('PENDIENTE puede marcarse NO_ASISTIO directo (cron E3 y accion manual)', () => {
+    expect(transicionValida(EstadoCita.PENDIENTE, EstadoCita.NO_ASISTIO)).toBe(true)
+  })
+
   it('estados desconocidos no rompen (acepta strings sucios)', () => {
     expect(transicionValida('CUALQUIER_COSA', 'COBRADO')).toBe(false)
     expect(transicionValida('', '')).toBe(false)

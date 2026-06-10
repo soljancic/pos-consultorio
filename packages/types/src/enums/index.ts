@@ -22,6 +22,8 @@ export enum EstadoCobro {
   PENDIENTE = 'PENDIENTE',
   PARCIAL = 'PARCIAL',
   COMPLETO = 'COMPLETO',
+  // Cita cancelada o no asistida sin pagos: el cobro no es deuda ni cuenta abierta
+  ANULADO = 'ANULADO',
 }
 
 // QR cubre tambien transferencias (mismo canal en la practica); VALES para
@@ -57,7 +59,7 @@ export const COLORES_ESTADO: Record<EstadoCita, string> = {
 
 // Maquina de estados: transiciones validas por estado
 export const TRANSICIONES_VALIDAS: Record<EstadoCita, EstadoCita[]> = {
-  [EstadoCita.PENDIENTE]: [EstadoCita.CONFIRMADA, EstadoCita.CANCELADA],
+  [EstadoCita.PENDIENTE]: [EstadoCita.CONFIRMADA, EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO],
   [EstadoCita.CONFIRMADA]: [EstadoCita.LLEGO, EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO],
   [EstadoCita.LLEGO]: [EstadoCita.EN_ATENCION, EstadoCita.CANCELADA],
   [EstadoCita.EN_ATENCION]: [EstadoCita.ATENDIDA],
