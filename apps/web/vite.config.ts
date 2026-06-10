@@ -6,7 +6,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      // Vite bundlea el source TS de @pos/types (el dist CJS es para el API;
+      // Rollup no importa named exports de CJS). TypeScript tipa contra
+      // dist/index.d.ts: si falta el build de packages/types, tsc avisa.
       '@pos/types': path.resolve(__dirname, '../../packages/types/src'),
     },
   },
