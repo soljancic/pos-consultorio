@@ -36,6 +36,9 @@ Write-Output "RESUMEN: total=$($resumen.totalDeuda) (esperado 3000) pacientes=$(
 # Pagar saldo desde el cobro del deudor -> desaparece
 $cobroId = $deudores[0].cobros[0].id
 Invoke-RestMethod -Uri "$base/cobros/$cobroId/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 3000; formaPago = "QR" } | ConvertTo-Json) | Out-Null
-$deudores2 = @(Invoke-RestMethod -Uri "$base/cobros/deudores" -Headers $h)
+# Gotcha PS 5.1: envolver el cmdlet directo en @() cuenta 1 con '[]' (el array
+# vacio entra al pipeline como UN objeto). Asignar primero y recien envolver.
+$deudores2Raw = ConvertFrom-Json -InputObject (Invoke-WebRequest -Uri "$base/cobros/deudores" -Headers $h -UseBasicParsing).Content
+$deudores2 = @($deudores2Raw)
 $resumen2 = Invoke-RestMethod -Uri "$base/cobros/deudores/resumen" -Headers $h
 Write-Output "TRAS PAGO TOTAL: deudores=$($deudores2.Count) (esperado 0) resumen total=$($resumen2.totalDeuda) (esperado 0)"
