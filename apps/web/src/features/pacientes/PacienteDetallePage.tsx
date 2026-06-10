@@ -32,7 +32,7 @@ type PacienteDetalle = Paciente & {
   citas: Array<Cita & {
     doctor: { nombre: string }
     servicio: { nombre: string; precioBase: number }
-    cobro: { id: string; total: number; saldoPendiente: number; estado: string } | null
+    cobro: { id: number; total: number; saldoPendiente: number; estado: string } | null
     atencion: Atencion | null
   }>
 }
@@ -43,7 +43,7 @@ export function PacienteDetallePage() {
   const qc = useQueryClient()
   const [editando, setEditando] = useState(false)
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
-  const [citaExpandida, setCitaExpandida] = useState<string | null>(null)
+  const [citaExpandida, setCitaExpandida] = useState<number | null>(null)
 
   const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],

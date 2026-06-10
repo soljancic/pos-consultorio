@@ -5,7 +5,7 @@ import { api } from '../../lib/api-client'
 
 const COLORES = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
-interface Doctor { id?: string; nombre: string; especialidad?: string; colorAgenda: string; activo: boolean }
+interface Doctor { id?: number; nombre: string; especialidad?: string; colorAgenda: string; activo: boolean }
 interface Props { doctor?: Doctor | null; onClose: () => void }
 
 export function DoctorModal({ doctor, onClose }: Props) {

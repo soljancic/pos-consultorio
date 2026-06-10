@@ -21,11 +21,11 @@ const ROL_LABEL: Record<string, string> = {
 }
 
 type Consultorio = {
-  id: string; nombre: string; logoUrl: string | null
+  id: number; nombre: string; logoUrl: string | null
   telefono: string | null; direccion: string | null
   moneda: string; timezone: string
 }
-type Usuario = { id: string; nombre: string; email: string; rol: string; activo: boolean }
+type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
 export function ConfiguracionPage() {
   const qc = useQueryClient()

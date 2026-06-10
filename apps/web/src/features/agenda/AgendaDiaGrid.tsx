@@ -13,7 +13,7 @@ interface Props {
   citas: Cita[]
   doctores: Doctor[]
   onCitaClick: (cita: Cita) => void
-  onSlotClick: (doctorId: string, hora: string) => void
+  onSlotClick: (doctorId: number, hora: string) => void
 }
 
 function offsetTop(fechaHora: Date) {
@@ -24,7 +24,7 @@ function offsetTop(fechaHora: Date) {
 export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Props) {
   const horas = Array.from({ length: HORA_FIN - HORA_INICIO }, (_, i) => HORA_INICIO + i)
 
-  function handleSlotClick(e: React.MouseEvent<HTMLDivElement>, doctorId: string) {
+  function handleSlotClick(e: React.MouseEvent<HTMLDivElement>, doctorId: number) {
     // Solo clicks directos sobre el fondo de la columna (no sobre una cita)
     if (e.target !== e.currentTarget) return
     const y = e.clientY - e.currentTarget.getBoundingClientRect().top

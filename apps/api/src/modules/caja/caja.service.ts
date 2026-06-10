@@ -23,7 +23,7 @@ export function diaCajaLocal(): { clave: Date; inicioLocal: Date; finLocal: Date
 export class CajaService {
   constructor(private prisma: PrismaService) {}
 
-  async getHoy(consultorioId: string) {
+  async getHoy(consultorioId: number) {
     const { clave: hoy, inicioLocal, finLocal } = diaCajaLocal()
 
     const caja = await this.prisma.cajaDiaria.findUnique({
@@ -75,7 +75,7 @@ export class CajaService {
     return { caja, pagos, pagosDeudaAnterior, nuevasDeudas }
   }
 
-  async cerrar(consultorioId: string, usuarioId: string) {
+  async cerrar(consultorioId: number, usuarioId: number) {
     const { clave: hoy } = diaCajaLocal()
 
     return this.prisma.cajaDiaria.update({
@@ -84,7 +84,7 @@ export class CajaService {
     })
   }
 
-  async getHistorial(consultorioId: string, desde: string, hasta: string) {
+  async getHistorial(consultorioId: number, desde: string, hasta: string) {
     return this.prisma.cajaDiaria.findMany({
       where: {
         consultorioId,

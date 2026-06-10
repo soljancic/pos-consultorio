@@ -1,7 +1,7 @@
 import { EstadoCita, EstadoCobro, FormaPago, Rol } from '../enums'
 
 export interface Consultorio {
-  id: string
+  id: number
   nombre: string
   logoUrl?: string
   moneda: string
@@ -13,8 +13,8 @@ export interface Consultorio {
 }
 
 export interface Usuario {
-  id: string
-  consultorioId: string
+  id: number
+  consultorioId: number
   nombre: string
   email: string
   rol: Rol
@@ -23,8 +23,8 @@ export interface Usuario {
 }
 
 export interface Servicio {
-  id: string
-  consultorioId: string
+  id: number
+  consultorioId: number
   nombre: string
   descripcion?: string
   duracionMin: number
@@ -33,9 +33,9 @@ export interface Servicio {
 }
 
 export interface Doctor {
-  id: string
-  consultorioId: string
-  usuarioId?: string
+  id: number
+  consultorioId: number
+  usuarioId?: number
   nombre: string
   especialidad?: string
   colorAgenda: string
@@ -43,8 +43,8 @@ export interface Doctor {
 }
 
 export interface HorarioAtencion {
-  id: string
-  doctorId: string
+  id: number
+  doctorId: number
   diaSemana: number
   horaInicio: string
   horaFin: string
@@ -52,8 +52,8 @@ export interface HorarioAtencion {
 }
 
 export interface Paciente {
-  id: string
-  consultorioId: string
+  id: number
+  consultorioId: number
   nombre: string
   apellido: string
   dni?: string
@@ -69,16 +69,16 @@ export interface Paciente {
 }
 
 export interface Cita {
-  id: string
-  consultorioId: string
-  pacienteId: string
-  doctorId: string
-  servicioId: string
+  id: number
+  consultorioId: number
+  pacienteId: number
+  doctorId: number
+  servicioId: number
   fechaHora: Date
   duracionMin: number
   estado: EstadoCita
   notasSecretaria?: string
-  createdById: string
+  createdById: number
   createdAt: Date
   // Relations (populated when requested)
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'whatsapp' | 'deudaTotal'>
@@ -88,9 +88,9 @@ export interface Cita {
 }
 
 export interface Cobro {
-  id: string
-  citaId: string
-  consultorioId: string
+  id: number
+  citaId: number
+  consultorioId: number
   total: number
   saldoPendiente: number
   estado: EstadoCobro
@@ -99,18 +99,18 @@ export interface Cobro {
 }
 
 export interface Pago {
-  id: string
-  cobroId: string
+  id: number
+  cobroId: number
   formaPago: FormaPago
   monto: number
   referencia?: string
-  createdById: string
+  createdById: number
   createdAt: Date
 }
 
 export interface CajaDiaria {
-  id: string
-  consultorioId: string
+  id: number
+  consultorioId: number
   fecha: Date
   totalEfectivo: number
   totalQr: number

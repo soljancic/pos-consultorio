@@ -32,7 +32,7 @@ const ESTADOS_ATENDIBLES: EstadoCita[] = [
 export class AtencionesService {
   constructor(private prisma: PrismaService) {}
 
-  async findByCita(consultorioId: string, citaId: string) {
+  async findByCita(consultorioId: number, citaId: number) {
     const atencion = await this.prisma.atencion.findFirst({
       where: { citaId, cita: { consultorioId, deletedAt: null } },
     })
@@ -40,7 +40,7 @@ export class AtencionesService {
     return atencion
   }
 
-  async upsert(consultorioId: string, citaId: string, dto: UpsertAtencionDto, usuarioId: string) {
+  async upsert(consultorioId: number, citaId: number, dto: UpsertAtencionDto, usuarioId: number) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
       include: { atencion: true },

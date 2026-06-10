@@ -26,24 +26,24 @@ export class UpdateServicioDto extends PartialType(CreateServicioDto) {
 export class ServiciosService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(consultorioId: string, incluirInactivos = false) {
+  findAll(consultorioId: number, incluirInactivos = false) {
     return this.prisma.servicio.findMany({
       where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
       orderBy: { nombre: 'asc' },
     })
   }
 
-  create(consultorioId: string, dto: CreateServicioDto) {
+  create(consultorioId: number, dto: CreateServicioDto) {
     return this.prisma.servicio.create({ data: { ...dto, consultorioId } })
   }
 
-  async update(consultorioId: string, id: string, dto: UpdateServicioDto) {
+  async update(consultorioId: number, id: number, dto: UpdateServicioDto) {
     const s = await this.prisma.servicio.findFirst({ where: { id, consultorioId } })
     if (!s) throw new NotFoundException()
     return this.prisma.servicio.update({ where: { id }, data: dto })
   }
 
-  async remove(consultorioId: string, id: string) {
+  async remove(consultorioId: number, id: number) {
     const s = await this.prisma.servicio.findFirst({ where: { id, consultorioId } })
     if (!s) throw new NotFoundException()
     return this.prisma.servicio.update({ where: { id }, data: { activo: false } })

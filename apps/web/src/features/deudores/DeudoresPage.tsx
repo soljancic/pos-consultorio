@@ -7,14 +7,14 @@ import { CobroModal } from '../agenda/CobroModal'
 import type { Cita } from '@pos/types'
 
 type CobroDeudor = {
-  id: string
+  id: number
   total: number
   saldoPendiente: number
   cita: Cita & { paciente: any; servicio: any }
 }
 
 type Deudor = {
-  pacienteId: string
+  pacienteId: number
   nombre: string
   apellido: string
   whatsapp: string | null
@@ -29,7 +29,7 @@ export function DeudoresPage() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
-  const [expandido, setExpandido] = useState<string | null>(null)
+  const [expandido, setExpandido] = useState<number | null>(null)
 
   const { data: deudores = [], isLoading } = useQuery<Deudor[]>({
     queryKey: ['deudores'],

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { DoctoresService, CreateDoctorDto, UpdateDoctorDto, CreateHorarioDto } from './doctores.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -20,19 +20,19 @@ export class DoctoresController {
   }
 
   @Put(':id')
-  update(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdateDoctorDto) {
+  update(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDoctorDto) {
     return this.service.update(user.consultorioId, id, dto)
   }
 
   @Post(':id/horarios')
-  addHorario(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: CreateHorarioDto) {
+  addHorario(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number, @Body() dto: CreateHorarioDto) {
     return this.service.addHorario(user.consultorioId, id, dto)
   }
 
   @Get(':id/disponibilidad')
   getDisponibilidad(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Query('fecha') fecha: string,
   ) {
     return this.service.getDisponibilidad(user.consultorioId, id, fecha)

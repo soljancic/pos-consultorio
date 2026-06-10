@@ -37,7 +37,7 @@ export function AgendaPage() {
   const [modalCobro, setModalCobro] = useState(false)
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
   const [modalAtencion, setModalAtencion] = useState(false)
-  const [slotPrefill, setSlotPrefill] = useState<{ doctorId: string; hora: string } | null>(null)
+  const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
   const queryClient = useQueryClient()
 
   const fechaStr = format(fecha, 'yyyy-MM-dd')
@@ -60,7 +60,7 @@ export function AgendaPage() {
     : undefined
 
   useEffect(() => {
-    if (doctorPropio) setDoctorId(doctorPropio.id)
+    if (doctorPropio) setDoctorId(String(doctorPropio.id))
   }, [doctorPropio?.id])
 
   // Dia (lista y grilla diaria)
@@ -87,7 +87,7 @@ export function AgendaPage() {
   })
 
   const cambiarEstado = useMutation({
-    mutationFn: ({ citaId, estado }: { citaId: string; estado: EstadoCita }) =>
+    mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['citas'] }),
   })
@@ -128,7 +128,9 @@ export function AgendaPage() {
     return new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime()
   })
 
-  const doctoresVisibles = doctorId ? doctores.filter((d) => d.id === doctorId) : doctores
+  const doctoresVisibles = doctorId
+    ? doctores.filter((d) => d.id === Number(doctorId))
+    : doctores
 
   const tituloFecha =
     vista === 'semana'

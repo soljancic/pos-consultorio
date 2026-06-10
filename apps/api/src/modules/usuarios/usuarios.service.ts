@@ -52,7 +52,7 @@ export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
   // Incluye inactivos: el admin debe poder verlos y reactivarlos
-  findAll(consultorioId: string) {
+  findAll(consultorioId: number) {
     return this.prisma.usuario.findMany({
       where: { consultorioId },
       select: USUARIO_SELECT,
@@ -60,7 +60,7 @@ export class UsuariosService {
     })
   }
 
-  async create(consultorioId: string, dto: CreateUsuarioDto) {
+  async create(consultorioId: number, dto: CreateUsuarioDto) {
     const exists = await this.prisma.usuario.findUnique({
       where: { email_consultorioId: { email: dto.email, consultorioId } },
     })
@@ -75,7 +75,7 @@ export class UsuariosService {
     })
   }
 
-  async update(consultorioId: string, id: string, dto: UpdateUsuarioDto) {
+  async update(consultorioId: number, id: number, dto: UpdateUsuarioDto) {
     const usuario = await this.prisma.usuario.findFirst({ where: { id, consultorioId } })
     if (!usuario) throw new NotFoundException('Usuario no encontrado')
 

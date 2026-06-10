@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { CobrosService, RegistrarPagoDto, AjustarTotalDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -23,7 +23,7 @@ export class CobrosController {
 
   @Get('cita/:citaId')
   @ApiOperation({ summary: 'Obtener cobro de una cita' })
-  findByCita(@CurrentUser() user: JwtPayload, @Param('citaId') citaId: string) {
+  findByCita(@CurrentUser() user: JwtPayload, @Param('citaId', ParseIntPipe) citaId: number) {
     return this.service.findByCita(user.consultorioId, citaId)
   }
 
@@ -31,7 +31,7 @@ export class CobrosController {
   @ApiOperation({ summary: 'Ajustar el precio del cobro (descuento/recargo, auditado)' })
   ajustarTotal(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: AjustarTotalDto,
   ) {
     return this.service.ajustarTotal(user.consultorioId, id, dto, user.sub)
@@ -41,7 +41,7 @@ export class CobrosController {
   @ApiOperation({ summary: 'Registrar pago (total o parcial)' })
   registrarPago(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: RegistrarPagoDto,
   ) {
     return this.service.registrarPago(user.consultorioId, id, dto, user.sub)

@@ -5,7 +5,7 @@ import { api } from '../../lib/api-client'
 
 const ROLES = ['ADMIN', 'SECRETARIA', 'DOCTOR', 'CAJA'] as const
 
-interface Usuario { id?: string; nombre: string; email: string; rol: string; activo: boolean }
+interface Usuario { id?: number; nombre: string; email: string; rol: string; activo: boolean }
 interface Props { usuario?: Usuario | null; onClose: () => void }
 
 export function UsuarioModal({ usuario, onClose }: Props) {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { ServiciosService, CreateServicioDto, UpdateServicioDto } from './servicios.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -20,12 +20,12 @@ export class ServiciosController {
   }
 
   @Put(':id')
-  update(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdateServicioDto) {
+  update(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateServicioDto) {
     return this.service.update(user.consultorioId, id, dto)
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  remove(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
     return this.service.remove(user.consultorioId, id)
   }
 }

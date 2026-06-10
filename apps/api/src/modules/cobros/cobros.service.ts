@@ -28,7 +28,7 @@ export class AjustarTotalDto {
 export class CobrosService {
   constructor(private prisma: PrismaService) {}
 
-  async findByCita(consultorioId: string, citaId: string) {
+  async findByCita(consultorioId: number, citaId: number) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { citaId, consultorioId },
       include: { pagos: { orderBy: { createdAt: 'asc' } } },
@@ -38,10 +38,10 @@ export class CobrosService {
   }
 
   async registrarPago(
-    consultorioId: string,
-    cobroId: string,
+    consultorioId: number,
+    cobroId: number,
     dto: RegistrarPagoDto,
-    usuarioId: string,
+    usuarioId: number,
   ) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { id: cobroId, consultorioId },
@@ -138,7 +138,7 @@ export class CobrosService {
 
   // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA).
   // Las citas futuras crean cobros PENDIENTE que NO son deuda.
-  private readonly whereDeudaReal = (consultorioId: string) => ({
+  private readonly whereDeudaReal = (consultorioId: number) => ({
     consultorioId,
     saldoPendiente: { gt: new Decimal(0) },
     cita: {
@@ -150,10 +150,10 @@ export class CobrosService {
   // Ajuste de precio al cobrar (MVP: "Descuento"). El total nunca puede
   // quedar por debajo de lo ya pagado; el cambio queda auditado en logs.
   async ajustarTotal(
-    consultorioId: string,
-    cobroId: string,
+    consultorioId: number,
+    cobroId: number,
     dto: AjustarTotalDto,
-    usuarioId: string,
+    usuarioId: number,
   ) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { id: cobroId, consultorioId },
@@ -232,7 +232,7 @@ export class CobrosService {
     return this.findByCita(consultorioId, cobro.cita.id)
   }
 
-  async getDeudores(consultorioId: string) {
+  async getDeudores(consultorioId: number) {
     const cobros = await this.prisma.cobro.findMany({
       where: this.whereDeudaReal(consultorioId),
       include: {
@@ -247,7 +247,7 @@ export class CobrosService {
     })
 
     type Deudor = {
-      pacienteId: string
+      pacienteId: number
       nombre: string
       apellido: string
       whatsapp: string | null
@@ -257,7 +257,7 @@ export class CobrosService {
       ultimoPago: Date | null
       cobros: typeof cobros
     }
-    const porPaciente = new Map<string, Deudor>()
+    const porPaciente = new Map<number, Deudor>()
 
     for (const cobro of cobros) {
       const pac = cobro.cita.paciente
@@ -293,7 +293,7 @@ export class CobrosService {
     return Array.from(porPaciente.values()).sort((a, b) => b.deudaTotal - a.deudaTotal)
   }
 
-  async getDeudoresResumen(consultorioId: string) {
+  async getDeudoresResumen(consultorioId: number) {
     const [suma, cobros] = await Promise.all([
       this.prisma.cobro.aggregate({
         where: this.whereDeudaReal(consultorioId),

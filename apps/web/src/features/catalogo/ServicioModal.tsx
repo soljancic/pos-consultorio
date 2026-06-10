@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { api } from '../../lib/api-client'
 
 interface Servicio {
-  id?: string
+  id?: number
   nombre: string
   descripcion?: string
   duracionMin: number

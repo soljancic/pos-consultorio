@@ -8,16 +8,18 @@ CREATE TYPE "EstadoCita" AS ENUM ('PENDIENTE', 'CONFIRMADA', 'LLEGO', 'EN_ATENCI
 CREATE TYPE "EstadoCobro" AS ENUM ('PENDIENTE', 'PARCIAL', 'COMPLETO');
 
 -- CreateEnum
-CREATE TYPE "FormaPago" AS ENUM ('EFECTIVO', 'QR', 'TRANSFERENCIA', 'TARJETA');
+CREATE TYPE "FormaPago" AS ENUM ('EFECTIVO', 'QR', 'TARJETA', 'VALES');
 
 -- CreateEnum
 CREATE TYPE "AccionLog" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'STATE_CHANGE', 'PAYMENT');
 
 -- CreateTable
 CREATE TABLE "consultorios" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "logoUrl" TEXT,
+    "telefono" TEXT,
+    "direccion" TEXT,
     "moneda" TEXT NOT NULL DEFAULT 'ARS',
     "timezone" TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
     "plan" TEXT NOT NULL DEFAULT 'free',
@@ -30,8 +32,8 @@ CREATE TABLE "consultorios" (
 
 -- CreateTable
 CREATE TABLE "usuarios" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
     "nombre" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
@@ -45,8 +47,8 @@ CREATE TABLE "usuarios" (
 
 -- CreateTable
 CREATE TABLE "servicios" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
     "nombre" TEXT NOT NULL,
     "descripcion" TEXT,
     "duracionMin" INTEGER NOT NULL,
@@ -60,9 +62,9 @@ CREATE TABLE "servicios" (
 
 -- CreateTable
 CREATE TABLE "doctores" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
-    "usuarioId" TEXT,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
+    "usuarioId" INTEGER,
     "nombre" TEXT NOT NULL,
     "especialidad" TEXT,
     "colorAgenda" TEXT NOT NULL DEFAULT '#3B82F6',
@@ -75,8 +77,8 @@ CREATE TABLE "doctores" (
 
 -- CreateTable
 CREATE TABLE "horarios_atencion" (
-    "id" TEXT NOT NULL,
-    "doctorId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "doctorId" INTEGER NOT NULL,
     "diaSemana" INTEGER NOT NULL,
     "horaInicio" TEXT NOT NULL,
     "horaFin" TEXT NOT NULL,
@@ -87,8 +89,8 @@ CREATE TABLE "horarios_atencion" (
 
 -- CreateTable
 CREATE TABLE "pacientes" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
     "nombre" TEXT NOT NULL,
     "apellido" TEXT NOT NULL,
     "dni" TEXT,
@@ -96,6 +98,8 @@ CREATE TABLE "pacientes" (
     "whatsapp" TEXT,
     "email" TEXT,
     "fechaNacimiento" DATE,
+    "sexo" TEXT,
+    "direccion" TEXT,
     "notas" TEXT,
     "deudaTotal" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -107,16 +111,16 @@ CREATE TABLE "pacientes" (
 
 -- CreateTable
 CREATE TABLE "citas" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
-    "pacienteId" TEXT NOT NULL,
-    "doctorId" TEXT NOT NULL,
-    "servicioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
+    "pacienteId" INTEGER NOT NULL,
+    "doctorId" INTEGER NOT NULL,
+    "servicioId" INTEGER NOT NULL,
     "fechaHora" TIMESTAMP(3) NOT NULL,
     "duracionMin" INTEGER NOT NULL,
     "estado" "EstadoCita" NOT NULL DEFAULT 'PENDIENTE',
     "notasSecretaria" TEXT,
-    "createdById" TEXT NOT NULL,
+    "createdById" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -126,10 +130,11 @@ CREATE TABLE "citas" (
 
 -- CreateTable
 CREATE TABLE "atenciones" (
-    "id" TEXT NOT NULL,
-    "citaId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "citaId" INTEGER NOT NULL,
     "motivo" TEXT,
     "diagnostico" TEXT,
+    "tratamiento" TEXT,
     "evolucion" TEXT,
     "proximoControl" DATE,
     "adjuntos" JSONB,
@@ -141,8 +146,8 @@ CREATE TABLE "atenciones" (
 
 -- CreateTable
 CREATE TABLE "recetas" (
-    "id" TEXT NOT NULL,
-    "atencionId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "atencionId" INTEGER NOT NULL,
     "contenido" JSONB NOT NULL,
     "pdfUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -152,9 +157,9 @@ CREATE TABLE "recetas" (
 
 -- CreateTable
 CREATE TABLE "cobros" (
-    "id" TEXT NOT NULL,
-    "citaId" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "citaId" INTEGER NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
     "total" DECIMAL(10,2) NOT NULL,
     "saldoPendiente" DECIMAL(10,2) NOT NULL,
     "estado" "EstadoCobro" NOT NULL DEFAULT 'PENDIENTE',
@@ -166,12 +171,12 @@ CREATE TABLE "cobros" (
 
 -- CreateTable
 CREATE TABLE "pagos" (
-    "id" TEXT NOT NULL,
-    "cobroId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "cobroId" INTEGER NOT NULL,
     "formaPago" "FormaPago" NOT NULL,
     "monto" DECIMAL(10,2) NOT NULL,
     "referencia" TEXT,
-    "createdById" TEXT NOT NULL,
+    "createdById" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "pagos_pkey" PRIMARY KEY ("id")
@@ -179,14 +184,14 @@ CREATE TABLE "pagos" (
 
 -- CreateTable
 CREATE TABLE "caja_diaria" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
     "fecha" DATE NOT NULL,
-    "usuarioAperturaId" TEXT NOT NULL,
-    "usuarioCierreId" TEXT,
+    "usuarioAperturaId" INTEGER NOT NULL,
+    "usuarioCierreId" INTEGER,
     "totalEfectivo" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "totalQr" DECIMAL(10,2) NOT NULL DEFAULT 0,
-    "totalTransferencia" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "totalVales" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "totalTarjeta" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "totalGeneral" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "cerrada" BOOLEAN NOT NULL DEFAULT false,
@@ -198,11 +203,11 @@ CREATE TABLE "caja_diaria" (
 
 -- CreateTable
 CREATE TABLE "logs" (
-    "id" TEXT NOT NULL,
-    "consultorioId" TEXT NOT NULL,
-    "usuarioId" TEXT,
+    "id" SERIAL NOT NULL,
+    "consultorioId" INTEGER NOT NULL,
+    "usuarioId" INTEGER,
     "entidad" TEXT NOT NULL,
-    "entidadId" TEXT NOT NULL,
+    "entidadId" INTEGER NOT NULL,
     "accion" "AccionLog" NOT NULL,
     "payloadAntes" JSONB,
     "payloadDespues" JSONB,

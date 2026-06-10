@@ -37,14 +37,14 @@ const CONSULTORIO_SELECT = {
 export class ConsultoriosService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     return this.prisma.consultorio.findUnique({
       where: { id },
       select: CONSULTORIO_SELECT,
     })
   }
 
-  async update(id: string, data: UpdateConsultorioDto) {
+  async update(id: number, data: UpdateConsultorioDto) {
     return this.prisma.consultorio.update({
       where: { id },
       data,

@@ -48,19 +48,19 @@ export interface AuthTokens {
 }
 
 export interface AuthUser {
-  id: string
+  id: number
   nombre: string
   email: string
   rol: string
-  consultorioId: string
+  consultorioId: number
   consultorioNombre: string
 }
 
 // Citas
 export interface CrearCitaRequest {
-  pacienteId: string
-  doctorId: string
-  servicioId: string
+  pacienteId: number
+  doctorId: number
+  servicioId: number
   fechaHora: string
   notasSecretaria?: string
 }

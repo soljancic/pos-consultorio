@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { UsuariosService, CreateUsuarioDto, UpdateUsuarioDto } from './usuarios.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -29,7 +29,7 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Editar usuario (password opcional)' })
   update(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUsuarioDto,
   ) {
     return this.service.update(user.consultorioId, id, dto)

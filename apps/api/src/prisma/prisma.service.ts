@@ -12,7 +12,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   // Helper: extrae consultorioId del contexto para queries con tenancy
-  withTenant(consultorioId: string) {
+  withTenant(consultorioId: number) {
     return {
       where: { consultorioId },
     }

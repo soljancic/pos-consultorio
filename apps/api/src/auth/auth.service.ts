@@ -82,10 +82,10 @@ export class AuthService {
   }
 
   private async buildTokens(
-    userId: string,
+    userId: number,
     email: string,
     rol: string,
-    consultorioId: string,
+    consultorioId: number,
   ) {
     const payload = { sub: userId, email, rol, consultorioId }
 

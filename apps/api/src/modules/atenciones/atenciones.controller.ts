@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, Param } from '@nestjs/common'
+import { Controller, Get, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { AtencionesService, UpsertAtencionDto } from './atenciones.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -11,7 +11,7 @@ export class AtencionesController {
 
   @Get('cita/:citaId')
   @ApiOperation({ summary: 'Atencion registrada de una cita' })
-  findByCita(@CurrentUser() user: JwtPayload, @Param('citaId') citaId: string) {
+  findByCita(@CurrentUser() user: JwtPayload, @Param('citaId', ParseIntPipe) citaId: number) {
     return this.service.findByCita(user.consultorioId, citaId)
   }
 
@@ -19,7 +19,7 @@ export class AtencionesController {
   @ApiOperation({ summary: 'Registrar o actualizar la atencion de una cita' })
   upsert(
     @CurrentUser() user: JwtPayload,
-    @Param('citaId') citaId: string,
+    @Param('citaId', ParseIntPipe) citaId: number,
     @Body() dto: UpsertAtencionDto,
   ) {
     return this.service.upsert(user.consultorioId, citaId, dto, user.sub)

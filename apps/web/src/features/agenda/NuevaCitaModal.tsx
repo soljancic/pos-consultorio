@@ -8,7 +8,7 @@ import type { Paciente, Doctor, Servicio } from '@pos/types'
 interface Props {
   fechaInicial: Date
   // Prefill al crear desde un slot vacio de la grilla
-  doctorIdInicial?: string
+  doctorIdInicial?: number
   horaInicial?: string
   onClose: () => void
 }
@@ -18,7 +18,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
   const [pacienteQuery, setPacienteQuery] = useState('')
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Pick<Paciente, 'id' | 'nombre' | 'apellido'> | null>(null)
   const [showPacienteList, setShowPacienteList] = useState(false)
-  const [doctorId, setDoctorId] = useState(doctorIdInicial ?? '')
+  const [doctorId, setDoctorId] = useState(doctorIdInicial ? String(doctorIdInicial) : '')
   const [servicioId, setServicioId] = useState('')
   const [fecha, setFecha] = useState(format(fechaInicial, 'yyyy-MM-dd'))
   const [hora, setHora] = useState(horaInicial ?? '09:00')
@@ -79,8 +79,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
 
     crearCita.mutate({
       pacienteId: pacienteSeleccionado.id,
-      doctorId,
-      servicioId,
+      doctorId: Number(doctorId),
+      servicioId: Number(servicioId),
       // El navegador opera en el timezone del consultorio: new Date interpreta
       // hora local y toISOString la convierte al instante UTC correcto.
       fechaHora: new Date(`${fecha}T${hora}:00`).toISOString(),

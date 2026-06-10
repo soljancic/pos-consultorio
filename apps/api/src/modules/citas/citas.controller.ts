@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { CitasService, CreateCitaDto, CambiarEstadoDto } from './citas.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -17,7 +17,12 @@ export class CitasController {
     @Query('doctorId') doctorId?: string,
     @Query('hasta') hasta?: string,
   ) {
-    return this.service.findByFecha(user.consultorioId, fecha, doctorId, hasta)
+    return this.service.findByFecha(
+      user.consultorioId,
+      fecha,
+      doctorId ? Number(doctorId) : undefined,
+      hasta,
+    )
   }
 
   @Post()
@@ -30,7 +35,7 @@ export class CitasController {
   @ApiOperation({ summary: 'Cambiar estado de la cita (maquina de estados)' })
   cambiarEstado(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: CambiarEstadoDto,
   ) {
     return this.service.cambiarEstado(user.consultorioId, id, dto, user.sub)

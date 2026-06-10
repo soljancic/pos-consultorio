@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { PacientesService, CreatePacienteDto, UpdatePacienteDto } from './pacientes.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -17,7 +17,7 @@ export class PacientesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Ficha completa del paciente' })
-  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  findOne(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(user.consultorioId, id)
   }
 
@@ -31,7 +31,7 @@ export class PacientesController {
   @ApiOperation({ summary: 'Actualizar paciente' })
   update(
     @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePacienteDto,
   ) {
     return this.service.update(user.consultorioId, id, dto)
@@ -39,7 +39,7 @@ export class PacientesController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar paciente (soft delete)' })
-  remove(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+  remove(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
     return this.service.softDelete(user.consultorioId, id)
   }
 }

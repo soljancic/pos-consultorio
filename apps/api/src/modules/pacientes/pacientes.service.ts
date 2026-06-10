@@ -41,7 +41,7 @@ export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {}
 export class PacientesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(consultorioId: string, search?: string) {
+  async findAll(consultorioId: number, search?: string) {
     return this.prisma.paciente.findMany({
       where: {
         consultorioId,
@@ -71,7 +71,7 @@ export class PacientesService {
     })
   }
 
-  async findOne(consultorioId: string, id: string) {
+  async findOne(consultorioId: number, id: number) {
     const paciente = await this.prisma.paciente.findFirst({
       where: { id, consultorioId, deletedAt: null },
       include: {
@@ -94,7 +94,7 @@ export class PacientesService {
     return paciente
   }
 
-  async create(consultorioId: string, dto: CreatePacienteDto) {
+  async create(consultorioId: number, dto: CreatePacienteDto) {
     return this.prisma.paciente.create({
       data: {
         ...dto,
@@ -104,7 +104,7 @@ export class PacientesService {
     })
   }
 
-  async update(consultorioId: string, id: string, dto: UpdatePacienteDto) {
+  async update(consultorioId: number, id: number, dto: UpdatePacienteDto) {
     await this.findOne(consultorioId, id)
     return this.prisma.paciente.update({
       where: { id },
@@ -115,7 +115,7 @@ export class PacientesService {
     })
   }
 
-  async softDelete(consultorioId: string, id: string) {
+  async softDelete(consultorioId: number, id: number) {
     await this.findOne(consultorioId, id)
     return this.prisma.paciente.update({
       where: { id },

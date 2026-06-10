@@ -7,17 +7,17 @@ import {
 import { PrismaService } from '../../prisma/prisma.service'
 import { transicionValida } from '@pos/types'
 import { EstadoCita, Prisma } from '@prisma/client'
-import { IsString, IsNotEmpty, IsOptional, IsISO8601, IsEnum } from 'class-validator'
+import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
-  @IsString() @IsNotEmpty()
-  pacienteId: string
+  @IsInt()
+  pacienteId: number
 
-  @IsString() @IsNotEmpty()
-  doctorId: string
+  @IsInt()
+  doctorId: number
 
-  @IsString() @IsNotEmpty()
-  servicioId: string
+  @IsInt()
+  servicioId: number
 
   @IsISO8601()
   fechaHora: string
@@ -38,7 +38,7 @@ export class CambiarEstadoDto {
 export class CitasService {
   constructor(private prisma: PrismaService) {}
 
-  async findByFecha(consultorioId: string, fecha: string, doctorId?: string, hasta?: string) {
+  async findByFecha(consultorioId: number, fecha: string, doctorId?: number, hasta?: string) {
     // "fecha" es el dia calendario LOCAL del consultorio (server en el mismo
     // timezone para el MVP). Con rango UTC, una cita de las 21:00 local en
     // GMT-4 caia en el dia UTC siguiente y desaparecia de la agenda.
@@ -64,7 +64,7 @@ export class CitasService {
     })
   }
 
-  async create(consultorioId: string, usuarioId: string, dto: CreateCitaDto) {
+  async create(consultorioId: number, usuarioId: number, dto: CreateCitaDto) {
     const servicio = await this.prisma.servicio.findFirst({
       where: { id: dto.servicioId, consultorioId },
     })
@@ -107,10 +107,10 @@ export class CitasService {
   }
 
   async cambiarEstado(
-    consultorioId: string,
-    citaId: string,
+    consultorioId: number,
+    citaId: number,
     dto: CambiarEstadoDto,
-    usuarioId: string,
+    usuarioId: number,
   ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
@@ -171,11 +171,11 @@ export class CitasService {
   }
 
   private async verificarDisponibilidad(
-    consultorioId: string,
-    doctorId: string,
+    consultorioId: number,
+    doctorId: number,
     inicio: Date,
     fin: Date,
-    excludeCitaId?: string,
+    excludeCitaId?: number,
   ) {
     // El fin de cada cita existente depende de su duracion, que Prisma no
     // puede sumar en el where: traemos las candidatas de una ventana acotada

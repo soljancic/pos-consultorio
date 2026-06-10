@@ -1,10 +1,10 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common'
 
 export interface JwtPayload {
-  sub: string          // usuarioId
+  sub: number          // usuarioId
   email: string
   rol: string
-  consultorioId: string
+  consultorioId: number
 }
 
 export const CurrentUser = createParamDecorator(

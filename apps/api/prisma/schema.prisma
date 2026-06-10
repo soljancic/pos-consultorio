@@ -53,7 +53,7 @@ enum AccionLog {
 // ─── TENANCY ─────────────────────────────────────────────────────────────────
 
 model Consultorio {
-  id        String   @id @default(cuid())
+  id        Int      @id @default(autoincrement())
   nombre    String
   logoUrl   String?
   telefono  String?
@@ -78,8 +78,8 @@ model Consultorio {
 }
 
 model Usuario {
-  id            String      @id @default(cuid())
-  consultorioId String
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
   consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
   nombre        String
   email         String
@@ -104,8 +104,8 @@ model Usuario {
 // ─── CATALOGO ────────────────────────────────────────────────────────────────
 
 model Servicio {
-  id            String      @id @default(cuid())
-  consultorioId String
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
   consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
   nombre        String
   descripcion   String?
@@ -122,10 +122,10 @@ model Servicio {
 }
 
 model Doctor {
-  id            String      @id @default(cuid())
-  consultorioId String
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
   consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
-  usuarioId     String?     @unique
+  usuarioId     Int?     @unique
   usuario       Usuario?    @relation(fields: [usuarioId], references: [id])
   nombre        String
   especialidad  String?
@@ -142,8 +142,8 @@ model Doctor {
 }
 
 model HorarioAtencion {
-  id         String  @id @default(cuid())
-  doctorId   String
+  id         Int      @id @default(autoincrement())
+  doctorId   Int
   doctor     Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   diaSemana  Int     // 0=domingo ... 6=sabado
   horaInicio String  // "08:00"
@@ -157,8 +157,8 @@ model HorarioAtencion {
 // ─── PACIENTES ───────────────────────────────────────────────────────────────
 
 model Paciente {
-  id              String      @id @default(cuid())
-  consultorioId   String
+  id              Int      @id @default(autoincrement())
+  consultorioId   Int
   consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
   nombre          String
   apellido        String
@@ -186,20 +186,20 @@ model Paciente {
 // ─── AGENDA ──────────────────────────────────────────────────────────────────
 
 model Cita {
-  id              String      @id @default(cuid())
-  consultorioId   String
+  id              Int      @id @default(autoincrement())
+  consultorioId   Int
   consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
-  pacienteId      String
+  pacienteId      Int
   paciente        Paciente    @relation(fields: [pacienteId], references: [id])
-  doctorId        String
+  doctorId        Int
   doctor          Doctor      @relation(fields: [doctorId], references: [id])
-  servicioId      String
+  servicioId      Int
   servicio        Servicio    @relation(fields: [servicioId], references: [id])
   fechaHora       DateTime
   duracionMin     Int
   estado          EstadoCita  @default(PENDIENTE)
   notasSecretaria String?
-  createdById     String
+  createdById     Int
   createdBy       Usuario     @relation("CitaCreatedBy", fields: [createdById], references: [id])
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -218,8 +218,8 @@ model Cita {
 // ─── CLINICO ─────────────────────────────────────────────────────────────────
 
 model Atencion {
-  id             String    @id @default(cuid())
-  citaId         String    @unique
+  id             Int      @id @default(autoincrement())
+  citaId         Int    @unique
   cita           Cita      @relation(fields: [citaId], references: [id])
   motivo         String?
   diagnostico    String?
@@ -236,8 +236,8 @@ model Atencion {
 }
 
 model Receta {
-  id         String   @id @default(cuid())
-  atencionId String
+  id         Int      @id @default(autoincrement())
+  atencionId Int
   atencion   Atencion @relation(fields: [atencionId], references: [id])
   contenido  Json     // { medicamentos: [...], indicaciones: string }
   pdfUrl     String?
@@ -249,10 +249,10 @@ model Receta {
 // ─── FINANCIERO ──────────────────────────────────────────────────────────────
 
 model Cobro {
-  id             String      @id @default(cuid())
-  citaId         String      @unique
+  id             Int      @id @default(autoincrement())
+  citaId         Int      @unique
   cita           Cita        @relation(fields: [citaId], references: [id])
-  consultorioId  String
+  consultorioId  Int
   consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
   total          Decimal     @db.Decimal(10, 2)
   saldoPendiente Decimal     @db.Decimal(10, 2)
@@ -268,13 +268,13 @@ model Cobro {
 }
 
 model Pago {
-  id          String    @id @default(cuid())
-  cobroId     String
+  id          Int      @id @default(autoincrement())
+  cobroId     Int
   cobro       Cobro     @relation(fields: [cobroId], references: [id])
   formaPago   FormaPago
   monto       Decimal   @db.Decimal(10, 2)
   referencia  String?
-  createdById String
+  createdById Int
   createdBy   Usuario   @relation("PagoCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime  @default(now())
 
@@ -283,13 +283,13 @@ model Pago {
 }
 
 model CajaDiaria {
-  id                String      @id @default(cuid())
-  consultorioId     String
+  id                Int      @id @default(autoincrement())
+  consultorioId     Int
   consultorio       Consultorio @relation(fields: [consultorioId], references: [id])
   fecha             DateTime    @db.Date
-  usuarioAperturaId String
+  usuarioAperturaId Int
   usuarioApertura   Usuario     @relation("CajaAbiertaPor", fields: [usuarioAperturaId], references: [id])
-  usuarioCierreId   String?
+  usuarioCierreId   Int?
   usuarioCierre     Usuario?    @relation("CajaCerradaPor", fields: [usuarioCierreId], references: [id])
   totalEfectivo     Decimal     @default(0) @db.Decimal(10, 2)
   totalQr           Decimal     @default(0) @db.Decimal(10, 2)
@@ -308,13 +308,13 @@ model CajaDiaria {
 // ─── AUDITORIA ───────────────────────────────────────────────────────────────
 
 model Log {
-  id             String      @id @default(cuid())
-  consultorioId  String
+  id             Int      @id @default(autoincrement())
+  consultorioId  Int
   consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
-  usuarioId      String?
+  usuarioId      Int?
   usuario        Usuario?    @relation(fields: [usuarioId], references: [id])
   entidad        String      // "Cita" | "Cobro" | "Pago" | "Paciente"
-  entidadId      String
+  entidadId      Int
   accion         AccionLog
   payloadAntes   Json?
   payloadDespues Json?
