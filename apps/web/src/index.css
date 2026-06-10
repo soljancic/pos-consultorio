@@ -1,26 +1,32 @@
+/* Tipografia del design system (ui-ux-pro-max, industria healthcare):
+   Figtree (titulares y UI) + Noto Sans (fallback de lectura) */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Paleta "Accessible & Ethical" — teal medico + verde salud (WCAG AA/AAA).
+     Generada con ui-ux-pro-max para medical clinic / healthcare SaaS. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 166 76% 97%; /* #F0FDFA */
+    --foreground: 176 61% 19%; /* #134E4A */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --card-foreground: 176 61% 19%;
+    --primary: 192 91% 36%; /* #0891B2 teal medico */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 167 85% 89%; /* #CCFBF1 */
+    --secondary-foreground: 176 61% 19%;
+    --muted: 201 44% 94%; /* #E8F1F6 */
+    --muted-foreground: 190 15% 38%;
+    --accent: 142 76% 36%; /* #16A34A verde salud (CTA) */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%; /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 167 60% 85%;
+    --input: 167 40% 80%;
+    --ring: 192 91% 36%;
     --radius: 0.5rem;
   }
 
@@ -31,5 +37,14 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

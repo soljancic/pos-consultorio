@@ -2,25 +2,52 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
+import {
+  CalendarDays,
+  Clock,
+  Activity,
+  CheckCircle2,
+  CircleDollarSign,
+  Wallet,
+  AlertCircle,
+  ArrowRight,
+} from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda } from '../../lib/utils'
 import { EstadoCita } from '@pos/types'
 import type { Cita } from '@pos/types'
 import { useAuthStore } from '../../stores/auth.store'
 
-const STAT_COLORS: Record<string, string> = {
-  blue: 'bg-blue-50 text-blue-700',
-  green: 'bg-green-50 text-green-700',
-  yellow: 'bg-yellow-50 text-yellow-700',
-  red: 'bg-red-50 text-red-700',
-  violet: 'bg-violet-50 text-violet-700',
+type StatTone = 'primary' | 'warning' | 'info' | 'success' | 'danger'
+
+const TONOS: Record<StatTone, string> = {
+  primary: 'bg-primary/10 text-primary',
+  warning: 'bg-amber-100 text-amber-700',
+  info: 'bg-cyan-100 text-cyan-700',
+  success: 'bg-accent/10 text-accent',
+  danger: 'bg-destructive/10 text-destructive',
 }
 
-function StatCard({ label, value, color = 'blue' }: { label: string; value: number; color?: string }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: number
+  icon: typeof CalendarDays
+  tone: StatTone
+}) {
   return (
-    <div className={`rounded-xl p-5 ${STAT_COLORS[color] ?? STAT_COLORS.blue}`}>
-      <p className="text-sm font-medium opacity-75">{label}</p>
-      <p className="text-3xl font-bold mt-1">{value}</p>
+    <div className="bg-card rounded-xl border p-4 flex items-center gap-3 shadow-sm">
+      <span className={`rounded-lg p-2.5 shrink-0 ${TONOS[tone]}`}>
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold leading-tight tabular-nums text-foreground">{value}</p>
+        <p className="text-xs font-medium text-muted-foreground truncate">{label}</p>
+      </div>
     </div>
   )
 }
@@ -72,86 +99,92 @@ export function DashboardPage() {
     .sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime())
     .slice(0, 5)
 
+  const filasCaja: Array<[string, number]> = caja
+    ? [
+        ['Efectivo', Number(caja.totalEfectivo)],
+        ['QR', Number(caja.totalQr)],
+        ['Transferencia', Number(caja.totalTransferencia)],
+        ['Tarjeta', Number(caja.totalTarjeta)],
+      ]
+    : []
+
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 max-w-5xl mx-auto w-full">
       <div>
-        <h1 className="text-xl font-semibold text-slate-800">
+        <h1 className="text-2xl font-bold text-foreground">
           Buen dia{user?.nombre ? `, ${user.nombre}` : ''}
         </h1>
-        <p className="text-sm text-slate-500 capitalize">{fechaLabel}</p>
+        <p className="text-sm text-muted-foreground capitalize mt-0.5">{fechaLabel}</p>
       </div>
 
       {/* Metricas de citas */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Citas hoy" value={citas.length} color="blue" />
-        <StatCard label="En espera" value={enEspera} color="yellow" />
-        <StatCard label="En atencion" value={enAtencion} color="green" />
-        <StatCard label="Atendidos" value={atendidosHoy} color="violet" />
-        <StatCard label="Por cobrar" value={porCobrar} color="red" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <StatCard label="Citas hoy" value={citas.length} icon={CalendarDays} tone="primary" />
+        <StatCard label="En espera" value={enEspera} icon={Clock} tone="warning" />
+        <StatCard label="En atencion" value={enAtencion} icon={Activity} tone="info" />
+        <StatCard label="Atendidos" value={atendidosHoy} icon={CheckCircle2} tone="success" />
+        <StatCard label="Por cobrar" value={porCobrar} icon={CircleDollarSign} tone="danger" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Caja del dia */}
-        <div className="bg-white rounded-xl border p-5">
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+        <div className="bg-card rounded-xl border shadow-sm p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4">
+            <span className="bg-primary/10 text-primary rounded-md p-1.5">
+              <Wallet className="h-4 w-4" aria-hidden="true" />
+            </span>
             Caja del dia
           </h2>
           {caja ? (
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Efectivo</span>
-                <span className="font-medium">{formatMoneda(Number(caja.totalEfectivo))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">QR</span>
-                <span className="font-medium">{formatMoneda(Number(caja.totalQr))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Transferencia</span>
-                <span className="font-medium">{formatMoneda(Number(caja.totalTransferencia))}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tarjeta</span>
-                <span className="font-medium">{formatMoneda(Number(caja.totalTarjeta))}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2 font-semibold">
+              {filasCaja.map(([label, monto]) => (
+                <div key={label} className="flex justify-between">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium tabular-nums">{formatMoneda(monto)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t pt-2.5 mt-2.5 font-bold text-foreground">
                 <span>Total</span>
-                <span>{formatMoneda(Number(caja.totalGeneral))}</span>
+                <span className="tabular-nums">{formatMoneda(Number(caja.totalGeneral))}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-400 pt-1">
+              <div className="flex justify-between text-xs text-muted-foreground pt-1">
                 <span>Ingresos del mes</span>
-                <span>{formatMoneda(ingresosMes)}</span>
+                <span className="tabular-nums">{formatMoneda(ingresosMes)}</span>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-400">Caja sin movimientos hoy</p>
+            <p className="text-sm text-muted-foreground">Caja sin movimientos hoy</p>
           )}
         </div>
 
         {/* Deudas pendientes */}
-        <div className="bg-white rounded-xl border p-5">
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+        <div className="bg-card rounded-xl border shadow-sm p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4">
+            <span className="bg-destructive/10 text-destructive rounded-md p-1.5">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            </span>
             Deudas pendientes
           </h2>
           {deudas && deudas.totalDeuda > 0 ? (
             <div className="space-y-3">
               <div>
-                <p className="text-3xl font-bold text-red-600">
+                <p className="text-3xl font-bold text-destructive tabular-nums">
                   {formatMoneda(deudas.totalDeuda)}
                 </p>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {deudas.cantidadPacientes} paciente{deudas.cantidadPacientes !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
                 onClick={() => navigate('/deudores')}
-                className="text-sm text-blue-600 hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
               >
                 Ver deudores
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
           ) : (
-            <p className="text-sm text-green-600 font-medium">Sin deudas pendientes</p>
+            <p className="text-sm font-medium text-accent">Sin deudas pendientes</p>
           )}
         </div>
       </div>
@@ -159,26 +192,26 @@ export function DashboardPage() {
       {/* Proximas citas */}
       {proximasCitas.length > 0 && (
         <div>
-          <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-semibold text-foreground mb-3">
             Proximas citas de hoy
           </h2>
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 {proximasCitas.map((cita) => (
                   <tr
                     key={cita.id}
                     onClick={() => navigate('/agenda')}
-                    className="border-b last:border-0 hover:bg-slate-50 cursor-pointer"
+                    className="border-b last:border-0 hover:bg-muted/60 cursor-pointer transition-colors duration-150"
                   >
-                    <td className="px-4 py-3 font-medium text-slate-700 w-20">
+                    <td className="px-4 py-3 font-semibold text-primary tabular-nums w-20">
                       {format(new Date(cita.fechaHora), 'HH:mm')}
                     </td>
-                    <td className="px-4 py-3 text-slate-800">
+                    <td className="px-4 py-3 font-medium text-foreground">
                       {cita.paciente?.apellido}, {cita.paciente?.nombre}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{cita.doctor?.nombre}</td>
-                    <td className="px-4 py-3 text-slate-500">{cita.servicio?.nombre}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{cita.doctor?.nombre}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{cita.servicio?.nombre}</td>
                   </tr>
                 ))}
               </tbody>

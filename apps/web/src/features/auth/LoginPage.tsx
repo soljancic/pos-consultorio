@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
 import { api } from '../../lib/api-client'
-import { Stethoscope } from 'lucide-react'
+import { Stethoscope, CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
+
+const BENEFICIOS = [
+  { icon: CalendarCheck, texto: 'Agenda del dia con estados en un vistazo' },
+  { icon: Wallet, texto: 'Cobros, deudas y caja siempre cuadrados' },
+  { icon: BellRing, texto: 'Recordatorios por WhatsApp en un click' },
+]
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -29,46 +35,103 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-6 justify-center">
-          <Stethoscope className="h-7 w-7 text-blue-600" />
-          <h1 className="text-xl font-bold text-slate-800">POS del Consultorio</h1>
+    <div className="min-h-screen flex bg-background">
+      {/* Panel de marca (desktop) */}
+      <div className="hidden lg:flex lg:w-[45%] bg-primary text-primary-foreground flex-col justify-between p-12">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-white/15 rounded-lg p-2">
+            <Stethoscope className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">POS del Consultorio</span>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="admin@consultorio.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Contrasena</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+        <div className="space-y-8 max-w-md">
+          <h1 className="text-3xl font-bold leading-snug">
+            El dia a dia de tu consultorio, en una sola pantalla
+          </h1>
+          <ul className="space-y-4">
+            {BENEFICIOS.map(({ icon: Icon, texto }) => (
+              <li key={texto} className="flex items-center gap-3 text-cyan-50">
+                <span className="bg-white/15 rounded-md p-1.5 shrink-0">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="text-sm">{texto}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="text-xs text-cyan-100/80">
+          Para consultorios de 1 a 10 profesionales
+        </p>
+      </div>
+
+      {/* Formulario */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center gap-2 mb-2 lg:hidden justify-center">
+            <Stethoscope className="h-7 w-7 text-primary" aria-hidden="true" />
+            <span className="text-lg font-semibold text-foreground">POS del Consultorio</span>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="bg-card rounded-xl border shadow-sm p-8">
+            <h2 className="text-xl font-bold text-foreground mb-1">Ingresar</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Accede con tu cuenta del consultorio
+            </p>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              <div>
+                <label htmlFor="login-email" className="block text-sm font-medium text-foreground mb-1.5">
+                  Email
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
+                  placeholder="admin@consultorio.com"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="login-password" className="block text-sm font-medium text-foreground mb-1.5">
+                  Contrasena
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
+                  required
+                />
+              </div>
+
+              {error && (
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 bg-primary text-primary-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+              >
+                {loading ? 'Ingresando...' : 'Ingresar'}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   )
