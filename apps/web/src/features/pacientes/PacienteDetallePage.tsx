@@ -142,7 +142,7 @@ export function PacienteDetallePage() {
               Sin citas registradas
             </div>
           ) : (
-            <div className="bg-card rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b">
                   <tr>

@@ -195,7 +195,7 @@ export function DashboardPage() {
           <h2 className="text-sm font-semibold text-foreground mb-3">
             Proximas citas de hoy
           </h2>
-          <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+          <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <tbody>
                 {proximasCitas.map((cita) => (

@@ -98,7 +98,7 @@ export function CajaPage() {
           </div>
 
           {/* Movimientos */}
-          <div className="bg-card rounded-lg border overflow-hidden">
+          <div className="bg-card rounded-lg border overflow-x-auto">
             <div className="px-4 py-3 border-b bg-muted/50">
               <h2 className="text-sm font-medium text-foreground">
                 Movimientos ({pagos.length})
@@ -159,7 +159,7 @@ export function CajaPage() {
             <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
               className="px-3 py-2 border rounded-md text-sm" />
           </div>
-          <div className="bg-card rounded-lg border overflow-hidden">
+          <div className="bg-card rounded-lg border overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>

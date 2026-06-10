@@ -85,7 +85,7 @@ export function AgendaPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navegarDia(-1)}
@@ -113,12 +113,12 @@ export function AgendaPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {user?.rol !== 'DOCTOR' && (
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="px-3 py-2 border rounded-md text-sm max-w-[180px] focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Todos los doctores</option>
               {doctores.map((d) => (

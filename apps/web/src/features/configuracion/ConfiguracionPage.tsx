@@ -102,7 +102,7 @@ export function ConfiguracionPage() {
                 <Plus className="h-3.5 w-3.5" /> Nuevo usuario
               </button>
             </div>
-            <div className="bg-card rounded-lg border overflow-hidden">
+            <div className="bg-card rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b">
                   <tr>
