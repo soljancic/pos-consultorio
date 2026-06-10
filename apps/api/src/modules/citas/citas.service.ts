@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { transicionValida } from '@pos/types'
-import { EstadoCita, Prisma } from '@prisma/client'
+import { EstadoCita, EstadoCobro, Prisma } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
@@ -33,6 +33,9 @@ export class CambiarEstadoDto {
   @IsString() @IsOptional()
   motivo?: string
 }
+
+// Estados que dejan el cobro sin efecto: el servicio no se presto
+const ESTADOS_ANULAN_COBRO: EstadoCita[] = [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO]
 
 @Injectable()
 export class CitasService {
@@ -137,6 +140,17 @@ export class CitasService {
       )
     }
 
+    // Cancelar/no-asistio con pagos registrados requiere anular los pagos
+    // primero (asiento de reversa, E2-M1): el dinero ya entro a la caja.
+    if (ESTADOS_ANULAN_COBRO.includes(dto.estado)) {
+      const pagos = await this.prisma.pago.count({ where: { cobro: { citaId } } })
+      if (pagos > 0) {
+        throw new ConflictException(
+          'La cita tiene pagos registrados: anule los pagos antes de cancelarla',
+        )
+      }
+    }
+
     const citaActualizada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },
@@ -149,6 +163,26 @@ export class CitasService {
         await tx.paciente.update({
           where: { id: cita.pacienteId },
           data: { deudaTotal: { increment: cita.cobro.saldoPendiente } },
+        })
+      }
+
+      // El cobro de una cita cancelada/no-show no es deuda ni cuenta abierta
+      if (ESTADOS_ANULAN_COBRO.includes(dto.estado) && cita.cobro) {
+        await tx.cobro.update({
+          where: { citaId },
+          data: { estado: EstadoCobro.ANULADO },
+        })
+      }
+
+      // Reabrir (CANCELADA/NO_ASISTIO -> PENDIENTE) revive el cobro
+      if (
+        dto.estado === EstadoCita.PENDIENTE &&
+        ESTADOS_ANULAN_COBRO.includes(cita.estado) &&
+        cita.cobro
+      ) {
+        await tx.cobro.update({
+          where: { citaId },
+          data: { estado: EstadoCobro.PENDIENTE },
         })
       }
 

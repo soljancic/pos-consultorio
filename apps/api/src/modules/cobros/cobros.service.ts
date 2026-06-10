@@ -51,6 +51,9 @@ export class CobrosService {
     if (cobro.estado === EstadoCobro.COMPLETO) {
       throw new BadRequestException('Este cobro ya esta completamente pagado')
     }
+    if (cobro.estado === EstadoCobro.ANULADO) {
+      throw new BadRequestException('El cobro esta anulado (cita cancelada o no asistida)')
+    }
 
     const monto = new Decimal(dto.monto)
     if (monto.lte(0)) throw new BadRequestException('El monto debe ser mayor a cero')
