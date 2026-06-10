@@ -1,6 +1,6 @@
 # Etapa 2 — Plan Maestro (Valor Clinico + Solidez Operativa)
 
-> **Estado: PLANIFICADO, no iniciado.** Trigger formal: 1 consultorio piloto activo a diario durante 2 semanas (PLAN.md §10). Se puede adelantar E2-M1 si el feedback del piloto lo pide.
+> **Estado: ACTIVO (adelantado por decision del owner, 2026-06-10).** El trigger original (piloto 2 semanas) quedo sin efecto: se ejecuta en orden de hitos sin esperar deploy ni piloto. Solo E2-M6 (decision Visitas) requiere datos de uso real — se pospone hasta que haya piloto.
 >
 > **Metodo:** igual que Etapa 1 — por cada hito se escribe el plan detallado con codigo completo JUSTO ANTES de ejecutarlo (writing-plans contra el codigo vigente), se ejecuta, y se verifica con gate runtime + spec Playwright nuevo. Las mini-specs de abajo fijan el alcance y las decisiones; no son los planes de implementacion.
 

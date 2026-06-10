@@ -21,6 +21,73 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 
 ---
 
+## 1b. Objetivos del Sistema — checklist vivo
+
+> Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
+> El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
+
+**➡️ SIGUIENTE PASO (hoy):** commitear el working tree (pase UI/UX + Google auth con su fix de tsc) → **E2-M7 Cancelar/Reprogramar** (primer hito del plan maestro de Etapa 2) y seguir avanzando hitos en orden. El deploy en Railway + piloto queda diferido a decision del owner (no bloquea el desarrollo).
+
+### Agenda y citas
+1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
+2. ✅ Vistas dia (columnas por doctor, estilo Pabau) y semana
+3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
+4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
+5. ⬜ Cancelar / No asistio / Reprogramar desde la UI (E2-M7)
+6. ⬜ Calendario de Atencion: horarios por doctor, recurrencias, plantillas, bloqueos (E2.5a)
+7. ⬜ Portal publico de agendamiento tipo Calendly (E2.5b)
+
+### Pacientes
+8. ✅ CRUD con busqueda (nombre, DNI, telefono) y ficha completa
+9. ✅ Historial de citas con atencion expandible y deuda visible
+10. ⬜ Historia clinica completa: linea de tiempo + adjuntos (E2-M4)
+11. ⬜ Contador de no-shows + requierePrepago (E3)
+
+### Cobros y deudas
+12. ✅ Cobro automatico por cita; pagos parciales y divididos (multi forma de pago)
+13. ✅ Ajuste de precio con motivo (descuento) auditado
+14. ✅ Deudores agrupados por paciente con deuda real y ultimo pago
+15. ✅ Recordatorio de deuda por WhatsApp (link manual)
+16. ⬜ Anulacion de pagos con asiento de reversa (E2-M1)
+
+### Caja y finanzas
+17. ✅ Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
+18. ✅ Desglose: pagos de deuda anterior vs nuevas deudas del dia
+19. ⬜ Arqueo de caja ciego con revision del admin (E2-M2)
+20. ⬜ Gastos administrativos con categorias + KPI en dashboard (E2-M8)
+21. ⬜ Comisiones por doctor y liquidacion mensual (E4)
+22. ⬜ Facturacion electronica (E4)
+
+### Catalogo y configuracion
+23. ✅ CRUD de servicios y doctores (con color de agenda)
+24. ✅ Gestion de usuarios con roles (ADMIN, SECRETARIA, DOCTOR, CAJA)
+25. ✅ Datos del consultorio (nombre, logo, moneda, timezone)
+26. ⬜ Templates de mensajes WhatsApp editables (E3)
+
+### Dashboard y reportes
+27. ✅ Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
+28. ⬜ KPI de gastos y resultado neto (E2-M8)
+29. ⬜ Reportes mensual y por doctor (E2+)
+30. ⬜ Vista de actividad reciente sobre logs (E2-M3)
+
+### Clinico
+31. ✅ Atencion basica por cita (modulo atenciones)
+32. ⬜ Recetas PDF con membrete (E2-M5)
+33. ⬜ Decision entidad Visitas / walk-ins (E2-M6)
+34. ⬜ Verticales: odontograma, consentimientos, notas privadas (E7)
+
+### Plataforma
+35. ✅ Multi-tenant estricto (consultorioId del JWT en toda query)
+36. ✅ Auth JWT + roles + hardening (helmet, throttler, /health)
+37. 🔄 Login con Google (en working tree, falta fix de tipos y commit)
+38. ✅ Design system ui-ux-pro-max en todas las pantallas + dark mode + responsive
+39. ✅ Suite de pruebas: gates de API + Playwright E2E (11/11)
+40. ⬜ Deploy en Railway + consultorio piloto (diferido: lo activa el owner cuando decida)
+41. ⬜ Automatizacion WhatsApp: cola manual → Business API (E3)
+42. ⬜ Multi-sucursal (E5) · Portal del paciente con pagos online (E6)
+
+---
+
 ## 2. Stack tecnologico
 
 | Capa | Definido en MVP.pdf | Implementado |
@@ -360,13 +427,13 @@ Aplica a TODO codigo nuevo de los planes. Corto y obligatorio; los planes ya lo 
 
 Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtime verdes, smoke E2E de UI con Playwright (5/5, `apps/web/e2e/smoke.spec.ts`), hardening pre-deploy (helmet, throttler, fail-hard de secrets, /health, REGISTRO_ABIERTO). Regresion: `scripts/gate-*.ps1`.
 
-**Pendiente operativo (no de codigo):** deploy en Railway segun `docs/DEPLOY.md` (lo ejecuta el owner) + consultorio piloto.
+**Pendiente operativo (no de codigo):** deploy en Railway segun `docs/DEPLOY.md` + consultorio piloto — **diferido por decision del owner (2026-06-10)**: el desarrollo avanza con Etapa 2 sin esperar el deploy.
 
 ---
 
 ### Etapa 2 — Valor Clinico + Solidez Operativa
 
-**Trigger:** al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas.
+**Trigger:** ~~al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas~~ → **se adelanta por decision del owner (2026-06-10)**: se ejecuta en orden de hitos sin esperar piloto. Solo E2-M6 (decision Visitas) requiere datos de uso real.
 **Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 8 hitos ordenados (cancelar/reprogramar → reversal de pagos → arqueo ciego → gastos → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
 
 - Historia clinica completa sobre la atencion basica de Etapa 1: linea de tiempo cronologica, adjuntos (fotos, estudios), guard duro por rol en endpoints de atenciones y agenda DOCTOR
