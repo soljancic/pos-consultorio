@@ -24,6 +24,19 @@ export class AjustarTotalDto {
   motivo?: string
 }
 
+export class AnularPagoDto {
+  @IsString() @IsOptional()
+  motivo?: string
+}
+
+// Campo de CajaDiaria que acumula cada forma de pago
+const CAMPO_CAJA: Record<FormaPago, string> = {
+  [FormaPago.EFECTIVO]: 'totalEfectivo',
+  [FormaPago.QR]: 'totalQr',
+  [FormaPago.TARJETA]: 'totalTarjeta',
+  [FormaPago.VALES]: 'totalVales',
+}
+
 @Injectable()
 export class CobrosService {
   constructor(private prisma: PrismaService) {}
@@ -100,12 +113,7 @@ export class CobrosService {
 
       // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC)
       const { clave: hoy } = diaCajaLocal()
-      const campoMonto = {
-        [FormaPago.EFECTIVO]: 'totalEfectivo',
-        [FormaPago.QR]: 'totalQr',
-        [FormaPago.TARJETA]: 'totalTarjeta',
-        [FormaPago.VALES]: 'totalVales',
-      }[dto.formaPago]
+      const campoMonto = CAMPO_CAJA[dto.formaPago]
 
       await tx.cajaDiaria.upsert({
         where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
@@ -137,6 +145,135 @@ export class CobrosService {
     })
 
     return this.findByCita(consultorioId, cobro.citaId)
+  }
+
+  // Anulacion con asiento de reversa (E2-M1): el pago original nunca se borra
+  // ni se edita; se crea un pago espejo negativo y todo queda auditado.
+  async anularPago(
+    consultorioId: number,
+    pagoId: number,
+    dto: AnularPagoDto,
+    usuarioId: number,
+  ) {
+    const pago = await this.prisma.pago.findFirst({
+      where: { id: pagoId, cobro: { consultorioId } },
+      include: {
+        cobro: {
+          include: { cita: { select: { id: true, pacienteId: true, estado: true } } },
+        },
+      },
+    })
+    if (!pago) throw new NotFoundException('Pago no encontrado')
+    if (pago.monto.isNegative()) {
+      throw new BadRequestException('No se puede anular una reversa')
+    }
+    if (pago.anuladoAt) {
+      throw new BadRequestException('El pago ya fue anulado')
+    }
+
+    const cobro = pago.cobro
+    const nuevoSaldo = cobro.saldoPendiente.plus(pago.monto)
+    const pagado = cobro.total.minus(nuevoSaldo)
+    const nuevoEstadoCobro = pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
+    // Una cita cobrada vuelve a tener deuda; los demas estados no cambian
+    const revierteCita = cobro.cita.estado === EstadoCita.COBRADO
+
+    const { clave: hoy } = diaCajaLocal()
+    const campoMonto = CAMPO_CAJA[pago.formaPago]
+
+    await this.prisma.$transaction(async (tx) => {
+      const reversa = await tx.pago.create({
+        data: {
+          cobroId: cobro.id,
+          formaPago: pago.formaPago,
+          monto: pago.monto.negated(),
+          referencia: pago.referencia,
+          createdById: usuarioId,
+          reversaDeId: pago.id,
+        },
+      })
+
+      await tx.pago.update({
+        where: { id: pago.id },
+        data: {
+          anuladoAt: new Date(),
+          anuladoPorId: usuarioId,
+          motivoAnulacion: dto.motivo,
+        },
+      })
+
+      await tx.cobro.update({
+        where: { id: cobro.id },
+        data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+      })
+
+      if (revierteCita) {
+        await tx.cita.update({
+          where: { id: cobro.cita.id },
+          data: { estado: EstadoCita.CON_DEUDA },
+        })
+      }
+
+      // Espejo del decrement de registrarPago
+      await tx.paciente.update({
+        where: { id: cobro.cita.pacienteId },
+        data: { deudaTotal: { increment: pago.monto } },
+      })
+
+      // La reversa descuenta de la caja de HOY (la historica no se reescribe)
+      await tx.cajaDiaria.upsert({
+        where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+        create: {
+          consultorioId,
+          fecha: hoy,
+          usuarioAperturaId: usuarioId,
+          [campoMonto]: pago.monto.negated(),
+          totalGeneral: pago.monto.negated(),
+        },
+        update: {
+          [campoMonto]: { decrement: pago.monto },
+          totalGeneral: { decrement: pago.monto },
+        },
+      })
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'Pago',
+          entidadId: pago.id,
+          accion: 'PAYMENT',
+          payloadAntes: {
+            monto: pago.monto.toString(),
+            formaPago: pago.formaPago,
+            saldoPendiente: cobro.saldoPendiente.toString(),
+          },
+          payloadDespues: {
+            anulado: true,
+            motivo: dto.motivo ?? null,
+            reversaId: reversa.id,
+            saldoPendiente: nuevoSaldo.toString(),
+          },
+        },
+      })
+    })
+
+    // La caja del dia del pago original puede estar cerrada: alerta, no bloquea
+    const claveDiaOriginal = new Date(
+      `${pago.createdAt.getFullYear()}-${String(pago.createdAt.getMonth() + 1).padStart(2, '0')}-${String(pago.createdAt.getDate()).padStart(2, '0')}T00:00:00Z`,
+    )
+    const cajaOriginal = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: claveDiaOriginal } },
+      select: { cerrada: true },
+    })
+
+    const cobroFresco = await this.findByCita(consultorioId, cobro.cita.id)
+    return {
+      ...cobroFresco,
+      advertencia: cajaOriginal?.cerrada
+        ? 'La caja del dia del pago original ya estaba cerrada: la reversa impacta la caja de hoy'
+        : undefined,
+    }
   }
 
   // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA).
