@@ -1,13 +1,18 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
-import { Lock, Wallet } from 'lucide-react'
+import { Lock, Wallet, Undo2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, formatFecha, cn } from '../../lib/utils'
-import { inputUI, btnOutlineUI, cardUI, chipIconUI } from '../../lib/ui'
+import { inputUI, btnOutlineUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { useAuthStore } from '../../stores/auth.store'
+import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
 
 export function CajaPage() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const esAdmin = user?.rol === 'ADMIN'
+  const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
   const [tab, setTab] = useState<'hoy' | 'historial'>('hoy')
   const [desde, setDesde] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -124,12 +129,14 @@ export function CajaPage() {
                   <th className="text-left px-4 py-2 text-muted-foreground font-medium">Doctor</th>
                   <th className="text-left px-4 py-2 text-muted-foreground font-medium">Forma</th>
                   <th className="text-right px-4 py-2 text-muted-foreground font-medium">Monto</th>
+                  {esAdmin && <th className="px-4 py-2" />}
                 </tr>
               </thead>
               <tbody>
                 {pagos.map((p) => {
                   const fechaCita = new Date(p.cobro.cita.fechaHora)
                   const esDeudaVieja = fechaCita.toDateString() !== hoyStr && fechaCita < new Date()
+                  const esReversa = Number(p.monto) < 0
                   return (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                       <td className="px-4 py-2 text-muted-foreground tabular-nums">{formatHora(p.createdAt)}</td>
@@ -138,19 +145,46 @@ export function CajaPage() {
                         {esDeudaVieja && (
                           <span className="ml-2 text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">Deuda</span>
                         )}
+                        {esReversa && (
+                          <span className="ml-2 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Reversa</span>
+                        )}
+                        {p.anuladoAt && (
+                          <span className="ml-2 text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Anulado</span>
+                        )}
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.servicio.nombre}</td>
                       <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.doctor.nombre}</td>
                       <td className="px-4 py-2 text-muted-foreground">{p.formaPago}</td>
-                      <td className="px-4 py-2 text-right font-medium text-accent tabular-nums">
+                      <td className={cn('px-4 py-2 text-right font-medium tabular-nums', esReversa ? 'text-destructive' : 'text-accent', p.anuladoAt && 'line-through opacity-60')}>
                         {formatMoneda(Number(p.monto))}
                       </td>
+                      {esAdmin && (
+                        <td className="px-4 py-2 text-right">
+                          {!esReversa && !p.anuladoAt && (
+                            <button
+                              onClick={() =>
+                                setPagoAnular({
+                                  id: p.id,
+                                  monto: Number(p.monto),
+                                  formaPago: p.formaPago,
+                                  descripcion: `${p.cobro.cita.paciente.apellido}, ${p.cobro.cita.paciente.nombre} - ${p.cobro.cita.servicio.nombre}`,
+                                })
+                              }
+                              title="Anular pago"
+                              aria-label={`Anular pago de ${formatMoneda(Number(p.monto))}`}
+                              className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}
+                            >
+                              <Undo2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
                 {pagos.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground/70">
+                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground/70">
                       No hay movimientos hoy
                     </td>
                   </tr>
@@ -217,6 +251,10 @@ export function CajaPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {pagoAnular && (
+        <AnularPagoModal pago={pagoAnular} onClose={() => setPagoAnular(null)} />
       )}
     </div>
   )

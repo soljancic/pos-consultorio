@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Pencil, Check } from 'lucide-react'
+import { X, Pencil, Check, Undo2 } from 'lucide-react'
 import { FormaPago, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatMoneda, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
+import { useAuthStore } from '../../stores/auth.store'
+import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
 
 interface CobroModalProps {
   cita: Cita
@@ -20,6 +22,9 @@ const FORMAS_PAGO = [
 
 export function CobroModal({ cita, onClose }: CobroModalProps) {
   const qc = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const esAdmin = user?.rol === 'ADMIN'
+  const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
   const [monto, setMonto] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPago>(FormaPago.EFECTIVO)
   const [referencia, setReferencia] = useState('')
@@ -205,6 +210,49 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               )}
             </div>
 
+            {/* Pagos ya registrados (anulables por ADMIN via reversa) */}
+            {cobro?.pagos?.length > 0 && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Pagos registrados
+                </p>
+                {cobro.pagos.map((p: any) => {
+                  const esReversa = Number(p.monto) < 0
+                  return (
+                    <div key={p.id} className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground tabular-nums">
+                        {formatFecha(p.createdAt, 'dd/MM HH:mm')} &bull; {p.formaPago}
+                        {esReversa && (
+                          <span className="ml-1.5 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Reversa</span>
+                        )}
+                        {p.anuladoAt && (
+                          <span className="ml-1.5 text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Anulado</span>
+                        )}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className={cn('font-medium tabular-nums', esReversa ? 'text-destructive' : 'text-foreground', p.anuladoAt && 'line-through opacity-60')}>
+                          {formatMoneda(Number(p.monto))}
+                        </span>
+                        {esAdmin && !esReversa && !p.anuladoAt && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPagoAnular({ id: p.id, monto: Number(p.monto), formaPago: p.formaPago })
+                            }
+                            title="Anular pago"
+                            aria-label={`Anular pago de ${formatMoneda(Number(p.monto))}`}
+                            className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                          >
+                            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             <div>
               <label htmlFor="cobro-monto" className="block text-sm font-medium text-foreground mb-1.5">
                 Monto que paga
@@ -306,6 +354,10 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
           </form>
         )}
       </div>
+
+      {pagoAnular && (
+        <AnularPagoModal pago={pagoAnular} onClose={() => setPagoAnular(null)} />
+      )}
     </div>
   )
 }
