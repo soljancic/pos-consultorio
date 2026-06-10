@@ -89,7 +89,12 @@ export function AgendaPage() {
   const cambiarEstado = useMutation({
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['citas'] }),
+    onSuccess: () => {
+      // ATENDIDA genera deuda: refrescar tambien deudores, ficha y caja
+      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
+        queryClient.invalidateQueries({ queryKey: [key] })
+      }
+    },
   })
 
   function navegar(direccion: number) {

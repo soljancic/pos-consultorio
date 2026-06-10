@@ -32,18 +32,37 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     queryFn: () => api.get(`/cobros/cita/${cita.id}`).then((r) => r.data),
   })
 
+  // Un pago toca citas, deudores, caja, dashboard y la ficha del paciente:
+  // se invalida todo aca para que cualquier pantalla quede fresca.
+  function invalidarFinanzas() {
+    for (const key of [
+      'citas',
+      'deudores',
+      'deudores-resumen',
+      'caja-hoy',
+      'caja-historial',
+      'pacientes',
+      'paciente',
+      'cobro-cita',
+    ]) {
+      qc.invalidateQueries({ queryKey: [key] })
+    }
+  }
+
   const registrarPago = useMutation({
     mutationFn: (data: { monto: number; formaPago: FormaPago; referencia?: string }) =>
       api.post(`/cobros/${cobro.id}/pagos`, data),
-    onSuccess: onClose,
+    onSuccess: () => {
+      invalidarFinanzas()
+      onClose()
+    },
   })
 
   const ajustarTotal = useMutation({
     mutationFn: (data: { nuevoTotal: number; motivo?: string }) =>
       api.put(`/cobros/${cobro.id}/total`, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cobro-cita', cita.id] })
-      qc.invalidateQueries({ queryKey: ['citas'] })
+      invalidarFinanzas()
       setEditandoPrecio(false)
       setNuevoPrecio('')
       setMotivoAjuste('')

@@ -11,7 +11,9 @@ iniciarTema()
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60,
+      // staleTime 0: al navegar entre pantallas los montos se refrescan
+      // siempre (una secretaria cobra y salta de caja a deudores al toque)
+      staleTime: 0,
       retry: 1,
     },
   },
