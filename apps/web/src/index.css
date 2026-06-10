@@ -10,6 +10,7 @@
   /* Paleta "Accessible & Ethical" — teal medico + verde salud (WCAG AA/AAA).
      Generada con ui-ux-pro-max para medical clinic / healthcare SaaS. */
   :root {
+    color-scheme: light;
     --background: 166 76% 97%; /* #F0FDFA */
     --foreground: 176 61% 19%; /* #134E4A */
     --card: 0 0% 100%;
@@ -32,6 +33,7 @@
 
   /* Dark mode: teal profundo, mismo sistema (toggle en el sidebar) */
   .dark {
+    color-scheme: dark;
     --background: 196 60% 7%;
     --foreground: 166 30% 92%;
     --card: 196 50% 10%;
@@ -58,6 +60,14 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Controles nativos (select, date, time): sin esto quedan con fondo UA
+     blanco e ilegibles en dark; color-scheme arregla el dropdown nativo */
+  input,
+  select,
+  textarea {
+    @apply bg-card text-foreground;
   }
 
   @media (prefers-reduced-motion: reduce) {

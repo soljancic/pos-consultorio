@@ -342,7 +342,7 @@ Aplica a TODO codigo nuevo de los planes. Corto y obligatorio; los planes ya lo 
 - **Performance:** busquedas de pacientes y citas en menos de 200ms (indices por fecha, doctor, estado, apellido)
 - **Seguridad:** passwords con argon2, JWT con expiracion, roles validados en cada endpoint, consultorioId obligatorio en queries
 - **Auditoria:** tabla logs para cambios de estado, eliminaciones y pagos
-- **Responsividad:** desktop-first, compatible con tablet; la agenda debe funcionar en pantalla tactil
+- **Responsividad:** desktop-first, compatible con tablet y celulares; la agenda debe funcionar en pantalla tactil
 - **Multi-tenant:** aislamiento total por consultorioId — un usuario nunca puede ver datos de otro consultorio
 - **Backups:** automaticos en la infraestructura de hosting
 
