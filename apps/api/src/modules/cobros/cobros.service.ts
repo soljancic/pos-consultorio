@@ -3,6 +3,7 @@ import { IsNumber, Min, IsEnum, IsString, IsOptional } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCobro, EstadoCita, FormaPago } from '@pos/types'
 import { Decimal } from '@prisma/client/runtime/library'
+import { diaCajaLocal } from '../caja/caja.service'
 
 export class RegistrarPagoDto {
   @IsNumber() @Min(0.01)
@@ -86,8 +87,8 @@ export class CobrosService {
         data: { deudaTotal: { decrement: monto } },
       })
 
-      // Actualizar caja diaria
-      const hoy = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00Z')
+      // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC)
+      const { clave: hoy } = diaCajaLocal()
       const campoMonto = {
         [FormaPago.EFECTIVO]: 'totalEfectivo',
         [FormaPago.QR]: 'totalQr',
