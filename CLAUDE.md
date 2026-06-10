@@ -125,6 +125,19 @@ ESTADOS DE CITA:
 
 ---
 
+## Memoria del proyecto (claude-mem)
+
+claude-mem graba observaciones automaticamente (hooks activos). Ademas hay un
+**corpus consultable** llamado `pos-consultorio` con las decisiones, bugfixes
+y refactors (el conocimiento que NO se deduce del codigo).
+
+- Preguntar al historial: `prime_corpus("pos-consultorio")` y luego
+  `query_corpus` (ej: "que bugs de timezone hubo y como se resolvieron").
+- El corpus es un snapshot: tras varias sesiones nuevas, regenerarlo con
+  `rebuild_corpus` o `build_corpus` (mismo nombre, filtro
+  `types: decision,bugfix,refactor,security_note`, `limit: 500`).
+- Para busquedas puntuales sin corpus: `search` / `get_observations`.
+
 ## Comandos
 
 ```bash
