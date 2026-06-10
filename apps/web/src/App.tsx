@@ -6,6 +6,8 @@ import { AgendaPage } from './features/agenda/AgendaPage'
 import { PacientesPage } from './features/pacientes/PacientesPage'
 import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
 import { CajaPage } from './features/caja/CajaPage'
+import { DeudoresPage } from './features/deudores/DeudoresPage'
+import { DashboardPage } from './features/dashboard/DashboardPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -25,11 +27,12 @@ export default function App() {
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/agenda" replace />} />
+        <Route index element={<DashboardPage />} />
         <Route path="agenda" element={<AgendaPage />} />
         <Route path="pacientes" element={<PacientesPage />} />
         <Route path="pacientes/:id" element={<PacienteDetallePage />} />
         <Route path="caja" element={<CajaPage />} />
+        <Route path="deudores" element={<DeudoresPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
       </Route>
     </Routes>

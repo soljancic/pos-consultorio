@@ -127,10 +127,22 @@ export class CobrosService {
     return this.findByCita(consultorioId, cobro.citaId)
   }
 
+  // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA).
+  // Las citas futuras crean cobros PENDIENTE que NO son deuda.
+  private readonly whereDeudaReal = (consultorioId: string) => ({
+    consultorioId,
+    saldoPendiente: { gt: new Decimal(0) },
+    cita: {
+      estado: { in: [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA] },
+      deletedAt: null,
+    },
+  })
+
   async getDeudores(consultorioId: string) {
-    return this.prisma.cobro.findMany({
-      where: { consultorioId, estado: { in: [EstadoCobro.PENDIENTE, EstadoCobro.PARCIAL] } },
+    const cobros = await this.prisma.cobro.findMany({
+      where: this.whereDeudaReal(consultorioId),
       include: {
+        pagos: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
         cita: {
           include: {
             paciente: { select: { id: true, nombre: true, apellido: true, whatsapp: true } },
@@ -138,7 +150,72 @@ export class CobrosService {
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
     })
+
+    type Deudor = {
+      pacienteId: string
+      nombre: string
+      apellido: string
+      whatsapp: string | null
+      deudaTotal: number
+      ultimaCitaFecha: Date
+      ultimoServicio: string
+      ultimoPago: Date | null
+      cobros: typeof cobros
+    }
+    const porPaciente = new Map<string, Deudor>()
+
+    for (const cobro of cobros) {
+      const pac = cobro.cita.paciente
+      const fechaCita = new Date(cobro.cita.fechaHora)
+      const fechaPago = cobro.pagos[0]?.createdAt ?? null
+      const existing = porPaciente.get(pac.id)
+
+      if (existing) {
+        existing.deudaTotal += Number(cobro.saldoPendiente)
+        if (fechaCita > existing.ultimaCitaFecha) {
+          existing.ultimaCitaFecha = fechaCita
+          existing.ultimoServicio = cobro.cita.servicio.nombre
+        }
+        if (fechaPago && (!existing.ultimoPago || fechaPago > existing.ultimoPago)) {
+          existing.ultimoPago = fechaPago
+        }
+        existing.cobros.push(cobro)
+      } else {
+        porPaciente.set(pac.id, {
+          pacienteId: pac.id,
+          nombre: pac.nombre,
+          apellido: pac.apellido,
+          whatsapp: pac.whatsapp,
+          deudaTotal: Number(cobro.saldoPendiente),
+          ultimaCitaFecha: fechaCita,
+          ultimoServicio: cobro.cita.servicio.nombre,
+          ultimoPago: fechaPago,
+          cobros: [cobro],
+        })
+      }
+    }
+
+    return Array.from(porPaciente.values()).sort((a, b) => b.deudaTotal - a.deudaTotal)
+  }
+
+  async getDeudoresResumen(consultorioId: string) {
+    const [suma, cobros] = await Promise.all([
+      this.prisma.cobro.aggregate({
+        where: this.whereDeudaReal(consultorioId),
+        _sum: { saldoPendiente: true },
+      }),
+      this.prisma.cobro.findMany({
+        where: this.whereDeudaReal(consultorioId),
+        select: { cita: { select: { pacienteId: true } } },
+      }),
+    ])
+
+    const pacienteIds = new Set(cobros.map((c) => c.cita.pacienteId))
+
+    return {
+      totalDeuda: Number(suma._sum.saldoPendiente ?? 0),
+      cantidadPacientes: pacienteIds.size,
+    }
   }
 }

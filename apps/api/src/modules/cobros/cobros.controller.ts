@@ -10,9 +10,15 @@ export class CobrosController {
   constructor(private service: CobrosService) {}
 
   @Get('deudores')
-  @ApiOperation({ summary: 'Listar todos los cobros con saldo pendiente' })
+  @ApiOperation({ summary: 'Pacientes con deuda real, agrupados (citas ATENDIDA/CON_DEUDA)' })
   getDeudores(@CurrentUser() user: JwtPayload) {
     return this.service.getDeudores(user.consultorioId)
+  }
+
+  @Get('deudores/resumen')
+  @ApiOperation({ summary: 'Total adeudado y cantidad de pacientes deudores' })
+  getDeudoresResumen(@CurrentUser() user: JwtPayload) {
+    return this.service.getDeudoresResumen(user.consultorioId)
   }
 
   @Get('cita/:citaId')

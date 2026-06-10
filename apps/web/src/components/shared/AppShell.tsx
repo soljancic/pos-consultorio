@@ -1,11 +1,13 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { Calendar, Users, DollarSign, Settings, LogOut, Stethoscope } from 'lucide-react'
+import { Calendar, Users, DollarSign, Settings, LogOut, Stethoscope, AlertCircle, LayoutDashboard } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
 
 const NAV_ITEMS = [
+  { to: '/', icon: LayoutDashboard, label: 'Inicio', end: true },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
+  { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },
   { to: '/catalogo', icon: Settings, label: 'Catalogo' },
 ]
@@ -31,10 +33,11 @@ export function AppShell() {
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-2">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
+              end={end}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
