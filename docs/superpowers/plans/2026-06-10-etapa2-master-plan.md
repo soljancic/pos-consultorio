@@ -13,15 +13,17 @@
 ## Orden de hitos y dependencias
 
 ```
+E2-M7: Cancelar / No asistio / Reprogramar (UI+API) ← JUNTO A M1: hoy una cita mal agendada no se puede cancelar
 E2-M1: Solidez financiera (reversal de pagos)      ← PRIMERO: el piloto VA a registrar pagos mal
 E2-M2: Arqueo de caja ciego                        ← depende de M1 (el arqueo cuenta pagos netos de reversas)
+E2-M8: Gastos administrativos                      ← depende de M2 (el arqueo compara efectivo neto de egresos)
 E2-M3: Actividad reciente (/actividad)             ← independiente; barato (la tabla logs ya se alimenta)
 E2-M4: Historia clinica completa                   ← adjuntos + linea de tiempo + guard duro de roles
 E2-M5: Recetas PDF                                 ← depende de M4 (cuelga de la atencion)
 E2-M6: Evaluacion entidad Visitas (walk-ins)       ← decision de modelado al final, con datos del piloto
 ```
 
-Racional del orden: los hitos financieros (M1-M2) protegen la confianza del piloto en los numeros — un pago mal cargado sin forma de anularlo rompe la caja el dia 1. Lo clinico (M4-M5) es el valor nuevo pero puede esperar 2-3 semanas de feedback.
+Racional del orden: los hitos operativos/financieros (M7, M1-M2, M8) protegen la confianza del piloto en la operacion y los numeros — una cita que no se puede cancelar o un pago mal cargado sin forma de anularlo rompen la agenda y la caja el dia 1. Lo clinico (M4-M5) es el valor nuevo pero puede esperar 2-3 semanas de feedback.
 
 ---
 
@@ -68,6 +70,29 @@ Sobre la atencion basica de Etapa 1:
 - Generacion server-side (pdfkit o similar) con membrete del consultorio (logoUrl, nombre, telefono, direccion — ya capturados en Configuracion).
 - `POST /atenciones/:citaId/recetas` + descarga; boton en AtencionModal.
 - Para WhatsApp manual: link de descarga copiable (wa.me con el link).
+
+## E2-M7 — Cancelar / No asistio / Reprogramar (UI + API)
+
+Hoy la UI no expone CANCELADA ni NO_ASISTIO (CitaCard las excluye del boton de transicion) y no existe forma de cambiar la fecha de una cita. Decision del owner (2026-06-10): reprogramar = **editar fecha/hora en el lugar**, no crear cita nueva.
+
+Mini-spec:
+- Maquina de estados (`@pos/types`): agregar `PENDIENTE → NO_ASISTIO` (tambien lo exige el cron NO-SHOW de Etapa 3). `REPROGRAMADA` queda documentado como estado sin uso (no se elimina del enum por compatibilidad con datos existentes).
+- `PUT /citas/:id` nuevo (fechaHora, doctorId?, servicioId?, duracionMin?, notas?): permitido solo en PENDIENTE/CONFIRMADA/LLEGO; revalida solape con la query existente de citas.service (excluye CANCELADA/NO_ASISTIO); al reprogramar el estado vuelve a PENDIENTE (hay que re-confirmar); log AGENDA con payloadAntes/Despues.
+- Cancelar: `PUT /citas/:id/estado` a CANCELADA + `motivo` opcional en el DTO. Cobro sin pagos → nuevo valor `EstadoCobro.ANULADO` (hoy el enum solo tiene PENDIENTE/PARCIAL/COMPLETO); cobro con pagos → 409 "anular pagos primero" (depende de E2-M1).
+- UI: menu "⋯" en CitaCard y CitaDetalleModal con **Reprogramar** (modal fecha/hora/doctor), **Cancelar** (confirmacion + motivo) y **No asistio** (segun maquina de estados). Confirmacion antes de acciones destructivas; colores ya definidos en COLORES_ESTADO (gris cancelada, gris oscuro no-show).
+- Gate: cancelar cita sin pagos → cobro ANULADO + log; cancelar con pagos → 409; reprogramar → solape revalidado, estado PENDIENTE, log con antes/despues. Spec Playwright: cancelar y reprogramar desde la agenda.
+
+## E2-M8 — Gastos administrativos
+
+Registro de egresos con categorizacion + KPI en dashboard. Decision del owner (2026-06-10): los gastos en efectivo **descuentan de la caja diaria** (impactan el arqueo ciego de M2; por eso va despues).
+
+Mini-spec:
+- Tabla `gastos`: id, consultorioId, fecha, categoria (enum: INSUMOS, SUELDOS, ALQUILER, SERVICIOS, IMPUESTOS, OTROS), monto Decimal, descripcion, personal (texto libre o usuarioId opcional: a quien se pago), cuenta (enum: CAJA_EFECTIVO, BANCO, OTRO), comprobanteUrl?, registradoPorId, deletedAt.
+- Endpoints: `GET/POST /gastos`, `PUT /gastos/:id`, `DELETE` soft, `GET /gastos/resumen?desde=&hasta=` (totales por categoria). SECRETARIA registra; solo ADMIN edita/anula.
+- Caja: los gastos con cuenta CAJA_EFECTIVO del dia restan del efectivo esperado (`/caja/hoy` expone `totalEgresos`); el arqueo de M2 compara el declarado contra efectivo NETO de egresos.
+- UI: pagina `/gastos` (lista con filtros por fecha/categoria + modal de alta, patron PacientesPage/CatalogoPage).
+- Dashboard KPI: card "Gastos del mes" + "Resultado neto" (ingresos del mes − gastos del mes) en DashboardPage.
+- Gate: gasto en efectivo → `/caja/hoy` refleja el egreso; resumen por categoria suma bien; soft delete restaura el efectivo; SECRETARIA no puede editar (403).
 
 ## E2-M6 — Decision: entidad Visitas (walk-ins)
 

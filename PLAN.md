@@ -1,6 +1,6 @@
 # Plan de Trabajo — POS del Consultorio
 
-> Ultima actualizacion: 2026-06-09
+> Ultima actualizacion: 2026-06-10
 > Fuente: MVP.pdf + FRD en NotebookLM (notebook: f7ea57f8-2fb2-4690-ac2c-09599034c535)
 
 ---
@@ -108,6 +108,8 @@ pos-consultorio/
 | logs | id, consultorioId, usuarioId, entidad, entidadId, accion, payloadAntes, payloadDespues |
 
 **Regla critica:** Toda tabla tiene `consultorioId` — filtro obligatorio en cada query de la API. (En modelo.jpeg: `empresa_id` "va con todos" — mismo concepto.)
+
+**Tablas futuras ya especificadas** (no crear hasta su hito): `gastos` (E2-M8, plan maestro Etapa 2), `disponibilidades` + `series_disponibilidad` + `plantillas_horario` + `doctor_servicios` (Etapa 2.5a, evolucionan a `horarios_atencion`; spec `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md`).
 
 ### 4b. modelo.jpeg (guia de modelo de clases) vs schema actual
 
@@ -264,10 +266,14 @@ Prefijo global: `/api/v1`
 
 | Modulo | Rutas |
 |---|---|
+| Citas (E2-M7) | PUT /citas/:id (reprogramar: editar fecha/hora en el lugar) |
+| Gastos (E2-M8) | GET/POST /gastos, PUT/DELETE /gastos/:id, GET /gastos/resumen |
 | Atenciones | POST /atenciones, GET /atenciones/:citaId |
 | Recetas | POST /recetas, GET /recetas/:id (PDF) |
 | Reportes | GET /reportes/mensual, GET /reportes/por-doctor |
-| Horarios | GET/POST/PUT/DELETE /doctores/:id/horarios |
+| Horarios | ~~GET/POST/PUT/DELETE /doctores/:id/horarios~~ → reemplazado por Calendario de Atencion (E2.5a) |
+| Calendario de Atencion (E2.5a) | GET/POST/PUT/DELETE /disponibilidades, CRUD /plantillas-horario, PUT /doctores/:id/servicios |
+| Portal publico (E2.5b) | GET /public/:slug, GET /public/:slug/slots, POST /public/:slug/reservas |
 | Configuracion WhatsApp | GET/PUT /configuracion/whatsapp-templates |
 
 ---
@@ -361,11 +367,13 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 ### Etapa 2 — Valor Clinico + Solidez Operativa
 
 **Trigger:** al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas.
-**Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 6 hitos ordenados (reversal de pagos → arqueo ciego → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
+**Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 8 hitos ordenados (cancelar/reprogramar → reversal de pagos → arqueo ciego → gastos → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
 
 - Historia clinica completa sobre la atencion basica de Etapa 1: linea de tiempo cronologica, adjuntos (fotos, estudios), guard duro por rol en endpoints de atenciones y agenda DOCTOR
 - Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
 - Historia clinica cronologica en la ficha del paciente
+- **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7): menu de acciones en CitaCard/CitaDetalleModal; reprogramar = editar fecha/hora en el lugar via `PUT /citas/:id` (decision owner 2026-06-10); cancelar anula el cobro sin pagos; agrega transicion `PENDIENTE → NO_ASISTIO`
+- **Gastos administrativos** (E2-M8): tabla `gastos` con categoria, fecha, personal, monto y cuenta de origen; los gastos en efectivo descuentan de la caja diaria (afectan el arqueo); KPI "Gastos del mes" + "Resultado neto" en el dashboard
 - **Anulacion de pagos con asiento de reversa**: campos `anuladoAt/anuladoPor/motivo` + pago espejo negativo; nunca se borra el original (patron probado en produccion en otro proyecto del usuario)
 - **Arqueo de caja ciego**: al cerrar, la secretaria declara el efectivo contado SIN ver el esperado; el sistema calcula la diferencia y notifica al admin si no es cero (campos `montoDeclarado`, `montoEsperado`, `diferencia`, revision admin)
 - **Vista de actividad reciente** (`/actividad`, solo ADMIN): feed paginado leyendo la tabla `logs` que ya se alimenta hoy
@@ -375,9 +383,21 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 
 ---
 
+### Etapa 2.5 — Agendamiento avanzado
+
+**Trigger:** Etapa 2 cerrada, o feedback del piloto pidiendo agenda online.
+**Specs:** `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md` y `2026-06-10-portal-agendamiento-design.md` (planes de implementacion just-in-time, como E1/E2).
+
+- **2.5a — Calendario de Atencion**: cada doctor define su horario de trabajo por dia (ej: doctor 1, lunes 9-17). Scheduler semanal (filas = doctores), creacion rapida con presets, horarios repetibles con fecha limite y edicion de series (solo este / toda la serie / desde esta fecha), plantillas (turno manana/tarde/completa), servicios habilitados por doctor, bloqueos (vacaciones, ausencia, capacitacion, reunion). Reemplaza el modelo simple `horarios_atencion`. Validaciones: sin solapes, citas solo dentro de disponibilidad. Sedes/ambientes quedan para Etapa 5.
+- **2.5b — Portal publico de agendamiento (tipo Calendly)**: link `/reservar/:slug` (con `?doctor=` opcional para doctor fijo); el cliente ve disponibilidad real del calendario, elige slot y deja sus datos; se crea paciente (match por telefono) + cita en PENDIENTE con origen PORTAL. Rate limit, slug → consultorioId solo en server, toggle on/off en Configuracion. Depende de 2.5a.
+
+---
+
 ### Etapa 3 — Automatizacion
 
 **Trigger:** feedback que confirma que el recordatorio manual es el cuello de botella.
+
+> Nota: el cron NO-SHOW requiere la transicion `PENDIENTE → NO_ASISTIO` que se agrega en E2-M7.
 
 **Paso intermedio (sin API de WhatsApp, patron probado en produccion):**
 - **Cola de mensajes pendientes**: un cron genera los mensajes del dia (recordatorios, avisos de deuda) ya redactados; la secretaria los ve en un panel, copia y envia por wa.me, y los marca como enviados/omitidos (expiran a los 3 dias)
@@ -418,7 +438,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 ### Etapa 6 — Ecosistema del Paciente
 
 - Portal del paciente: historial propio, proximas citas
-- Reserva online 24/7 via link en Instagram/WhatsApp
+- ~~Reserva online 24/7 via link en Instagram/WhatsApp~~ → adelantada a Etapa 2.5b (portal de agendamiento); en E6 queda el portal del paciente autenticado
 - Citas en estado PENDIENTE al entrar al sistema
 - Pagos en linea al reservar
 
