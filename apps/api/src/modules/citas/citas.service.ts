@@ -34,8 +34,26 @@ export class CambiarEstadoDto {
   motivo?: string
 }
 
+export class ReprogramarCitaDto {
+  @IsISO8601()
+  fechaHora: string
+
+  @IsInt() @IsOptional()
+  doctorId?: number
+
+  @IsString() @IsOptional()
+  notasSecretaria?: string
+}
+
 // Estados que dejan el cobro sin efecto: el servicio no se presto
 const ESTADOS_ANULAN_COBRO: EstadoCita[] = [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO]
+
+// Una cita ya en curso o cerrada no se mueve de horario
+const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
+  EstadoCita.PENDIENTE,
+  EstadoCita.CONFIRMADA,
+  EstadoCita.LLEGO,
+]
 
 @Injectable()
 export class CitasService {
@@ -202,6 +220,66 @@ export class CitasService {
     })
 
     return citaActualizada
+  }
+
+  // Reprogramar = editar fecha/hora/doctor en el lugar (decision owner
+  // 2026-06-10): la cita conserva su id y su cobro; el cambio queda en logs.
+  async reprogramar(
+    consultorioId: number,
+    citaId: number,
+    dto: ReprogramarCitaDto,
+    usuarioId: number,
+  ) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
+      throw new BadRequestException(
+        `No se puede reprogramar una cita en estado ${cita.estado}`,
+      )
+    }
+
+    const doctorId = dto.doctorId ?? cita.doctorId
+    const fechaHora = new Date(dto.fechaHora)
+    const fechaFin = new Date(fechaHora.getTime() + cita.duracionMin * 60 * 1000)
+    await this.verificarDisponibilidad(consultorioId, doctorId, fechaHora, fechaFin, citaId)
+
+    return this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.cita.update({
+        where: { id: citaId },
+        data: {
+          fechaHora,
+          doctorId,
+          // la cita movida vuelve a PENDIENTE: hay que re-confirmar con el paciente
+          estado: EstadoCita.PENDIENTE,
+          ...(dto.notasSecretaria !== undefined && { notasSecretaria: dto.notasSecretaria }),
+        },
+      })
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'Cita',
+          entidadId: citaId,
+          accion: 'UPDATE',
+          payloadAntes: {
+            fechaHora: cita.fechaHora.toISOString(),
+            doctorId: cita.doctorId,
+            estado: cita.estado,
+          },
+          payloadDespues: {
+            fechaHora: fechaHora.toISOString(),
+            doctorId,
+            estado: EstadoCita.PENDIENTE,
+            motivo: 'reprogramacion',
+          },
+        },
+      })
+
+      return actualizada
+    })
   }
 
   private async verificarDisponibilidad(
