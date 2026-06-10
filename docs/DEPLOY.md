@@ -41,7 +41,7 @@ Proyecto Railway "pos-consultorio"
 - Build command: `pnpm install --frozen-lockfile && pnpm --filter @pos/types build && pnpm --filter api build`
   (ajustar `--filter` a los nombres reales de los package.json de apps/api y packages/types)
 - Pre-deploy (Railway "Pre-deploy command"): `cd apps/api && npx prisma migrate deploy`
-- Start command: `node apps/api/dist/src/main.js`
+- Start command: `node apps/api/dist/main.js`
 - Healthcheck path: `/api/v1/health` (verifica DB con SELECT 1)
 
 ## 3. Frontend (apps/web)

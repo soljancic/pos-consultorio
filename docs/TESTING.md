@@ -18,7 +18,7 @@ Sin base de datos ni server. Agregar aqui todo lo que sea logica pura.
 
 ## 2. Gates de API (PowerShell) — flujos de negocio reales
 
-Requieren la API corriendo (`node dist/src/main.js` o `pnpm start:dev`) con
+Requieren la API corriendo (`pnpm start` o `pnpm start:dev`) con
 PostgreSQL local. Cada gate crea su propio consultorio (no ensucian datos de
 otros): son idempotentes y re-ejecutables.
 
