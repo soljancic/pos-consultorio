@@ -10,13 +10,14 @@ export class CitasController {
   constructor(private service: CitasService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Agenda del dia (fecha requerida, doctorId opcional)' })
+  @ApiOperation({ summary: 'Agenda (fecha requerida; hasta opcional para rango; doctorId opcional)' })
   findByFecha(
     @CurrentUser() user: JwtPayload,
     @Query('fecha') fecha: string,
     @Query('doctorId') doctorId?: string,
+    @Query('hasta') hasta?: string,
   ) {
-    return this.service.findByFecha(user.consultorioId, fecha, doctorId)
+    return this.service.findByFecha(user.consultorioId, fecha, doctorId, hasta)
   }
 
   @Post()

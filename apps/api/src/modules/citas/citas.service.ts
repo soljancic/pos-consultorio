@@ -38,12 +38,14 @@ export class CambiarEstadoDto {
 export class CitasService {
   constructor(private prisma: PrismaService) {}
 
-  async findByFecha(consultorioId: string, fecha: string, doctorId?: string) {
+  async findByFecha(consultorioId: string, fecha: string, doctorId?: string, hasta?: string) {
     // "fecha" es el dia calendario LOCAL del consultorio (server en el mismo
     // timezone para el MVP). Con rango UTC, una cita de las 21:00 local en
     // GMT-4 caia en el dia UTC siguiente y desaparecia de la agenda.
+    // "hasta" (opcional, inclusive) habilita rangos: vista semanal.
     const inicio = new Date(`${fecha}T00:00:00`)
-    const fin = new Date(inicio.getTime() + 24 * 60 * 60 * 1000 - 1)
+    const finDia = new Date(`${hasta ?? fecha}T00:00:00`)
+    const fin = new Date(finDia.getTime() + 24 * 60 * 60 * 1000 - 1)
 
     return this.prisma.cita.findMany({
       where: {

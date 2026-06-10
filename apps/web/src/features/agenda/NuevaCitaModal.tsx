@@ -7,18 +7,21 @@ import type { Paciente, Doctor, Servicio } from '@pos/types'
 
 interface Props {
   fechaInicial: Date
+  // Prefill al crear desde un slot vacio de la grilla
+  doctorIdInicial?: string
+  horaInicial?: string
   onClose: () => void
 }
 
-export function NuevaCitaModal({ fechaInicial, onClose }: Props) {
+export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onClose }: Props) {
   const qc = useQueryClient()
   const [pacienteQuery, setPacienteQuery] = useState('')
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Pick<Paciente, 'id' | 'nombre' | 'apellido'> | null>(null)
   const [showPacienteList, setShowPacienteList] = useState(false)
-  const [doctorId, setDoctorId] = useState('')
+  const [doctorId, setDoctorId] = useState(doctorIdInicial ?? '')
   const [servicioId, setServicioId] = useState('')
   const [fecha, setFecha] = useState(format(fechaInicial, 'yyyy-MM-dd'))
-  const [hora, setHora] = useState('09:00')
+  const [hora, setHora] = useState(horaInicial ?? '09:00')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState('')
   const searchRef = useRef<HTMLDivElement>(null)
