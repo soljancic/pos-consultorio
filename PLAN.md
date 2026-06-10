@@ -285,7 +285,7 @@ Los 4 detectados en la auditoria pre-ejecucion (DTOs sin validators, deudaTotal 
 
 | Item del MVP | Estado | Decision |
 |---|---|---|
-| Descuento en cobros | No implementado (sin campo en schema) | Backlog Etapa 1.5 — el flujo de pago parcial cubre el caso de cobrar menos |
+| Descuento en cobros | ✔ Implementado (2026-06-10) | `PUT /cobros/:id/total` + edicion inline en CobroModal, auditado, con reglas (no menor a lo pagado, no sobre COMPLETO) |
 | "Ultimo pago" en vista deudores | Incorporado | Columna agregada al spec/plan de deudores |
 | Logo del consultorio en config | Incorporado | Campo URL en ConfiguracionPage (upload de archivo: etapa posterior) |
 | Horarios de atencion en config | Parcial | API por-doctor existe (`POST /doctores/:id/horarios`); UI se difiere a Etapa 2 |
