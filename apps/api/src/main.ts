@@ -1,5 +1,5 @@
-import { NestFactory, Reflector } from '@nestjs/core'
-import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common'
+import { NestFactory } from '@nestjs/core'
+import { ValidationPipe } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
@@ -17,8 +17,9 @@ async function bootstrap() {
     }),
   )
 
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)))
-
+  // Sin ClassSerializerInterceptor: la API devuelve objetos planos de Prisma y el
+  // interceptor descomponia los Decimal en {s,e,d} en vez de dejar que toJSON()
+  // los serialice como string.
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
