@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { X, Pencil, Check } from 'lucide-react'
 import { FormaPago, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda } from '../../lib/utils'
@@ -18,9 +18,14 @@ const FORMAS_PAGO = [
 ]
 
 export function CobroModal({ cita, onClose }: CobroModalProps) {
+  const qc = useQueryClient()
   const [monto, setMonto] = useState('')
   const [formaPago, setFormaPago] = useState<FormaPago>(FormaPago.EFECTIVO)
   const [referencia, setReferencia] = useState('')
+  const [editandoPrecio, setEditandoPrecio] = useState(false)
+  const [nuevoPrecio, setNuevoPrecio] = useState('')
+  const [motivoAjuste, setMotivoAjuste] = useState('')
+  const [errorAjuste, setErrorAjuste] = useState('')
 
   const { data: cobro, isLoading } = useQuery({
     queryKey: ['cobro-cita', cita.id],
@@ -33,7 +38,34 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     onSuccess: onClose,
   })
 
+  const ajustarTotal = useMutation({
+    mutationFn: (data: { nuevoTotal: number; motivo?: string }) =>
+      api.put(`/cobros/${cobro.id}/total`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cobro-cita', cita.id] })
+      qc.invalidateQueries({ queryKey: ['citas'] })
+      setEditandoPrecio(false)
+      setNuevoPrecio('')
+      setMotivoAjuste('')
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setErrorAjuste(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al ajustar el precio')
+    },
+  })
+
   const saldo = cobro ? Number(cobro.saldoPendiente) : 0
+  const pagado = cobro ? Number(cobro.total) - saldo : 0
+
+  function confirmarAjuste() {
+    setErrorAjuste('')
+    const precio = parseFloat(nuevoPrecio)
+    if (isNaN(precio) || precio < 0) {
+      setErrorAjuste('Ingrese un precio valido')
+      return
+    }
+    ajustarTotal.mutate({ nuevoTotal: precio, motivo: motivoAjuste || undefined })
+  }
   const montoNum = parseFloat(monto) || 0
   const vuelto = montoNum > saldo ? montoNum - saldo : 0
   const quedaDeuda = saldo - Math.min(montoNum, saldo)
@@ -67,15 +99,83 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
           <div className="p-6 text-center text-muted-foreground">Cargando cobro...</div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            <div className="bg-muted/50 rounded-lg p-3 grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <div className="text-muted-foreground">Total servicio</div>
-                <div className="font-semibold">{formatMoneda(Number(cobro?.total))}</div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="text-muted-foreground">Total servicio</div>
+                  <div className="font-semibold inline-flex items-center gap-1.5">
+                    {formatMoneda(Number(cobro?.total))}
+                    {!editandoPrecio && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoPrecio(String(Number(cobro?.total ?? 0)))
+                          setEditandoPrecio(true)
+                        }}
+                        title="Cambiar precio"
+                        aria-label="Cambiar precio del servicio"
+                        className="p-1 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Saldo pendiente</div>
+                  <div className="font-semibold text-destructive">{formatMoneda(saldo)}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-muted-foreground">Saldo pendiente</div>
-                <div className="font-semibold text-destructive">{formatMoneda(saldo)}</div>
-              </div>
+
+              {editandoPrecio && (
+                <div className="border-t pt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={pagado}
+                      step="0.01"
+                      value={nuevoPrecio}
+                      onChange={(e) => setNuevoPrecio(e.target.value)}
+                      autoFocus
+                      aria-label="Nuevo precio"
+                      className="flex-1 border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <button
+                      type="button"
+                      onClick={confirmarAjuste}
+                      disabled={ajustarTotal.isPending}
+                      title="Confirmar precio"
+                      className="p-1.5 rounded-md bg-primary text-white hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Check className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditandoPrecio(false)
+                        setErrorAjuste('')
+                      }}
+                      title="Cancelar"
+                      className="p-1.5 rounded-md border text-muted-foreground hover:bg-muted cursor-pointer"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={motivoAjuste}
+                    onChange={(e) => setMotivoAjuste(e.target.value)}
+                    placeholder="Motivo (ej: descuento obra social)"
+                    className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  {pagado > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Ya pagado: {formatMoneda(pagado)} — el precio no puede ser menor
+                    </p>
+                  )}
+                  {errorAjuste && <p className="text-xs text-destructive">{errorAjuste}</p>}
+                </div>
+              )}
             </div>
 
             <div>

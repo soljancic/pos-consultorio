@@ -16,6 +16,14 @@ export class RegistrarPagoDto {
   referencia?: string
 }
 
+export class AjustarTotalDto {
+  @IsNumber() @Min(0)
+  nuevoTotal: number
+
+  @IsString() @IsOptional()
+  motivo?: string
+}
+
 @Injectable()
 export class CobrosService {
   constructor(private prisma: PrismaService) {}
@@ -138,6 +146,91 @@ export class CobrosService {
       deletedAt: null,
     },
   })
+
+  // Ajuste de precio al cobrar (MVP: "Descuento"). El total nunca puede
+  // quedar por debajo de lo ya pagado; el cambio queda auditado en logs.
+  async ajustarTotal(
+    consultorioId: string,
+    cobroId: string,
+    dto: AjustarTotalDto,
+    usuarioId: string,
+  ) {
+    const cobro = await this.prisma.cobro.findFirst({
+      where: { id: cobroId, consultorioId },
+      include: { cita: { select: { id: true, pacienteId: true, estado: true } } },
+    })
+    if (!cobro) throw new NotFoundException('Cobro no encontrado')
+    // Un cobro saldado no se reabre por precio: dejaria deuda con la cita
+    // en COBRADO. La correccion de pagos llega con las reversas (Etapa 2).
+    if (cobro.estado === EstadoCobro.COMPLETO) {
+      throw new BadRequestException('El cobro ya esta saldado; no se puede ajustar el precio')
+    }
+
+    const pagado = cobro.total.minus(cobro.saldoPendiente)
+    const nuevoTotal = new Decimal(dto.nuevoTotal)
+    if (nuevoTotal.lt(pagado)) {
+      throw new BadRequestException(
+        `El nuevo total ($${nuevoTotal}) no puede ser menor a lo ya pagado ($${pagado})`,
+      )
+    }
+
+    const nuevoSaldo = nuevoTotal.minus(pagado)
+    const quedaSaldado = nuevoSaldo.lte(0)
+    const nuevoEstadoCobro = quedaSaldado
+      ? EstadoCobro.COMPLETO
+      : pagado.gt(0)
+        ? EstadoCobro.PARCIAL
+        : EstadoCobro.PENDIENTE
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.cobro.update({
+        where: { id: cobroId },
+        data: { total: nuevoTotal, saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+      })
+
+      // La deuda del paciente sigue al saldo solo si el servicio ya se presto
+      const citaConDeuda =
+        cobro.cita.estado === EstadoCita.ATENDIDA ||
+        cobro.cita.estado === EstadoCita.CON_DEUDA
+      if (citaConDeuda) {
+        const delta = nuevoSaldo.minus(cobro.saldoPendiente)
+        if (!delta.isZero()) {
+          await tx.paciente.update({
+            where: { id: cobro.cita.pacienteId },
+            data: { deudaTotal: { increment: delta } },
+          })
+        }
+        // Si el ajuste deja el cobro saldado, la cita queda cobrada
+        if (quedaSaldado) {
+          await tx.cita.update({
+            where: { id: cobro.cita.id },
+            data: { estado: EstadoCita.COBRADO },
+          })
+        }
+      }
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'Cobro',
+          entidadId: cobroId,
+          accion: 'UPDATE',
+          payloadAntes: {
+            total: cobro.total.toString(),
+            saldoPendiente: cobro.saldoPendiente.toString(),
+          },
+          payloadDespues: {
+            total: nuevoTotal.toString(),
+            saldoPendiente: nuevoSaldo.toString(),
+            motivo: dto.motivo ?? 'ajuste de precio',
+          },
+        },
+      })
+    })
+
+    return this.findByCita(consultorioId, cobro.cita.id)
+  }
 
   async getDeudores(consultorioId: string) {
     const cobros = await this.prisma.cobro.findMany({

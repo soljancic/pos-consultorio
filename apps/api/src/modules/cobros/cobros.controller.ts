@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CobrosService, RegistrarPagoDto } from './cobros.service'
+import { CobrosService, RegistrarPagoDto, AjustarTotalDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Cobros')
@@ -25,6 +25,16 @@ export class CobrosController {
   @ApiOperation({ summary: 'Obtener cobro de una cita' })
   findByCita(@CurrentUser() user: JwtPayload, @Param('citaId') citaId: string) {
     return this.service.findByCita(user.consultorioId, citaId)
+  }
+
+  @Put(':id/total')
+  @ApiOperation({ summary: 'Ajustar el precio del cobro (descuento/recargo, auditado)' })
+  ajustarTotal(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: AjustarTotalDto,
+  ) {
+    return this.service.ajustarTotal(user.consultorioId, id, dto, user.sub)
   }
 
   @Post(':id/pagos')

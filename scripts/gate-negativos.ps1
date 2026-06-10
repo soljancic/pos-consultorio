@@ -80,12 +80,29 @@ try {
   Write-Output "PAGO EXCEDIDO: FALLO (acepto monto mayor al saldo)"
 } catch { Write-Output "PAGO EXCEDIDO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 
-# Pago sobre cobro COMPLETO -> 400
-Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 5000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+# Ajuste de precio (descuento): 5000 -> 4000 con pago parcial de 1000
+Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+$ajustado = Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/total" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ nuevoTotal = 4000; motivo = "descuento prueba" } | ConvertTo-Json)
+Write-Output "AJUSTE PRECIO: total=$($ajustado.total) (esp 4000) saldo=$($ajustado.saldoPendiente) (esp 3000)"
+
+# Ajustar por debajo de lo pagado -> 400
+try {
+  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/total" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ nuevoTotal = 500 } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+  Write-Output "AJUSTE BAJO PAGADO: FALLO (acepto total menor a lo pagado)"
+} catch { Write-Output "AJUSTE BAJO PAGADO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
+
+# Pago sobre cobro COMPLETO -> 400 (saldar el resto: 3000)
+Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 3000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
 try {
   Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1; formaPago = "EFECTIVO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null
   Write-Output "PAGO SOBRE COMPLETO: FALLO"
 } catch { Write-Output "PAGO SOBRE COMPLETO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
+
+# Ajustar precio de cobro COMPLETO -> 400 (no se reabre deuda por precio)
+try {
+  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/total" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ nuevoTotal = 9000 } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+  Write-Output "AJUSTE SOBRE COMPLETO: FALLO"
+} catch { Write-Output "AJUSTE SOBRE COMPLETO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 
 # Sin token -> 401
 try {
