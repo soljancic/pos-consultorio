@@ -39,8 +39,11 @@ export class CitasService {
   constructor(private prisma: PrismaService) {}
 
   async findByFecha(consultorioId: string, fecha: string, doctorId?: string) {
-    const inicio = new Date(`${fecha}T00:00:00Z`)
-    const fin = new Date(`${fecha}T23:59:59.999Z`)
+    // "fecha" es el dia calendario LOCAL del consultorio (server en el mismo
+    // timezone para el MVP). Con rango UTC, una cita de las 21:00 local en
+    // GMT-4 caia en el dia UTC siguiente y desaparecia de la agenda.
+    const inicio = new Date(`${fecha}T00:00:00`)
+    const fin = new Date(inicio.getTime() + 24 * 60 * 60 * 1000 - 1)
 
     return this.prisma.cita.findMany({
       where: {
