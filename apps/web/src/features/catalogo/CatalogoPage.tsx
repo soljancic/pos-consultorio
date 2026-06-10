@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, ClipboardList } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda } from '../../lib/utils'
+import { formatMoneda, cn } from '../../lib/utils'
+import { btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { ServicioModal } from './ServicioModal'
 import { DoctorModal } from './DoctorModal'
@@ -29,8 +30,13 @@ export function CatalogoPage() {
   })
 
   return (
-    <div className="p-6 space-y-8 max-w-4xl mx-auto">
-      <h1 className="text-lg font-semibold text-foreground">Catalogo</h1>
+    <div className="p-4 sm:p-6 space-y-8 max-w-4xl mx-auto">
+      <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+        <span className={chipIconUI}>
+          <ClipboardList className="h-4 w-4" aria-hidden="true" />
+        </span>
+        Catalogo
+      </h1>
 
       {/* Servicios */}
       <section>
@@ -38,12 +44,12 @@ export function CatalogoPage() {
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Servicios</h2>
           {esAdmin && (
             <button onClick={() => { setServicioEdit(null); setServicioModal(true) }}
-              className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
-              <Plus className="h-3.5 w-3.5" /> Nuevo servicio
+              className={cn(btnPrimaryUI, 'h-9 px-3')}>
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nuevo servicio
             </button>
           )}
         </div>
-        <div className="bg-card rounded-lg border overflow-x-auto">
+        <div className={cn(cardUI, 'overflow-x-auto')}>
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b">
               <tr>
@@ -56,10 +62,10 @@ export function CatalogoPage() {
             </thead>
             <tbody>
               {(servicios as any[]).map((s) => (
-                <tr key={s.id} className="border-b last:border-0">
+                <tr key={s.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                   <td className="px-4 py-3 font-medium">{s.nombre}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.duracionMin} min</td>
-                  <td className="px-4 py-3 text-right">{formatMoneda(Number(s.precioBase))}</td>
+                  <td className="px-4 py-3 text-muted-foreground tabular-nums">{s.duracionMin} min</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(s.precioBase))}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.activo ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'}`}>
                       {s.activo ? 'Activo' : 'Inactivo'}
@@ -68,8 +74,9 @@ export function CatalogoPage() {
                   {esAdmin && (
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => { setServicioEdit(s); setServicioModal(true) }}
-                        className="text-muted-foreground/70 hover:text-foreground">
-                        <Pencil className="h-4 w-4" />
+                        aria-label={`Editar servicio ${s.nombre}`}
+                        className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </td>
                   )}
@@ -89,14 +96,14 @@ export function CatalogoPage() {
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Doctores</h2>
           {esAdmin && (
             <button onClick={() => { setDoctorEdit(null); setDoctorModal(true) }}
-              className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
-              <Plus className="h-3.5 w-3.5" /> Nuevo doctor
+              className={cn(btnPrimaryUI, 'h-9 px-3')}>
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nuevo doctor
             </button>
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(doctores as any[]).map((d) => (
-            <div key={d.id} className="bg-card rounded-lg border p-4 flex items-center gap-3">
+            <div key={d.id} className={cn(cardUI, 'p-4 flex items-center gap-3')}>
               <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: d.colorAgenda }} />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-foreground truncate">{d.nombre}</div>
@@ -109,8 +116,9 @@ export function CatalogoPage() {
               </div>
               {esAdmin && (
                 <button onClick={() => { setDoctorEdit(d); setDoctorModal(true) }}
-                  className="text-muted-foreground/70 hover:text-foreground shrink-0">
-                  <Pencil className="h-4 w-4" />
+                  aria-label={`Editar doctor ${d.nombre}`}
+                  className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted shrink-0')}>
+                  <Pencil className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>

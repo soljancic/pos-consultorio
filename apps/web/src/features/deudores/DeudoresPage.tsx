@@ -1,8 +1,9 @@
 import { Fragment, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MessageCircle, DollarSign, ChevronDown, ChevronRight } from 'lucide-react'
+import { MessageCircle, DollarSign, ChevronDown, ChevronRight, CircleDollarSign } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, buildWhatsAppUrl } from '../../lib/utils'
+import { formatMoneda, formatFecha, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { inputUI, cardUI, chipIconUI } from '../../lib/ui'
 import { CobroModal } from '../agenda/CobroModal'
 import type { Cita } from '@pos/types'
 
@@ -58,17 +59,23 @@ export function DeudoresPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-card">
-        <h1 className="text-lg font-semibold text-foreground">Deudores</h1>
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
+        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <span className={chipIconUI}>
+            <CircleDollarSign className="h-4 w-4" aria-hidden="true" />
+          </span>
+          Deudores
+        </h1>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nombre..."
-          className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring w-56"
+          aria-label="Buscar deudores"
+          className={cn(inputUI, 'w-56')}
         />
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         {isLoading ? (
           <div className="text-center text-muted-foreground py-12">Cargando...</div>
         ) : filtrados.length === 0 ? (
@@ -76,7 +83,7 @@ export function DeudoresPage() {
             {search ? 'No se encontraron deudores' : 'No hay deudas pendientes'}
           </div>
         ) : (
-          <div className="bg-card rounded-lg border overflow-x-auto">
+          <div className={cn(cardUI, 'overflow-x-auto')}>
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
@@ -94,7 +101,7 @@ export function DeudoresPage() {
                   const abierto = expandido === d.pacienteId
                   return (
                     <Fragment key={d.pacienteId}>
-                      <tr className="border-b last:border-0 hover:bg-muted/60">
+                      <tr className="border-b last:border-0 hover:bg-muted/60 transition-colors duration-150">
                         <td className="px-4 py-3 font-medium text-foreground">
                           <span className="inline-flex items-center gap-1.5">
                             {variasCitas && (
@@ -104,7 +111,8 @@ export function DeudoresPage() {
                                 }
                                 title={abierto ? 'Ocultar detalle' : 'Ver detalle por cita'}
                                 aria-expanded={abierto}
-                                className="text-muted-foreground/70 hover:text-foreground cursor-pointer"
+                                aria-label={abierto ? 'Ocultar detalle' : 'Ver detalle por cita'}
+                                className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                               >
                                 {abierto ? (
                                   <ChevronDown className="h-4 w-4" />
@@ -123,7 +131,7 @@ export function DeudoresPage() {
                           {variasCitas ? (
                             <button
                               onClick={() => setExpandido(abierto ? null : d.pacienteId)}
-                              className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-amber-500/25"
+                              className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                             >
                               {d.cobros.length} citas
                             </button>
@@ -147,18 +155,20 @@ export function DeudoresPage() {
                                 )}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20"
+                                className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                                 title="Enviar WhatsApp"
+                                aria-label="Enviar recordatorio por WhatsApp"
                               >
-                                <MessageCircle className="h-4 w-4" />
+                                <MessageCircle className="h-4 w-4" aria-hidden="true" />
                               </a>
                             )}
                             <button
                               onClick={() => cobrarDeudor(d)}
-                              className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                               title={variasCitas ? 'Ver citas para cobrar' : 'Cobrar'}
+                              aria-label={variasCitas ? 'Ver citas para cobrar' : 'Cobrar'}
                             >
-                              <DollarSign className="h-4 w-4" />
+                              <DollarSign className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         </td>
@@ -183,7 +193,7 @@ export function DeudoresPage() {
                               <div className="flex justify-end">
                                 <button
                                   onClick={() => setCitaCobro(cobro.cita)}
-                                  className="text-xs font-medium text-primary hover:underline cursor-pointer"
+                                  className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                                 >
                                   Cobrar esta cita
                                 </button>

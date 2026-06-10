@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange } from '
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
+import { inputUI, btnPrimaryUI, btnIconUI } from '../../lib/ui'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
@@ -147,8 +148,8 @@ export function AgendaPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
-          <button onClick={() => navegar(-1)} aria-label="Anterior" className="p-1 rounded hover:bg-muted cursor-pointer">
-            <ChevronLeft className="h-5 w-5" />
+          <button onClick={() => navegar(-1)} aria-label="Anterior" className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
           <div>
             <h2 className="text-lg font-semibold text-foreground capitalize">{tituloFecha}</h2>
@@ -156,12 +157,12 @@ export function AgendaPage() {
               <p className="text-xs text-muted-foreground">{citas.length} citas</p>
             )}
           </div>
-          <button onClick={() => navegar(1)} aria-label="Siguiente" className="p-1 rounded hover:bg-muted cursor-pointer">
-            <ChevronRight className="h-5 w-5" />
+          <button onClick={() => navegar(1)} aria-label="Siguiente" className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
           <button
             onClick={() => setFecha(new Date())}
-            className="ml-2 text-xs text-primary hover:underline cursor-pointer"
+            className="ml-2 text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150"
           >
             Hoy
           </button>
@@ -175,10 +176,11 @@ export function AgendaPage() {
                 key={id}
                 onClick={() => cambiarVista(id)}
                 title={label}
+                aria-pressed={vista === id}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150',
+                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                   vista === id
-                    ? 'bg-primary text-white'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted',
                 )}
               >
@@ -192,7 +194,8 @@ export function AgendaPage() {
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm max-w-[180px] focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-label="Filtrar por doctor"
+              className={cn(inputUI, 'w-auto max-w-[180px]')}
             >
               <option value="">Todos los doctores</option>
               {doctores.map((d) => (
@@ -200,11 +203,8 @@ export function AgendaPage() {
               ))}
             </select>
           )}
-          <button
-            onClick={() => setModalNuevaCita(true)}
-            className="flex items-center gap-1 bg-primary text-white px-3 py-2 rounded-md text-sm hover:bg-primary/90 cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
+          <button onClick={() => setModalNuevaCita(true)} className={btnPrimaryUI}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
             Nueva cita
           </button>
         </div>

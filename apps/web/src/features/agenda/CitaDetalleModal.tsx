@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import type { Cita, EstadoCita } from '@pos/types'
-import { formatFecha } from '../../lib/utils'
+import { formatFecha, cn } from '../../lib/utils'
+import { btnIconUI } from '../../lib/ui'
 import { CitaCard } from './CitaCard'
 
 // Detalle de una cita desde las vistas de grilla: reutiliza la CitaCard
@@ -17,13 +18,17 @@ interface Props {
 export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl shadow-xl w-full max-w-lg">
+      <div className="bg-card rounded-xl border shadow-xl w-full max-w-lg">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="font-semibold text-foreground capitalize">
             {formatFecha(cita.fechaHora, "EEEE d 'de' MMMM")}
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 rounded hover:bg-muted cursor-pointer">
-            <X className="h-5 w-5" />
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         <div className="p-4">

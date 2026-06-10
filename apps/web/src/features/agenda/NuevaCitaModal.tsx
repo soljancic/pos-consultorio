@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { X, Search } from 'lucide-react'
+import { X, Search, AlertCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { cn } from '../../lib/utils'
+import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 
 interface Props {
@@ -89,21 +91,25 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-card rounded-xl shadow-xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card rounded-xl border shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-foreground">Nueva cita</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted">
-            <X className="h-5 w-5" />
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Paciente */}
           <div ref={searchRef} className="relative">
-            <label className="block text-sm font-medium text-foreground mb-1">Paciente</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Paciente</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
               <input
                 value={pacienteQuery}
                 onChange={(e) => {
@@ -113,7 +119,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
                 }}
                 onFocus={() => setShowPacienteList(true)}
                 placeholder="Buscar paciente..."
-                className="w-full pl-9 pr-4 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={cn(inputUI, 'pl-9')}
                 required
               />
             </div>
@@ -124,7 +130,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
                     key={p.id}
                     type="button"
                     onClick={() => seleccionarPaciente(p)}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-primary/10"
+                    className="w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
                   >
                     {p.apellido}, {p.nombre}
                   </button>
@@ -135,11 +141,11 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
 
           {/* Doctor */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Doctor</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Doctor</label>
             <select
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className={inputUI}
               required
             >
               <option value="">Seleccionar doctor...</option>
@@ -151,11 +157,11 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
 
           {/* Servicio */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Servicio</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Servicio</label>
             <select
               value={servicioId}
               onChange={(e) => setServicioId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className={inputUI}
               required
             >
               <option value="">Seleccionar servicio...</option>
@@ -170,22 +176,22 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
           {/* Fecha y hora */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Fecha</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Fecha</label>
               <input
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputUI}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Hora</label>
               <input
                 type="time"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputUI}
                 required
               />
             </div>
@@ -193,7 +199,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
             </label>
             <textarea
@@ -201,27 +207,22 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onC
               onChange={(e) => setNotas(e.target.value)}
               rows={2}
               placeholder="Observaciones para la cita..."
-              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              className={textareaUI}
             />
           </div>
 
           {error && (
-            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">{error}</p>
+            <p role="alert" className={errorUI}>
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-md text-sm text-foreground hover:bg-muted/60"
-            >
+            <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={crearCita.isPending}
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60"
-            >
+            <button type="submit" disabled={crearCita.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
               {crearCita.isPending ? 'Guardando...' : 'Crear cita'}
             </button>
           </div>

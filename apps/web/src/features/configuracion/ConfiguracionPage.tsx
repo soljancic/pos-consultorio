@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { cn } from '../../lib/utils'
+import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { UsuarioModal } from './UsuarioModal'
 
 const MONEDAS = ['ARS', 'USD', 'UYU', 'CLP', 'PEN', 'COP', 'MXN', 'BOB', 'BRL']
@@ -76,33 +78,40 @@ export function ConfiguracionPage() {
     },
   })
 
-  const inputClass =
-    'w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring'
-
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 border-b bg-card">
-        <h1 className="text-lg font-semibold text-foreground">Configuracion</h1>
-        <div className="flex gap-1 mt-3">
+      <div className="px-4 sm:px-6 py-4 border-b bg-card">
+        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <span className={chipIconUI}>
+            <Settings className="h-4 w-4" aria-hidden="true" />
+          </span>
+          Configuracion
+        </h1>
+        <div className="flex gap-1 mt-3" role="tablist">
           {(['usuarios', 'consultorio'] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize ${tab === t ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}>
+              role="tab"
+              aria-selected={tab === t}
+              className={cn(
+                'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+              )}>
               {t}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 max-w-3xl mx-auto w-full">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-3xl mx-auto w-full">
         {tab === 'usuarios' && (
           <div>
             <div className="flex justify-end mb-4">
               <button onClick={() => { setUsuarioEdit(null); setUsuarioModal(true) }}
-                className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary/90">
-                <Plus className="h-3.5 w-3.5" /> Nuevo usuario
+                className={cn(btnPrimaryUI, 'h-9 px-3')}>
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nuevo usuario
               </button>
             </div>
-            <div className="bg-card rounded-lg border overflow-x-auto">
+            <div className={cn(cardUI, 'overflow-x-auto')}>
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b">
                   <tr>
@@ -115,7 +124,7 @@ export function ConfiguracionPage() {
                 </thead>
                 <tbody>
                   {usuarios.map((u) => (
-                    <tr key={u.id} className="border-b last:border-0">
+                    <tr key={u.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                       <td className="px-4 py-3 font-medium">{u.nombre}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                       <td className="px-4 py-3">
@@ -130,8 +139,9 @@ export function ConfiguracionPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => { setUsuarioEdit(u); setUsuarioModal(true) }}
-                          className="text-muted-foreground/70 hover:text-foreground">
-                          <Pencil className="h-4 w-4" />
+                          aria-label={`Editar usuario ${u.nombre}`}
+                          className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -143,52 +153,57 @@ export function ConfiguracionPage() {
         )}
 
         {tab === 'consultorio' && (
-          <div className="bg-card rounded-lg border p-6 space-y-4">
+          <div className={cn(cardUI, 'p-6 space-y-4')}>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nombre del consultorio</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Nombre del consultorio</label>
               <input value={consForm.nombre} onChange={(e) => setConsForm((f) => ({ ...f, nombre: e.target.value }))}
-                className={inputClass} />
+                className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Logo (URL)</label>
-              <input value={consForm.logoUrl} placeholder="https://..."
+              <label className="block text-sm font-medium text-foreground mb-1.5">Logo (URL)</label>
+              <input type="url" value={consForm.logoUrl} placeholder="https://..."
                 onChange={(e) => setConsForm((f) => ({ ...f, logoUrl: e.target.value }))}
-                className={inputClass} />
+                className={inputUI} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Telefono</label>
-                <input value={consForm.telefono} onChange={(e) => setConsForm((f) => ({ ...f, telefono: e.target.value }))}
-                  className={inputClass} />
+                <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
+                <input type="tel" value={consForm.telefono} onChange={(e) => setConsForm((f) => ({ ...f, telefono: e.target.value }))}
+                  className={inputUI} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Direccion</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Direccion</label>
                 <input value={consForm.direccion} onChange={(e) => setConsForm((f) => ({ ...f, direccion: e.target.value }))}
-                  className={inputClass} />
+                  className={inputUI} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Moneda</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Moneda</label>
                 <select value={consForm.moneda} onChange={(e) => setConsForm((f) => ({ ...f, moneda: e.target.value }))}
-                  className={inputClass}>
+                  className={inputUI}>
                   {MONEDAS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Timezone</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Timezone</label>
                 <select value={consForm.timezone} onChange={(e) => setConsForm((f) => ({ ...f, timezone: e.target.value }))}
-                  className={inputClass}>
+                  className={inputUI}>
                   {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
                 </select>
               </div>
             </div>
             <div className="flex items-center gap-3 pt-2">
               <button onClick={() => updateConsultorio.mutate(consForm)} disabled={updateConsultorio.isPending}
-                className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60">
+                className={btnPrimaryUI}>
                 {updateConsultorio.isPending ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              {guardado && <span className="text-sm text-accent">Guardado</span>}
+              {guardado && (
+                <span role="status" className="inline-flex items-center gap-1 text-sm font-medium text-accent">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Guardado
+                </span>
+              )}
             </div>
           </div>
         )}

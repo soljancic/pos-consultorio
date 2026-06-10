@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { X, AlertCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { cn } from '../../lib/utils'
+import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import type { Paciente } from '@pos/types'
 
 interface Props {
@@ -63,63 +65,64 @@ export function PacienteModal({ paciente, onClose }: Props) {
     mutation.mutate(form)
   }
 
-  const inputClass =
-    'w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring'
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-card rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card rounded-xl border shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
           <h2 className="text-lg font-semibold text-foreground">
             {editando ? 'Editar paciente' : 'Nuevo paciente'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted">
-            <X className="h-5 w-5" />
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
-              <input required value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={inputClass} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
+              <input required value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Apellido *</label>
-              <input required value={form.apellido} onChange={(e) => set('apellido', e.target.value)} className={inputClass} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">DNI</label>
-              <input value={form.dni} onChange={(e) => set('dni', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Fecha de nacimiento</label>
-              <input type="date" value={form.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} className={inputClass} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Apellido *</label>
+              <input required value={form.apellido} onChange={(e) => set('apellido', e.target.value)} className={inputUI} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Telefono</label>
-              <input value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputClass} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">DNI</label>
+              <input inputMode="numeric" value={form.dni} onChange={(e) => set('dni', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">WhatsApp</label>
-              <input value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} className={inputClass} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Fecha de nacimiento</label>
+              <input type="date" value={form.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} className={inputUI} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
+              <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Sexo</label>
-              <select value={form.sexo} onChange={(e) => set('sexo', e.target.value)} className={inputClass}>
+              <label className="block text-sm font-medium text-foreground mb-1.5">WhatsApp</label>
+              <input type="tel" value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} className={inputUI} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputUI} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Sexo</label>
+              <select value={form.sexo} onChange={(e) => set('sexo', e.target.value)} className={inputUI}>
                 <option value="">-</option>
                 <option value="F">Femenino</option>
                 <option value="M">Masculino</option>
@@ -129,25 +132,28 @@ export function PacienteModal({ paciente, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Direccion</label>
-            <input value={form.direccion} onChange={(e) => set('direccion', e.target.value)} className={inputClass} />
+            <label className="block text-sm font-medium text-foreground mb-1.5">Direccion</label>
+            <input value={form.direccion} onChange={(e) => set('direccion', e.target.value)} className={inputUI} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Notas</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Notas</label>
             <textarea value={form.notas} onChange={(e) => set('notas', e.target.value)} rows={2}
-              className={`${inputClass} resize-none`} />
+              className={textareaUI} />
           </div>
 
-          {error && <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">{error}</p>}
+          {error && (
+            <p role="alert" className={errorUI}>
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-md text-sm text-foreground hover:bg-muted/60">
+            <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>
-            <button type="submit" disabled={mutation.isPending}
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60">
+            <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
               {mutation.isPending ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear paciente'}
             </button>
           </div>

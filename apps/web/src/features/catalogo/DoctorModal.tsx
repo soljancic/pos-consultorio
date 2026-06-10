@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { X, AlertCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { cn } from '../../lib/utils'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
 const COLORES = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -36,33 +38,36 @@ export function DoctorModal({ doctor, onClose }: Props) {
     },
   })
 
-  const inputClass =
-    'w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring'
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-card rounded-xl shadow-xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-card rounded-xl border shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-foreground">
             {editando ? 'Editar doctor' : 'Nuevo doctor'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted"><X className="h-5 w-5" /></button>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
         <form
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
           className="p-6 space-y-4"
         >
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
             <input required value={form.nombre}
               onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              className={inputClass} />
+              className={inputUI} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Especialidad</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Especialidad</label>
             <input value={form.especialidad}
               onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
-              className={inputClass} />
+              className={inputUI} />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Color en agenda</label>
@@ -70,7 +75,12 @@ export function DoctorModal({ doctor, onClose }: Props) {
               {COLORES.map((c) => (
                 <button key={c} type="button"
                   onClick={() => setForm((f) => ({ ...f, colorAgenda: c }))}
-                  className={`h-8 w-8 rounded-full border-2 transition-transform ${form.colorAgenda === c ? 'border-slate-800 scale-110' : 'border-transparent'}`}
+                  aria-label={`Color ${c}`}
+                  aria-pressed={form.colorAgenda === c}
+                  className={cn(
+                    'h-9 w-9 rounded-full border-2 cursor-pointer transition-transform duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    form.colorAgenda === c ? 'border-foreground scale-110' : 'border-transparent',
+                  )}
                   style={{ backgroundColor: c }} />
               ))}
             </div>
@@ -83,12 +93,15 @@ export function DoctorModal({ doctor, onClose }: Props) {
               Doctor activo
             </label>
           )}
-          {error && <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded">{error}</p>}
+          {error && (
+            <p role="alert" className={errorUI}>
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          )}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-md text-sm text-foreground hover:bg-muted/60">Cancelar</button>
-            <button type="submit" disabled={mutation.isPending}
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 disabled:opacity-60">
+            <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>Cancelar</button>
+            <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
               {mutation.isPending ? 'Guardando...' : editando ? 'Guardar' : 'Crear'}
             </button>
           </div>

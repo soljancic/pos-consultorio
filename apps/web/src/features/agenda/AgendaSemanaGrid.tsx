@@ -18,7 +18,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
   const hoy = new Date()
 
   return (
-    <div className="bg-card rounded-xl border overflow-x-auto">
+    <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
       <div className="min-w-[840px] grid grid-cols-7">
         {dias.map((dia) => {
           const citasDia = citas
@@ -41,7 +41,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
                 <span
                   className={cn(
                     'inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-semibold',
-                    esHoy ? 'bg-primary text-white' : 'text-foreground',
+                    esHoy ? 'bg-primary text-primary-foreground' : 'text-foreground',
                   )}
                 >
                   {format(dia, 'd')}

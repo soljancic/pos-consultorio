@@ -43,7 +43,7 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
   }
 
   return (
-    <div className="bg-card rounded-xl border overflow-x-auto">
+    <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
       <div className="min-w-[640px]">
         {/* Header: doctores */}
         <div

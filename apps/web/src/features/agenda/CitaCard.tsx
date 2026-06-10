@@ -1,6 +1,7 @@
 import { MessageCircle, DollarSign, ChevronRight, Stethoscope } from 'lucide-react'
 import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, type Cita } from '@pos/types'
-import { formatHora, formatMoneda, buildWhatsAppUrl } from '../../lib/utils'
+import { formatHora, formatMoneda, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { btnIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 
 const ESTADOS_CON_ATENCION = [
@@ -58,12 +59,12 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
 
   return (
     <div
-      className="bg-card rounded-lg border shadow-sm p-4 flex items-start gap-3"
+      className="bg-card rounded-xl border shadow-sm p-4 flex items-start gap-3"
       style={{ borderLeftWidth: 4, borderLeftColor: color }}
     >
       {/* Hora */}
       <div className="text-center min-w-[48px]">
-        <div className="text-lg font-bold text-foreground">{formatHora(cita.fechaHora)}</div>
+        <div className="text-lg font-bold text-foreground tabular-nums">{formatHora(cita.fechaHora)}</div>
         <div className="text-xs text-muted-foreground/70">{cita.duracionMin}min</div>
       </div>
 
@@ -84,7 +85,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
           {cita.servicio?.nombre} &bull; {cita.doctor?.nombre}
         </div>
         {tieneSaldo && (
-          <div className="text-xs text-destructive font-medium mt-1">
+          <div className="text-xs text-destructive font-medium mt-1 tabular-nums">
             Deuda: {formatMoneda(Number(cita.cobro?.saldoPendiente))}
           </div>
         )}
@@ -95,40 +96,43 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
         {cita.paciente?.whatsapp && (
           <button
             onClick={handleWhatsApp}
-            className="p-2 rounded hover:bg-accent/10 text-accent"
+            className={cn(btnIconUI, 'text-accent hover:bg-accent/10')}
             title="Enviar WhatsApp"
+            aria-label="Enviar recordatorio por WhatsApp"
           >
-            <MessageCircle className="h-4 w-4" />
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
 
         {muestraAtencion && (
           <button
             onClick={onAtencion}
-            className="p-2 rounded hover:bg-violet-500/10 text-violet-600"
+            className={cn(btnIconUI, 'text-violet-600 hover:bg-violet-500/10')}
             title="Atencion"
+            aria-label="Registrar o ver atencion"
           >
-            <Stethoscope className="h-4 w-4" />
+            <Stethoscope className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
 
         {(cita.estado === EstadoCita.ATENDIDA || cita.estado === EstadoCita.CON_DEUDA) && (
           <button
             onClick={onCobrar}
-            className="p-2 rounded hover:bg-primary/10 text-primary"
+            className={cn(btnIconUI, 'text-primary hover:bg-primary/10')}
             title="Cobrar"
+            aria-label="Cobrar cita"
           >
-            <DollarSign className="h-4 w-4" />
+            <DollarSign className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
 
         {proximaTransicion && (
           <button
             onClick={() => onCambiarEstado(proximaTransicion)}
-            className="flex items-center gap-1 text-xs bg-muted hover:bg-slate-200 px-2 py-1.5 rounded text-foreground"
+            className="flex items-center gap-1 text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/70 px-2.5 py-2 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
           >
             {LABEL_ESTADO[proximaTransicion]}
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="h-3 w-3" aria-hidden="true" />
           </button>
         )}
       </div>
