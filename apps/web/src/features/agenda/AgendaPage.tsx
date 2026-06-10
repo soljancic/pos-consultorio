@@ -6,14 +6,15 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
+import { NuevaCitaModal } from './NuevaCitaModal'
 import type { Cita } from '@pos/types'
 import { EstadoCita } from '@pos/types'
-import { formatFecha } from '../../lib/utils'
 
 export function AgendaPage() {
   const [fecha, setFecha] = useState(new Date())
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null)
   const [modalCobro, setModalCobro] = useState(false)
+  const [modalNuevaCita, setModalNuevaCita] = useState(false)
   const queryClient = useQueryClient()
 
   const fechaStr = format(fecha, 'yyyy-MM-dd')
@@ -90,7 +91,10 @@ export function AgendaPage() {
           </button>
         </div>
 
-        <button className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700">
+        <button
+          onClick={() => setModalNuevaCita(true)}
+          className="flex items-center gap-1 bg-blue-600 text-white px-3 py-2 rounded-md text-sm hover:bg-blue-700"
+        >
           <Plus className="h-4 w-4" />
           Nueva cita
         </button>
@@ -119,6 +123,17 @@ export function AgendaPage() {
           </div>
         )}
       </div>
+
+      {/* Modal nueva cita */}
+      {modalNuevaCita && (
+        <NuevaCitaModal
+          fechaInicial={fecha}
+          onClose={() => {
+            setModalNuevaCita(false)
+            queryClient.invalidateQueries({ queryKey: ['citas', fechaStr] })
+          }}
+        />
+      )}
 
       {/* Modal cobro */}
       {modalCobro && citaSeleccionada && (

@@ -6,7 +6,7 @@ import { formatMoneda, formatHora } from '../../lib/utils'
 export function CajaPage() {
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['caja-hoy'],
     queryFn: () => api.get('/caja/hoy').then((r) => r.data),
     refetchInterval: 30_000,

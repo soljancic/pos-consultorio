@@ -1,6 +1,6 @@
 import { MessageCircle, DollarSign, ChevronRight } from 'lucide-react'
 import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, type Cita } from '@pos/types'
-import { cn, formatHora, formatMoneda, buildWhatsAppUrl } from '../../lib/utils'
+import { formatHora, formatMoneda, buildWhatsAppUrl } from '../../lib/utils'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
   [EstadoCita.PENDIENTE]: 'Pendiente',

@@ -81,8 +81,7 @@ export class CobrosService {
       })
 
       // Actualizar caja diaria
-      const hoy = new Date()
-      hoy.setHours(0, 0, 0, 0)
+      const hoy = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00Z')
       const campoMonto = {
         [FormaPago.EFECTIVO]: 'totalEfectivo',
         [FormaPago.QR]: 'totalQr',

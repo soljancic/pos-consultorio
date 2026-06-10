@@ -67,6 +67,8 @@ export const TRANSICIONES_VALIDAS: Record<EstadoCita, EstadoCita[]> = {
   [EstadoCita.REPROGRAMADA]: [EstadoCita.PENDIENTE],
 }
 
-export function transicionValida(desde: EstadoCita, hacia: EstadoCita): boolean {
-  return TRANSICIONES_VALIDAS[desde].includes(hacia)
+export function transicionValida(desde: string, hacia: string): boolean {
+  const transiciones = TRANSICIONES_VALIDAS[desde as EstadoCita]
+  if (!transiciones) return false
+  return transiciones.includes(hacia as EstadoCita)
 }

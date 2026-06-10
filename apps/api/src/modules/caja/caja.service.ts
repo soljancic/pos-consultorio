@@ -6,8 +6,7 @@ export class CajaService {
   constructor(private prisma: PrismaService) {}
 
   async getHoy(consultorioId: string) {
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
+    const hoy = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00Z')
 
     const caja = await this.prisma.cajaDiaria.findUnique({
       where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
@@ -38,8 +37,7 @@ export class CajaService {
   }
 
   async cerrar(consultorioId: string, usuarioId: string) {
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
+    const hoy = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00Z')
 
     return this.prisma.cajaDiaria.update({
       where: { consultorioId_fecha: { consultorioId, fecha: hoy } },

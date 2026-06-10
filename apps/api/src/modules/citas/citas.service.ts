@@ -5,8 +5,8 @@ import {
   ConflictException,
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import { EstadoCita, transicionValida } from '@pos/types'
-import { Prisma } from '@prisma/client'
+import { transicionValida } from '@pos/types'
+import { EstadoCita, Prisma } from '@prisma/client'
 
 export class CreateCitaDto {
   pacienteId: string
@@ -26,10 +26,8 @@ export class CitasService {
   constructor(private prisma: PrismaService) {}
 
   async findByFecha(consultorioId: string, fecha: string, doctorId?: string) {
-    const inicio = new Date(fecha)
-    inicio.setHours(0, 0, 0, 0)
-    const fin = new Date(fecha)
-    fin.setHours(23, 59, 59, 999)
+    const inicio = new Date(`${fecha}T00:00:00Z`)
+    const fin = new Date(`${fecha}T23:59:59.999Z`)
 
     return this.prisma.cita.findMany({
       where: {
