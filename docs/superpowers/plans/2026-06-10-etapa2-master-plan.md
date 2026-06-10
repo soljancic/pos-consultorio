@@ -1,0 +1,83 @@
+# Etapa 2 — Plan Maestro (Valor Clinico + Solidez Operativa)
+
+> **Estado: PLANIFICADO, no iniciado.** Trigger formal: 1 consultorio piloto activo a diario durante 2 semanas (PLAN.md §10). Se puede adelantar E2-M1 si el feedback del piloto lo pide.
+>
+> **Metodo:** igual que Etapa 1 — por cada hito se escribe el plan detallado con codigo completo JUSTO ANTES de ejecutarlo (writing-plans contra el codigo vigente), se ejecuta, y se verifica con gate runtime + spec Playwright nuevo. Las mini-specs de abajo fijan el alcance y las decisiones; no son los planes de implementacion.
+
+**Objetivo de la etapa:** que el doctor tenga valor clinico real (historia, recetas, adjuntos) y que la operacion financiera sea a prueba de errores humanos (anulaciones, arqueo ciego, auditoria visible).
+
+**Fuentes:** PLAN.md §10 Etapa 2, modelo.jpeg (entidad Visitas, tratamiento), patrones probados de Baby Spa (reversals, arqueo ciego, actividad), MVP.pdf Etapa 2.
+
+---
+
+## Orden de hitos y dependencias
+
+```
+E2-M1: Solidez financiera (reversal de pagos)      ← PRIMERO: el piloto VA a registrar pagos mal
+E2-M2: Arqueo de caja ciego                        ← depende de M1 (el arqueo cuenta pagos netos de reversas)
+E2-M3: Actividad reciente (/actividad)             ← independiente; barato (la tabla logs ya se alimenta)
+E2-M4: Historia clinica completa                   ← adjuntos + linea de tiempo + guard duro de roles
+E2-M5: Recetas PDF                                 ← depende de M4 (cuelga de la atencion)
+E2-M6: Evaluacion entidad Visitas (walk-ins)       ← decision de modelado al final, con datos del piloto
+```
+
+Racional del orden: los hitos financieros (M1-M2) protegen la confianza del piloto en los numeros — un pago mal cargado sin forma de anularlo rompe la caja el dia 1. Lo clinico (M4-M5) es el valor nuevo pero puede esperar 2-3 semanas de feedback.
+
+---
+
+## E2-M1 — Anulacion de pagos con asiento de reversa
+
+**Regla (PLAN.md §8):** los pagos nunca se borran ni editan; se corrigen con una reversa.
+
+Mini-spec:
+- Schema `Pago`: + `anuladoAt DateTime?`, `anuladoPorId String?`, `motivoAnulacion String?`, `reversaDeId String? @unique` (autorelacion: la reversa apunta al original).
+- `POST /pagos/:id/anular { motivo }` (ADMIN; SECRETARIA configurable despues): transaccion que (1) crea Pago espejo con monto NEGATIVO y `reversaDeId`, (2) marca el original anulado, (3) restaura `cobro.saldoPendiente` y su estado (COMPLETO→PARCIAL/PENDIENTE), (4) revierte estado de la cita (COBRADO→CON_DEUDA o ATENDIDA segun saldo), (5) incrementa `paciente.deudaTotal`, (6) decrementa la caja DEL DIA DE LA REVERSA (no la historica), (7) log accion PAYMENT con payloads.
+- Validaciones: no anular una reversa, no anular dos veces, no anular si la caja del dia del pago original esta cerrada y la diferencia importa (alerta, no bloquea — regla "alerta no bloquea").
+- UI: boton anular en los movimientos de CajaPage + en CobroModal (lista de pagos del cobro); fila de reversa en rojo con motivo.
+- Gate: anular pago parcial → saldo y deudaTotal restaurados, cita vuelve a CON_DEUDA, caja del dia refleja el negativo, log con antes/despues; reintento de anulacion → 400.
+
+## E2-M2 — Arqueo de caja ciego
+
+Patron Baby Spa (probado en produccion).
+
+Mini-spec:
+- Schema `CajaDiaria`: + `montoDeclarado Decimal?`, `diferencia Decimal?`, `notasCierre String?`, `revisadaPorId String?`, `revisadaAt DateTime?`.
+- Cerrar caja pasa a 2 pasos: la secretaria declara el efectivo contado SIN ver el esperado (el modal no muestra totales de efectivo); el sistema calcula `diferencia = declarado - totalEfectivo` y la guarda.
+- Si diferencia = 0 → auto-aprobada. Si no → queda "pendiente de revision"; el ADMIN la ve en Caja > Historial con badge y puede aprobar con nota.
+- Solo el efectivo participa del arqueo (QR/transferencia/tarjeta son rastreables).
+- UI: modal de cierre ciego, badge de diferencia en historial, accion revisar (ADMIN).
+- Gate: cierre con declarado exacto → APROBADA; con faltante → diferencia negativa + pendiente; ADMIN aprueba con nota → log.
+
+## E2-M3 — Actividad reciente
+
+- `GET /logs?entidad=&accion=&desde=&hasta=&page=` (ADMIN) sobre la tabla `logs` existente — solo lectura, paginado.
+- Pagina `/actividad` (ADMIN): feed agrupado por dia, filtros por tipo, payloadAntes/Despues expandible.
+- Sin migracion. Es el hito mas barato y da visibilidad inmediata de lo que pasa en el piloto.
+
+## E2-M4 — Historia clinica completa
+
+Sobre la atencion basica de Etapa 1:
+- **Linea de tiempo** en la ficha del paciente: todas las atenciones cronologicas (hoy: filas expandibles de las ultimas 10 citas) — vista dedicada con busqueda.
+- **Adjuntos**: el campo `Atencion.adjuntos Json` ya existe. Decision pendiente de infra: almacenar en disco del server vs S3/R2 (Railway: volumen persistente o R2 — definir con el deploy andando). Subida desde AtencionModal, galeria en la ficha.
+- **Guard duro por rol**: `@Roles(DOCTOR, ADMIN)` en PUT /atenciones (hoy la UI oculta, el backend no restringe); DOCTOR solo edita atenciones de sus propias citas; agenda del DOCTOR forzada en backend (`doctorId` del token, no del query).
+- `proximoControl` accionable: boton "agendar control" que precarga NuevaCitaModal con la fecha.
+
+## E2-M5 — Recetas PDF
+
+- Modelo `Receta` ya existe (atencionId, contenido Json, pdfUrl).
+- Generacion server-side (pdfkit o similar) con membrete del consultorio (logoUrl, nombre, telefono, direccion — ya capturados en Configuracion).
+- `POST /atenciones/:citaId/recetas` + descarga; boton en AtencionModal.
+- Para WhatsApp manual: link de descarga copiable (wa.me con el link).
+
+## E2-M6 — Decision: entidad Visitas (walk-ins)
+
+Con 2+ semanas de datos del piloto, decidir si los walk-ins justifican la entidad `Visitas` de modelo.jpeg (cita_id opcional) o si "crear cita en el momento" alcanza. Si alcanza: cerrar el punto en PLAN.md 4b y no construirla. Es una decision, no un feature — entra como spike de medio dia.
+
+---
+
+## Checklist transversal de la etapa
+
+- [ ] Cada hito: plan detallado just-in-time + gate runtime + spec Playwright nuevo en `apps/web/e2e/`
+- [ ] PLAN.md §8b (practicas) aplica integro; toda mutacion financiera en transaccion con log
+- [ ] Migraciones aditivas (columnas nullable) — el piloto estara en produccion: `prisma migrate deploy`, nunca reset
+- [ ] Actualizar PLAN.md y memoria al cierre de cada hito

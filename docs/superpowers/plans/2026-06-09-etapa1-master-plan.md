@@ -1,5 +1,7 @@
 # Etapa 1 — Plan Maestro de Ejecucion
 
+> ✔ **EJECUTADO COMPLETO el 2026-06-09/10.** Los 5 hitos M0-M4 pasaron sus gates runtime, el gate final se cumplio con la suite Playwright (5/5) y se taggeo `v0.1.0-mvp`. Bugs extra encontrados por los gates (no previstos en los planes): packaging de @pos/types, serializacion de Decimal, PUT parcial de pacientes, dia de caja/agenda en UTC. Este documento queda como registro historico; el estado vivo esta en PLAN.md §11.
+
 > **Para agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Este documento orquesta los 8 planes individuales — cada hito ejecuta un plan completo de `docs/superpowers/plans/`.
 
 **Goal:** Completar la Etapa 1 (MVP Operativo vendible) ejecutando los 8 planes en orden, con gates de verificacion entre hitos.

@@ -150,14 +150,14 @@ Mapeo verificado el 2026-06-09 contra el diagrama del usuario:
 | Ruta | Pantalla | Rol | Estado |
 |---|---|---|---|
 | /login | Login | Todos | Hecho |
-| / | Dashboard | ADMIN, SECRETARIA | Falta |
-| /agenda | Agenda diaria | SECRETARIA, ADMIN, DOCTOR | Hecho |
-| /pacientes | Lista de pacientes | SECRETARIA, ADMIN | Hecho |
-| /pacientes/:id | Ficha del paciente | SECRETARIA, ADMIN, DOCTOR | Falta |
-| /deudores | Lista de deudores | SECRETARIA, ADMIN, CAJA | Falta |
-| /caja | Caja diaria | ADMIN, SECRETARIA, CAJA | Hecho |
-| /catalogo | Servicios y doctores | ADMIN, SECRETARIA | Hecho (solo lectura) |
-| /configuracion | Admin de usuarios y settings | ADMIN | Falta |
+| / | Dashboard | ADMIN, SECRETARIA | Hecho (v0.1.0) |
+| /agenda | Agenda diaria (+ filtro doctor, atencion) | SECRETARIA, ADMIN, DOCTOR | Hecho (v0.1.0) |
+| /pacientes | Lista de pacientes (+ modal nuevo) | SECRETARIA, ADMIN | Hecho (v0.1.0) |
+| /pacientes/:id | Ficha del paciente (+ atencion expandible) | SECRETARIA, ADMIN, DOCTOR | Hecho (v0.1.0) |
+| /deudores | Lista de deudores | SECRETARIA, ADMIN, CAJA | Hecho (v0.1.0) |
+| /caja | Caja diaria (+ historial, desglose deuda) | ADMIN, SECRETARIA, CAJA | Hecho (v0.1.0) |
+| /catalogo | Servicios y doctores (CRUD ADMIN) | ADMIN, SECRETARIA | Hecho (v0.1.0) |
+| /configuracion | Admin de usuarios y settings | ADMIN | Hecho (v0.1.0) |
 
 ### Detalle de cada pantalla
 
@@ -247,18 +247,18 @@ Prefijo global: `/api/v1`
 | GET | /consultorio | Datos del consultorio autenticado |
 | PUT | /consultorio | Actualizar nombre, logoUrl, moneda, timezone (ADMIN) |
 
-### Pendientes Etapa 1
+### Completados en v0.1.0-mvp (eran los pendientes de Etapa 1)
 
-| Metodo | Ruta | Descripcion | Plan |
-|---|---|---|---|
-| PUT | /doctores/:id | Editar doctor (NO existe hoy) | catalogo-crud |
-| GET | /cobros/deudores | Reescribir: agrupar por paciente + filtrar deuda real | deudores |
-| GET | /cobros/deudores/resumen | Total deuda + cantidad pacientes | dashboard |
-| POST | /usuarios | Crear usuario (ADMIN) | configuracion |
-| PUT | /usuarios/:id | Editar usuario, password opcional (ADMIN) | configuracion |
-| GET | /atenciones/cita/:citaId | Atencion registrada de una cita | atencion-basica |
-| PUT | /atenciones/cita/:citaId | Upsert atencion (modulo nuevo) | atencion-basica |
-| — | GET /caja/hoy | Se enriquece con `pagosDeudaAnterior` y `nuevasDeudas` | etapa1-menores |
+| Metodo | Ruta | Estado |
+|---|---|---|
+| PUT | /doctores/:id | Implementado |
+| GET | /cobros/deudores | Reescrito: agrupado por paciente, solo deuda real, ultimoPago |
+| GET | /cobros/deudores/resumen | Implementado |
+| POST / PUT | /usuarios | Implementados (argon2, activo visible) |
+| GET / PUT | /atenciones/cita/:citaId | Implementados (modulo nuevo) |
+| GET | /caja/hoy | Enriquecido con `pagosDeudaAnterior` y `nuevasDeudas` |
+| GET | /health | Healthcheck publico con verificacion de DB |
+| GET ?todos=true | /servicios y /doctores | Listados con inactivos para el catalogo |
 
 ### Pendientes Etapa 2+
 
@@ -272,14 +272,14 @@ Prefijo global: `/api/v1`
 
 ---
 
-## 7b. Issues conocidos (auditoria 2026-06-09) — fixes previos obligatorios
+## 7b. Issues conocidos — TODOS RESUELTOS en v0.1.0-mvp
 
-Detectados al cruzar los planes contra el codigo real. Cubiertos por `docs/superpowers/plans/2026-06-09-fixes-previos-plan.md`, que se ejecuta ANTES que los demas planes:
+Los 4 detectados en la auditoria pre-ejecucion (DTOs sin validators, deudaTotal sin incremento, deudores con citas futuras, timezone del modal) fueron corregidos. Los gates runtime encontraron y se corrigieron ademas:
 
-1. **DTOs sin decoradores class-validator (BLOQUEANTE).** `main.ts` usa `ValidationPipe` con `whitelist: true, forbidNonWhitelisted: true`. Solo los DTOs de auth tienen decoradores — todo POST/PUT de citas, pacientes, servicios, doctores y cobros devuelve 400 en runtime.
-2. **`Paciente.deudaTotal` nunca se incrementa.** `registrarPago` lo decrementa pero nada lo incrementa — queda en 0 o negativo. Fix: incrementar al pasar la cita a ATENDIDA.
-3. **`getDeudores` actual lista citas futuras como deuda.** Toda cita crea un cobro PENDIENTE; el metodo no filtra por estado de cita. Deuda real = cita ATENDIDA o CON_DEUDA con saldo > 0.
-4. **Timezone en NuevaCitaModal.** Envia `fechaHora` sin offset — drift de 3hs con server UTC. Fix: `new Date(...).toISOString()`.
+5. **@pos/types era TS crudo** — el API compilado crasheaba al arrancar. El paquete ahora buildea a `dist/` (CJS + d.ts); correr `pnpm build` en packages/types tras cambiar tipos.
+6. **ClassSerializerInterceptor rompia los Decimal** — todos los montos llegaban como `{s,e,d}`. Eliminado (no habia @Exclude en ningun lado).
+7. **UpdatePacienteDto rechazaba PUT parcial** — ahora usa PartialType.
+8. **Dia de caja y dia de agenda usaban fecha UTC** — despues de las 20:00 GMT-4 los cobros caian al dia siguiente y las citas nocturnas desaparecian. Ambos usan ahora el dia LOCAL del negocio (`diaCajaLocal()`); el server DEBE correr con TZ del consultorio (var `TZ`, ver docs/DEPLOY.md).
 
 ### Gaps vs MVP.pdf (documentados, decididos)
 
@@ -350,30 +350,18 @@ Aplica a TODO codigo nuevo de los planes. Corto y obligatorio; los planes ya lo 
 
 ## 10. Roadmap completo
 
-### Etapa 1 — MVP Operativo (actual)
+### Etapa 1 — MVP Operativo — ✔ COMPLETADA (tag `v0.1.0-mvp`, 2026-06-10)
 
-**Objetivo:** nucleo operativo que pueda venderse y generar feedback real.
+Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtime verdes, smoke E2E de UI con Playwright (5/5, `apps/web/e2e/smoke.spec.ts`), hardening pre-deploy (helmet, throttler, fail-hard de secrets, /health, REGISTRO_ABIERTO). Regresion: `scripts/gate-*.ps1`.
 
-Pendientes para completar Etapa 1, en orden de ejecucion. Cada item tiene spec en `docs/superpowers/specs/` y plan con codigo completo en `docs/superpowers/plans/`:
-
-0. **Fixes previos** (`2026-06-09-fixes-previos-plan.md`) — OBLIGATORIO PRIMERO: decoradores class-validator, deudaTotal, timezone.
-1. **Ficha del paciente** (`/pacientes/:id`) + modal nuevo/editar paciente — `2026-06-09-pacientes-plan.md`
-2. **Dashboard** (`/`) — metricas del dia + resumen deudas — `2026-06-09-dashboard-plan.md`
-3. **Vista de deudores** (`/deudores`) — `2026-06-09-deudores-plan.md`
-4. **CRUD catalogo** (incluye `PUT /doctores/:id` nuevo) — `2026-06-09-catalogo-crud-plan.md`
-5. **Configuracion** (`/configuracion`) — usuarios + datos del consultorio — `2026-06-09-configuracion-plan.md`
-6. **Atencion basica** — registro clinico del doctor (evolucion/diagnostico/tratamiento), modulo `atenciones` nuevo — `2026-06-09-atencion-basica-plan.md`
-7. **Cierre Etapa 1 menores** — filtro por doctor (+ vista DOCTOR), historial de cajas, desglose "pagos de deuda / nuevas deudas" — `2026-06-09-etapa1-menores-plan.md`
-
-Con esto la Etapa 1 queda 100% especificada: 7 specs + 8 planes con codigo completo.
-
-**Ejecucion:** `2026-06-09-etapa1-master-plan.md` orquesta los 8 planes en 5 hitos (M0-M4) con gates de verificacion runtime entre cada uno y el gate final E2E que define "Etapa 1 terminada" (tag `v0.1.0-mvp`).
+**Pendiente operativo (no de codigo):** deploy en Railway segun `docs/DEPLOY.md` (lo ejecuta el owner) + consultorio piloto.
 
 ---
 
-### Etapa 2 — Valor Clinico
+### Etapa 2 — Valor Clinico + Solidez Operativa
 
 **Trigger:** al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas.
+**Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 6 hitos ordenados (reversal de pagos → arqueo ciego → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
 
 - Historia clinica completa sobre la atencion basica de Etapa 1: linea de tiempo cronologica, adjuntos (fotos, estudios), guard duro por rol en endpoints de atenciones y agenda DOCTOR
 - Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
@@ -445,30 +433,21 @@ Con esto la Etapa 1 queda 100% especificada: 7 specs + 8 planes con codigo compl
 
 ---
 
-## 11. Estado actual del repositorio
+## 11. Estado actual del repositorio (2026-06-10)
 
 ```
-Commit base: 875f6c2 feat: initial monorepo scaffold
+Tag: v0.1.0-mvp — Etapa 1 completa, working tree limpio, 15 commits.
 
-Cambios sin commitear (working tree):
-  Modificados:
-    - jwt.strategy.ts         fallback para JWT_SECRET
-    - jwt-auth.guard.ts       tipado de handleRequest
-    - caja.service.ts         fechas UTC correctas
-    - citas.service.ts        EstadoCita desde @prisma/client, fechas UTC
-    - cobros.service.ts       fechas UTC correctas
-    - api/tsconfig.json       paths vacios (workspace resuelve @pos/types)
-    - AgendaPage.tsx          NuevaCitaModal conectado al boton
-    - CitaCard.tsx            limpieza de imports
-    - CajaPage.tsx            limpieza de imports
-    - enums/index.ts          transicionValida acepta string
-    - pnpm-workspace.yaml     allowBuilds para pnpm
+Migraciones: init, paciente_sexo_direccion, consultorio_telefono_direccion,
+             atencion_tratamiento
 
-  Nuevos sin trackear:
-    - prisma/migrations/      migracion inicial (20260609232817_init)
-    - NuevaCitaModal.tsx      modal de nueva cita (listo)
-    - vite-env.d.ts           declaracion de tipos Vite
-    - pnpm-lock.yaml          lockfile generado
+Testing:
+  - apps/web/e2e/smoke.spec.ts   Playwright, 5 specs E2E en Chromium (5/5)
+  - scripts/gate-m2/m3/m4/agenda-nocturna/hardening.ps1   regresion de API
+
+Para desarrollar:
+  - PostgreSQL local + apps/api/.env (ver .env.example)
+  - cd apps/api && pnpm start:dev   (o pnpm build && node dist/src/main.js)
+  - cd apps/web && pnpm dev
+  - Tras cambiar packages/types: pnpm build dentro de packages/types
 ```
-
-El proximo commit deberia incluir todos estos cambios juntos como `feat: connect nueva-cita modal and fix UTC dates`.
