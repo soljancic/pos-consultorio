@@ -10,6 +10,8 @@ import { inputUI, btnPrimaryUI, btnIconUI } from '../../lib/ui'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
+import { ReprogramarCitaModal } from './ReprogramarCitaModal'
+import { CancelarCitaModal } from './CancelarCitaModal'
 import { AtencionModal } from './AtencionModal'
 import { AgendaDiaGrid } from './AgendaDiaGrid'
 import { AgendaSemanaGrid } from './AgendaSemanaGrid'
@@ -38,6 +40,8 @@ export function AgendaPage() {
   const [modalCobro, setModalCobro] = useState(false)
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
   const [modalAtencion, setModalAtencion] = useState(false)
+  const [citaReprogramar, setCitaReprogramar] = useState<Cita | null>(null)
+  const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
   const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
   const queryClient = useQueryClient()
 
@@ -230,6 +234,8 @@ export function AgendaPage() {
                   }
                   onCobrar={() => abrirCobro(cita)}
                   onAtencion={() => abrirAtencion(cita)}
+                  onReprogramar={() => setCitaReprogramar(cita)}
+                  onCancelar={() => setCitaCancelar(cita)}
                 />
               ))}
             </div>
@@ -282,7 +288,31 @@ export function AgendaPage() {
             setCitaDetalle(null)
             abrirAtencion(citaDetalle)
           }}
+          onReprogramar={() => {
+            setCitaDetalle(null)
+            setCitaReprogramar(citaDetalle)
+          }}
+          onCancelar={() => {
+            setCitaDetalle(null)
+            setCitaCancelar(citaDetalle)
+          }}
           onClose={() => setCitaDetalle(null)}
+        />
+      )}
+
+      {/* Modal reprogramar */}
+      {citaReprogramar && (
+        <ReprogramarCitaModal
+          cita={citaReprogramar}
+          onClose={() => setCitaReprogramar(null)}
+        />
+      )}
+
+      {/* Modal cancelar */}
+      {citaCancelar && (
+        <CancelarCitaModal
+          cita={citaCancelar}
+          onClose={() => setCitaCancelar(null)}
         />
       )}
 

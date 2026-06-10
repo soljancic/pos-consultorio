@@ -12,10 +12,12 @@ interface Props {
   onCambiarEstado: (estado: EstadoCita) => void
   onCobrar: () => void
   onAtencion: () => void
+  onReprogramar: () => void
+  onCancelar: () => void
   onClose: () => void
 }
 
-export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onClose }: Props) {
+export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-xl border shadow-xl w-full max-w-lg">
@@ -37,6 +39,8 @@ export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, 
             onCambiarEstado={onCambiarEstado}
             onCobrar={onCobrar}
             onAtencion={onAtencion}
+            onReprogramar={onReprogramar}
+            onCancelar={onCancelar}
           />
         </div>
       </div>

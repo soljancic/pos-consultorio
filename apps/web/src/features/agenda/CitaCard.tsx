@@ -1,5 +1,6 @@
-import { MessageCircle, DollarSign, ChevronRight, Stethoscope } from 'lucide-react'
-import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, type Cita } from '@pos/types'
+import { useEffect, useRef, useState } from 'react'
+import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX } from 'lucide-react'
+import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { btnIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
@@ -24,18 +25,49 @@ const LABEL_ESTADO: Record<EstadoCita, string> = {
   [EstadoCita.REPROGRAMADA]: 'Reprogramada',
 }
 
+// Una cita en curso o cerrada no se mueve de horario (espejo del backend)
+const ESTADOS_REPROGRAMABLES = [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO]
+
 interface CitaCardProps {
   cita: Cita
   onCambiarEstado: (estado: EstadoCita) => void
   onCobrar: () => void
   onAtencion: () => void
+  onReprogramar: () => void
+  onCancelar: () => void
 }
 
-export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCardProps) {
+export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar }: CitaCardProps) {
   const user = useAuthStore((s) => s.user)
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
   const tieneSaldo = cita.cobro && Number(cita.cobro.saldoPendiente) > 0
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuAbierto) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuAbierto(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuAbierto])
+
+  const puedeReprogramar = ESTADOS_REPROGRAMABLES.includes(cita.estado)
+  const puedeCancelar = transicionValida(cita.estado, EstadoCita.CANCELADA)
+  const puedeNoAsistio = transicionValida(cita.estado, EstadoCita.NO_ASISTIO)
+  const tieneMenu = puedeReprogramar || puedeCancelar || puedeNoAsistio
+
+  function handleNoAsistio() {
+    setMenuAbierto(false)
+    const nombre = `${cita.paciente?.apellido}, ${cita.paciente?.nombre}`
+    if (window.confirm(`Marcar la cita de ${nombre} como No asistio?`)) {
+      onCambiarEstado(EstadoCita.NO_ASISTIO)
+    }
+  }
 
   // Registrar (EN_ATENCION) es del doctor/admin; consultar (estados posteriores) es de todos
   const muestraAtencion =
@@ -134,6 +166,57 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion }: CitaCa
             {LABEL_ESTADO[proximaTransicion]}
             <ChevronRight className="h-3 w-3" aria-hidden="true" />
           </button>
+        )}
+
+        {tieneMenu && (
+          <div ref={menuRef} className="relative">
+            <button
+              onClick={() => setMenuAbierto((v) => !v)}
+              aria-label="Mas acciones"
+              aria-haspopup="menu"
+              aria-expanded={menuAbierto}
+              className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+            >
+              <MoreVertical className="h-4 w-4" aria-hidden="true" />
+            </button>
+            {menuAbierto && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-1 z-20 w-44 bg-card border rounded-md shadow-lg py-1"
+              >
+                {puedeReprogramar && (
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuAbierto(false); onReprogramar() }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                  >
+                    <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    Reprogramar
+                  </button>
+                )}
+                {puedeNoAsistio && (
+                  <button
+                    role="menuitem"
+                    onClick={handleNoAsistio}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                  >
+                    <UserX className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    No asistio
+                  </button>
+                )}
+                {puedeCancelar && (
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuAbierto(false); onCancelar() }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-none focus-visible:bg-destructive/10 transition-colors duration-150"
+                  >
+                    <Ban className="h-4 w-4" aria-hidden="true" />
+                    Cancelar cita
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
