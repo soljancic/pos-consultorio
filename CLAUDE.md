@@ -129,7 +129,21 @@ ESTADOS DE CITA:
 
 ```bash
 pnpm install                          # raiz del monorepo
+cd packages/types && pnpm build       # OBLIGATORIO tras cambiar tipos compartidos
 cd apps/api && npx prisma migrate dev # migraciones (dev)
 cd apps/api && pnpm start:dev         # API en :3000 (Swagger en /api/docs)
 cd apps/web && pnpm dev               # web en :5173
 ```
+
+## Testing (ver docs/TESTING.md)
+
+```bash
+cd apps/api && npx jest               # unit: maquina de estados
+scripts/gate-*.ps1                    # gates de API (API corriendo; crean su propio tenant)
+cd apps/web && npx playwright test    # E2E UI (API :3000 + vite :5173)
+```
+
+- Cada hito nuevo agrega su gate y/o spec; los anteriores corren como regresion.
+- Un bug de runtime gana un caso en el gate que lo hubiera atrapado.
+- PS 5.1: `ConvertFrom-Json -InputObject` (el pipeline no enumera arrays).
+- La suite E2E necesita `LOGIN_RATE_LIMIT` alto en apps/api/.env (throttle).

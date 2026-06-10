@@ -26,7 +26,10 @@ for ($i = 1; $i -le 11; $i++) {
     if ($code -eq 429) { $status429 = $true; Write-Output "THROTTLE LOGIN: 429 en intento $i (esp <= 11)"; break }
   }
 }
-if (-not $status429) { Write-Output "THROTTLE LOGIN: FALLO (nunca dio 429)" }
+if (-not $status429) {
+  Write-Output "THROTTLE LOGIN: sin 429 en 11 intentos — esperado si LOGIN_RATE_LIMIT esta alto (dev/E2E)."
+  Write-Output "                En produccion (defaults: 10/min) este check DEBE dar 429."
+}
 
 # 5. REGISTRO_ABIERTO por defecto (true): register responde (400 por body vacio, no 403)
 try {
