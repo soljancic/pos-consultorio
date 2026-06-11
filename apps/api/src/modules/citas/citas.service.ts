@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { transicionValida } from '@pos/types'
-import { EstadoCita, EstadoCobro, Prisma } from '@prisma/client'
+import { EstadoCita, EstadoCobro, TipoDisponibilidad, Prisma } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
@@ -95,6 +95,7 @@ export class CitasService {
     const fechaFin = new Date(fechaHora.getTime() + servicio.duracionMin * 60 * 1000)
 
     await this.verificarDisponibilidad(consultorioId, dto.doctorId, fechaHora, fechaFin)
+    await this.verificarHorarioAtencion(consultorioId, dto.doctorId, fechaHora, fechaFin)
 
     const cita = await this.prisma.cita.create({
       data: {
@@ -244,6 +245,7 @@ export class CitasService {
     const fechaHora = new Date(dto.fechaHora)
     const fechaFin = new Date(fechaHora.getTime() + cita.duracionMin * 60 * 1000)
     await this.verificarDisponibilidad(consultorioId, doctorId, fechaHora, fechaFin, citaId)
+    await this.verificarHorarioAtencion(consultorioId, doctorId, fechaHora, fechaFin)
 
     return this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
@@ -280,6 +282,56 @@ export class CitasService {
 
       return actualizada
     })
+  }
+
+  // Calendario de Atencion (E2.5a): bloqueos siempre rechazan; si el doctor
+  // tiene horarios DISPONIBLE configurados, la cita debe caer dentro de uno.
+  // Doctor sin calendario = modo legacy (acepta cualquier horario).
+  private async verificarHorarioAtencion(
+    consultorioId: number,
+    doctorId: number,
+    inicio: Date,
+    fin: Date,
+  ) {
+    // Dia calendario LOCAL del negocio → clave @db.Date (UTC midnight)
+    const diaStr = `${inicio.getFullYear()}-${String(inicio.getMonth() + 1).padStart(2, '0')}-${String(inicio.getDate()).padStart(2, '0')}`
+    const clave = new Date(`${diaStr}T00:00:00Z`)
+    const hhmm = (d: Date) =>
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    const iniStr = hhmm(inicio)
+    const finStr = hhmm(fin)
+
+    const bloquesDia = await this.prisma.disponibilidad.findMany({
+      where: { consultorioId, doctorId, fecha: clave, deletedAt: null },
+      select: { tipo: true, horaInicio: true, horaFin: true },
+    })
+
+    const bloqueo = bloquesDia.find(
+      (b) =>
+        b.tipo !== TipoDisponibilidad.DISPONIBLE &&
+        iniStr < b.horaFin &&
+        finStr > b.horaInicio,
+    )
+    if (bloqueo) {
+      throw new ConflictException(
+        `El doctor tiene un bloqueo (${bloqueo.tipo}) en ese horario`,
+      )
+    }
+
+    const tieneCalendario = await this.prisma.disponibilidad.count({
+      where: { consultorioId, doctorId, deletedAt: null, tipo: TipoDisponibilidad.DISPONIBLE },
+    })
+    if (tieneCalendario === 0) return
+
+    const dentro = bloquesDia.some(
+      (b) =>
+        b.tipo === TipoDisponibilidad.DISPONIBLE &&
+        b.horaInicio <= iniStr &&
+        b.horaFin >= finStr,
+    )
+    if (!dentro) {
+      throw new BadRequestException('La cita esta fuera del horario de atencion del doctor')
+    }
   }
 
   private async verificarDisponibilidad(

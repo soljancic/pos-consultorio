@@ -15,6 +15,7 @@ import { AtencionesModule } from './modules/atenciones/atenciones.module'
 import { CobrosModule } from './modules/cobros/cobros.module'
 import { CajaModule } from './modules/caja/caja.module'
 import { GastosModule } from './modules/gastos/gastos.module'
+import { DisponibilidadesModule } from './modules/disponibilidades/disponibilidades.module'
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { GastosModule } from './modules/gastos/gastos.module'
     CobrosModule,
     CajaModule,
     GastosModule,
+    DisponibilidadesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
