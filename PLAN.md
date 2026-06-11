@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2-M8 Gastos administrativos** (E2-M7, E2-M1 y E2-M2 hechos el 2026-06-10; el arqueo ya existe asi que los egresos de efectivo pueden impactarlo). Despues: E2-M3 actividad. El deploy en Railway + piloto queda diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** **E2-M3 Actividad reciente** (`/actividad` sobre la tabla logs — hito barato). Despues: E2-M4 historia clinica → E2-M5 recetas PDF. Hechos: E2-M7, E2-M1, E2-M2 (2026-06-10) y E2-M8 (2026-06-11). El deploy en Railway + piloto queda diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -54,7 +54,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 17. ✅ Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
 18. ✅ Desglose: pagos de deuda anterior vs nuevas deudas del dia
 19. ✅ Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10)
-20. ⬜ Gastos administrativos con categorias + KPI en dashboard (E2-M8)
+20. ✅ Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
 21. ⬜ Comisiones por doctor y liquidacion mensual (E4)
 22. ⬜ Facturacion electronica (E4)
 
@@ -66,7 +66,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 
 ### Dashboard y reportes
 27. ✅ Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
-28. ⬜ KPI de gastos y resultado neto (E2-M8)
+28. ✅ KPI de gastos y resultado neto (E2-M8, 2026-06-11)
 29. ⬜ Reportes mensual y por doctor (E2+)
 30. ⬜ Vista de actividad reciente sobre logs (E2-M3)
 
@@ -334,7 +334,7 @@ Prefijo global: `/api/v1`
 | Modulo | Rutas |
 |---|---|
 | Citas (E2-M7) | ✔ PUT /citas/:id implementado (2026-06-10): reprogramar en el lugar, solape revalidado, estado a PENDIENTE; cancelar/no-asistio anulan el cobro |
-| Gastos (E2-M8) | GET/POST /gastos, PUT/DELETE /gastos/:id, GET /gastos/resumen |
+| Gastos (E2-M8) | ✔ Implementados (2026-06-11): GET/POST /gastos, PUT/DELETE (ADMIN, soft), GET /gastos/resumen; /caja/hoy expone egresos |
 | Atenciones | POST /atenciones, GET /atenciones/:citaId |
 | Recetas | POST /recetas, GET /recetas/:id (PDF) |
 | Reportes | GET /reportes/mensual, GET /reportes/por-doctor |
@@ -440,7 +440,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
 - Historia clinica cronologica en la ficha del paciente
 - ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
-- **Gastos administrativos** (E2-M8): tabla `gastos` con categoria, fecha, personal, monto y cuenta de origen; los gastos en efectivo descuentan de la caja diaria (afectan el arqueo); KPI "Gastos del mes" + "Resultado neto" en el dashboard
+- ✔ **Gastos administrativos** (E2-M8, HECHO 2026-06-11): tabla `gastos` + `/gastos` CRUD (SECRETARIA registra, ADMIN edita/borra) y `/gastos/resumen`; los egresos CAJA_EFECTIVO descuentan del arqueo (efectivo NETO, computado on-the-fly sin reescribir la caja); pagina `/gastos` + KPIs "Gastos del mes"/"Resultado neto" en dashboard. Gate: `gate-e2m8.ps1`; E2E: `gastos.spec.ts`
 - ✔ **Anulacion de pagos con asiento de reversa** (E2-M1, HECHO 2026-06-10): `POST /cobros/pagos/:id/anular` (ADMIN) crea pago espejo negativo, restaura saldo/deuda/cita y descuenta la caja de HOY; UI en Caja y CobroModal. Gate: `gate-e2m1.ps1`; E2E: `anular-pago.spec.ts`
 - ✔ **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
 - **Vista de actividad reciente** (`/actividad`, solo ADMIN): feed paginado leyendo la tabla `logs` que ya se alimenta hoy

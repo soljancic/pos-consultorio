@@ -88,7 +88,9 @@ Mini-spec:
 - UI: menu "⋯" en CitaCard y CitaDetalleModal con **Reprogramar** (modal fecha/hora/doctor), **Cancelar** (confirmacion + motivo) y **No asistio** (segun maquina de estados). Confirmacion antes de acciones destructivas; colores ya definidos en COLORES_ESTADO (gris cancelada, gris oscuro no-show).
 - Gate: cancelar cita sin pagos → cobro ANULADO + log; cancelar con pagos → 409; reprogramar → solape revalidado, estado PENDIENTE, log con antes/despues. Spec Playwright: cancelar y reprogramar desde la agenda.
 
-## E2-M8 — Gastos administrativos
+## E2-M8 — Gastos administrativos — ✔ EJECUTADO 2026-06-11
+
+Plan detallado: `2026-06-11-e2-m8-gastos-plan.md`. Verificado: gate-e2m8 8/8, Playwright 15/15. Nota: los egresos NO reescriben `cajaDiaria` (se computan on-the-fly en /caja/hoy y al cerrar); borrar un gasto antes del cierre corrige el neto solo.
 
 Registro de egresos con categorizacion + KPI en dashboard. Decision del owner (2026-06-10): los gastos en efectivo **descuentan de la caja diaria** (impactan el arqueo ciego de M2; por eso va despues).
 
