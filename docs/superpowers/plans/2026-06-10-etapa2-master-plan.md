@@ -62,13 +62,16 @@ Mini-spec:
 - Pagina `/actividad` (ADMIN): feed agrupado por dia, filtros por tipo, payloadAntes/Despues expandible.
 - Sin migracion. Es el hito mas barato y da visibilidad inmediata de lo que pasa en el piloto.
 
-## E2-M4 — Historia clinica completa
+## E2-M4 — Historia clinica completa — fase 1 ✔ EJECUTADA 2026-06-11
 
 Sobre la atencion basica de Etapa 1:
+- **Guard duro por rol** ✔: el guard vive en `atenciones.service.upsert()` (recibe `rol`): solo ADMIN o el DOCTOR vinculado a la cita escriben (ForbiddenException 403); la lectura sigue abierta al staff. Agenda del DOCTOR forzada en backend: `citas.findByFecha()` ignora el `doctorId` del query y usa el Doctor vinculado al usuario del token (sin vinculo → no ve citas). Frontend: AtencionModal en solo lectura (inputs disabled, sin Guardar) para SECRETARIA/CAJA.
+- **`proximoControl` accionable** ✔: boton "Agendar control" en la fila de atencion expandida de la ficha abre NuevaCitaModal con paciente y fecha precargados (prop `pacienteInicial`).
+- Verificado: `gate-e2m4.ps1` 8/8 (escrituras por rol + agenda forzada), Playwright 16/16. Commits 8261d87, b09b27b, 5136e45.
+
+Fase 2 (pendiente):
 - **Linea de tiempo** en la ficha del paciente: todas las atenciones cronologicas (hoy: filas expandibles de las ultimas 10 citas) — vista dedicada con busqueda.
 - **Adjuntos**: el campo `Atencion.adjuntos Json` ya existe. Decision pendiente de infra: almacenar en disco del server vs S3/R2 (Railway: volumen persistente o R2 — definir con el deploy andando). Subida desde AtencionModal, galeria en la ficha.
-- **Guard duro por rol**: `@Roles(DOCTOR, ADMIN)` en PUT /atenciones (hoy la UI oculta, el backend no restringe); DOCTOR solo edita atenciones de sus propias citas; agenda del DOCTOR forzada en backend (`doctorId` del token, no del query).
-- `proximoControl` accionable: boton "agendar control" que precarga NuevaCitaModal con la fecha.
 
 ## E2-M5 — Recetas PDF
 
