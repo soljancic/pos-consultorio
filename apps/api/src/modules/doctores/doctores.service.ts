@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsBoolean, Matches } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
+import { EstadoCita, TipoDisponibilidad } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreateDoctorDto {
@@ -61,31 +62,76 @@ export class DoctoresService {
     return this.prisma.horarioAtencion.create({ data: { ...dto, doctorId } })
   }
 
-  async getDisponibilidad(consultorioId: number, doctorId: number, fecha: string) {
+  // Reescrito sobre el Calendario de Atencion (E2.5a): slots concretos a
+  // partir de los bloques DISPONIBLE del dia, descontando citas reales y
+  // bloqueos. Base del portal publico de agendamiento (E2.5b).
+  async getDisponibilidad(
+    consultorioId: number,
+    doctorId: number,
+    fecha: string,
+    duracionMin = 30,
+  ) {
     const doctor = await this.prisma.doctor.findFirst({
       where: { id: doctorId, consultorioId },
-      include: { horarios: { where: { activo: true } } },
     })
-    if (!doctor) throw new NotFoundException()
+    if (!doctor) throw new NotFoundException('Doctor no encontrado')
 
-    const date = new Date(fecha)
-    const diaSemana = date.getDay()
-    const horario = doctor.horarios.find((h) => h.diaSemana === diaSemana)
-    if (!horario) return { disponible: false, slots: [] }
+    const clave = new Date(`${fecha.slice(0, 10)}T00:00:00Z`)
+    const bloquesDia = await this.prisma.disponibilidad.findMany({
+      where: { consultorioId, doctorId, fecha: clave, deletedAt: null },
+      orderBy: { horaInicio: 'asc' },
+    })
+    const disponibles = bloquesDia.filter((b) => b.tipo === TipoDisponibilidad.DISPONIBLE)
+    const bloqueos = bloquesDia.filter((b) => b.tipo !== TipoDisponibilidad.DISPONIBLE)
 
-    const citasDelDia = await this.prisma.cita.findMany({
+    if (disponibles.length === 0) {
+      const tieneCalendario = await this.prisma.disponibilidad.count({
+        where: { consultorioId, doctorId, deletedAt: null, tipo: TipoDisponibilidad.DISPONIBLE },
+      })
+      // sin-calendario = modo legacy: las citas internas se aceptan igual,
+      // pero no hay slots que ofrecer (el portal exigira calendario)
+      return {
+        disponible: false,
+        slots: [],
+        modo: tieneCalendario > 0 ? 'sin-horario-ese-dia' : 'sin-calendario',
+      }
+    }
+
+    // Citas reales del dia LOCAL (canceladas/no-show liberan el lugar)
+    const inicioLocal = new Date(`${fecha.slice(0, 10)}T00:00:00`)
+    const finLocal = new Date(inicioLocal.getTime() + 86_400_000)
+    const citas = await this.prisma.cita.findMany({
       where: {
         consultorioId,
         doctorId,
         deletedAt: null,
-        fechaHora: {
-          gte: new Date(`${fecha}T${horario.horaInicio}`),
-          lte: new Date(`${fecha}T${horario.horaFin}`),
-        },
+        estado: { notIn: [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO] },
+        fechaHora: { gte: inicioLocal, lt: finLocal },
       },
       select: { fechaHora: true, duracionMin: true },
     })
 
-    return { disponible: true, horario, citasOcupadas: citasDelDia }
+    const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+    const aHHMM = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+    const ocupados: Array<[number, number]> = [
+      ...citas.map((c): [number, number] => {
+        const ini = c.fechaHora.getHours() * 60 + c.fechaHora.getMinutes()
+        return [ini, ini + c.duracionMin]
+      }),
+      ...bloqueos.map((b): [number, number] => [aMin(b.horaInicio), aMin(b.horaFin)]),
+    ]
+
+    const slots: string[] = []
+    for (const b of disponibles) {
+      for (let t = aMin(b.horaInicio); t + duracionMin <= aMin(b.horaFin); t += duracionMin) {
+        const fin = t + duracionMin
+        const choca = ocupados.some(([oIni, oFin]) => t < oFin && fin > oIni)
+        if (!choca) slots.push(aHHMM(t))
+      }
+    }
+
+    return { disponible: slots.length > 0, slots, duracionMin, modo: 'calendario' }
   }
 }

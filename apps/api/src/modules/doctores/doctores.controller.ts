@@ -34,7 +34,13 @@ export class DoctoresController {
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
     @Query('fecha') fecha: string,
+    @Query('duracionMin') duracionMin?: string,
   ) {
-    return this.service.getDisponibilidad(user.consultorioId, id, fecha)
+    return this.service.getDisponibilidad(
+      user.consultorioId,
+      id,
+      fecha,
+      duracionMin ? Number(duracionMin) : undefined,
+    )
   }
 }
