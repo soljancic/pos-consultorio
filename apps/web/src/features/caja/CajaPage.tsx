@@ -1,18 +1,21 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
-import { Lock, Wallet, Undo2 } from 'lucide-react'
+import { Lock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnOutlineUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
+import { CerrarCajaModal } from './CerrarCajaModal'
+import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
 
 export function CajaPage() {
-  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
   const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
+  const [modalCerrar, setModalCerrar] = useState(false)
+  const [cajaRevisar, setCajaRevisar] = useState<CajaRevisable | null>(null)
   const [tab, setTab] = useState<'hoy' | 'historial'>('hoy')
   const [desde, setDesde] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -27,11 +30,6 @@ export function CajaPage() {
     queryKey: ['caja-historial', desde, hasta],
     queryFn: () => api.get(`/caja/historial?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
     enabled: tab === 'historial',
-  })
-
-  const cerrar = useMutation({
-    mutationFn: () => api.post('/caja/cerrar'),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['caja-hoy'] }),
   })
 
   const caja = data?.caja
@@ -63,14 +61,16 @@ export function CajaPage() {
           </div>
         </div>
         {tab === 'hoy' && caja && !caja.cerrada && (
-          <button
-            onClick={() => cerrar.mutate()}
-            disabled={cerrar.isPending}
-            className={btnOutlineUI}
-          >
+          <button onClick={() => setModalCerrar(true)} className={btnOutlineUI}>
             <Lock className="h-4 w-4" aria-hidden="true" />
-            {cerrar.isPending ? 'Cerrando...' : 'Cerrar caja'}
+            Cerrar caja
           </button>
+        )}
+        {tab === 'hoy' && caja?.cerrada && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+            <Lock className="h-4 w-4" aria-hidden="true" />
+            Caja cerrada
+          </span>
         )}
       </div>
 
@@ -216,11 +216,15 @@ export function CajaPage() {
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Vales</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Tarjeta</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Diferencia</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {historial.map((c) => (
+                {historial.map((c) => {
+                  const tieneDiferencia = c.diferencia != null && Number(c.diferencia) !== 0
+                  const pendienteRevision = c.cerrada && tieneDiferencia && !c.revisadaAt
+                  return (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                     <td className="px-4 py-3 font-medium tabular-nums">{formatFecha(c.fecha)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalEfectivo))}</td>
@@ -228,15 +232,41 @@ export function CajaPage() {
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalVales))}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalTarjeta))}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatMoneda(Number(c.totalGeneral))}</td>
+                    <td className={cn('px-4 py-3 text-right tabular-nums font-medium', tieneDiferencia ? 'text-destructive' : 'text-muted-foreground')} title={c.notasRevision ?? undefined}>
+                      {c.diferencia != null ? formatMoneda(Number(c.diferencia)) : '-'}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.cerrada ? 'bg-muted text-muted-foreground' : 'bg-accent/10 text-accent'}`}>
-                        {c.cerrada ? 'Cerrada' : 'Abierta'}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.cerrada ? 'bg-muted text-muted-foreground' : 'bg-accent/10 text-accent'}`}>
+                          {c.cerrada ? 'Cerrada' : 'Abierta'}
+                        </span>
+                        {pendienteRevision && (
+                          <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+                            Pendiente revision
+                          </span>
+                        )}
+                        {c.revisadaAt && tieneDiferencia && (
+                          <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium" title={c.notasRevision ?? undefined}>
+                            Revisada
+                          </span>
+                        )}
+                        {pendienteRevision && esAdmin && (
+                          <button
+                            onClick={() => setCajaRevisar(c)}
+                            title="Revisar cierre"
+                            aria-label={`Revisar cierre del ${formatFecha(c.fecha)}`}
+                            className={cn(btnIconUI, 'h-8 w-8 text-primary hover:bg-primary/10')}
+                          >
+                            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        )}
                       </span>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
                 {historial.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground/70">Sin cajas en el periodo</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground/70">Sin cajas en el periodo</td></tr>
                 )}
               </tbody>
               <tfoot className="bg-muted/50 border-t">
@@ -245,7 +275,7 @@ export function CajaPage() {
                   <td className="px-4 py-3 text-right font-bold tabular-nums">
                     {formatMoneda(historial.reduce((acc, c) => acc + Number(c.totalGeneral), 0))}
                   </td>
-                  <td />
+                  <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>
@@ -255,6 +285,12 @@ export function CajaPage() {
 
       {pagoAnular && (
         <AnularPagoModal pago={pagoAnular} onClose={() => setPagoAnular(null)} />
+      )}
+
+      {modalCerrar && <CerrarCajaModal onClose={() => setModalCerrar(false)} />}
+
+      {cajaRevisar && (
+        <RevisarCajaModal caja={cajaRevisar} onClose={() => setCajaRevisar(null)} />
       )}
     </div>
   )
