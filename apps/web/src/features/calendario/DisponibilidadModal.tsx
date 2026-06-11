@@ -5,6 +5,7 @@ import { TipoDisponibilidad } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export const LABEL_TIPO: Record<TipoDisponibilidad, string> = {
   [TipoDisponibilidad.DISPONIBLE]: 'Disponible',
@@ -59,6 +60,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
   const [diasSemana, setDiasSemana] = useState<number[]>([1, 2, 3, 4, 5])
   const [hasta, setHasta] = useState('')
   const [alcance, setAlcance] = useState<Alcance>('uno')
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
 
   function invalidar() {
     qc.invalidateQueries({ queryKey: ['disponibilidades'] })
@@ -110,13 +112,8 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
     else crear.mutate()
   }
 
-  function handleEliminar() {
-    const aviso = alcance === 'uno' ? 'este bloque' : alcance === 'serie' ? 'TODA la serie' : 'la serie desde esta fecha'
-    if (window.confirm(`Eliminar ${aviso}?`)) {
-      setError('')
-      eliminar.mutate()
-    }
-  }
+  const avisoEliminar =
+    alcance === 'uno' ? 'este bloque' : alcance === 'serie' ? 'TODA la serie' : 'la serie desde esta fecha en adelante'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -264,7 +261,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             {editando && (
               <button
                 type="button"
-                onClick={handleEliminar}
+                onClick={() => setConfirmandoEliminar(true)}
                 disabled={eliminar.isPending}
                 aria-label="Eliminar horario"
                 className={cn(btnIconUI, 'h-10 w-10 border border-input text-destructive hover:bg-destructive/10')}
@@ -281,6 +278,17 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
           </div>
         </form>
       </div>
+
+      {confirmandoEliminar && (
+        <ConfirmarModal
+          titulo="Eliminar horario"
+          mensaje={`Se elimina ${avisoEliminar} de ${doctorNombre}.`}
+          confirmLabel="Eliminar"
+          pendiente={eliminar.isPending}
+          onConfirm={() => { setError(''); eliminar.mutate() }}
+          onClose={() => setConfirmandoEliminar(false)}
+        />
+      )}
     </div>
   )
 }

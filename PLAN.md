@@ -57,6 +57,10 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 20. ✅ Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
 21. ⬜ Comisiones por doctor y liquidacion mensual (E4)
 22. ⬜ Facturacion electronica (E4)
+43. ⬜ Apertura de caja con monto inicial (caja chica) + bloqueo de cobros/gastos sin turno abierto (E2-M9)
+44. ⬜ Cero dialogos nativos EN TODO EL PROYECTO: reemplazar los window.confirm/alert restantes por modales del design system (GastosPage borrar, DisponibilidadModal eliminar, advertencia de AnularPagoModal) — convencion en CLAUDE.md Don'ts
+45. ⬜ Pase de acentos: todo el copy visible del frontend con tildes correctas (hoy esta sin acentos; convencion nueva en CLAUDE.md)
+46. ⬜ Usuario DOCTOR asociado a su Doctor (UI sobre Doctor.usuarioId existente en UsuarioModal/DoctorModal): al loguearse ve y edita SOLO su agenda (ya filtra) y su Calendario de Atencion (falta: hoy solo ADMIN edita horarios)
 
 ### Catalogo y configuracion
 23. ✅ CRUD de servicios y doctores (con color de agenda)
@@ -374,6 +378,7 @@ Los 4 detectados en la auditoria pre-ejecucion (DTOs sin validators, deudaTotal 
 - Al crear una cita se crea automaticamente un cobro en estado PENDIENTE
 - Si el pago es menor al total, la cita queda en estado CON_DEUDA
 - Al registrar un pago se actualiza la caja diaria del dia (por forma de pago)
+- (E2-M9, pendiente) **Sin caja abierta no se cobra ni se gasta**: la jornada abre declarando el monto inicial (caja chica) y el cierre lo contempla: `inicial + cobros efectivo - gastos efectivo`
 - **Las deudas ALERTAN pero NO BLOQUEAN**: un paciente deudor puede seguir agendando; el sistema muestra el saldo, no impide operar
 - **Pagos divididos**: un cobro acepta multiples pagos (registros Pago) — distintos montos y formas de pago hasta cubrir el total
 - **Los pagos nunca se borran ni editan**: un pago mal registrado se corrige con un asiento de reversa (Etapa 2); el original queda auditado
@@ -442,6 +447,8 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
 - ✔ **Gastos administrativos** (E2-M8, HECHO 2026-06-11): tabla `gastos` + `/gastos` CRUD (SECRETARIA registra, ADMIN edita/borra) y `/gastos/resumen`; los egresos CAJA_EFECTIVO descuentan del arqueo (efectivo NETO, computado on-the-fly sin reescribir la caja); pagina `/gastos` + KPIs "Gastos del mes"/"Resultado neto" en dashboard. Gate: `gate-e2m8.ps1`; E2E: `gastos.spec.ts`
 - ✔ **Anulacion de pagos con asiento de reversa** (E2-M1, HECHO 2026-06-10): `POST /cobros/pagos/:id/anular` (ADMIN) crea pago espejo negativo, restaura saldo/deuda/cita y descuenta la caja de HOY; UI en Caja y CobroModal. Gate: `gate-e2m1.ps1`; E2E: `anular-pago.spec.ts`
+- **Mejoras pedidas por el owner (2026-06-11, pendientes)**: (a) cero `window.confirm/alert` — siempre modales del design system (quedan 3 usos: borrar gasto, eliminar disponibilidad, advertencia de anulacion); (b) pase de acentos en todo el copy del frontend; (c) usuario DOCTOR asociado a su Doctor (selector en UsuarioModal/DoctorModal sobre `Doctor.usuarioId`) con edicion de su propio Calendario de Atencion (guard backend: DOCTOR solo muta disponibilidades de su doctorId)
+- **Apertura de caja / turno** (E2-M9, owner 2026-06-11): `POST /caja/abrir { montoInicial }` — la jornada arranca declarando la caja chica; **no se puede cobrar ni registrar gastos sin caja abierta** (ni despues del cierre); el arqueo pasa a `esperado = montoInicial + cobros efectivo - gastos efectivo`. Schema: `CajaDiaria.montoInicial` + `abiertaAt`. UI: modal de apertura + banner de estado (Sin abrir / Abierta / Cerrada). Incluye actualizar gates/specs existentes que hoy cobran sin abrir
 - ✔ **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
 - **Vista de actividad reciente** (`/actividad`, solo ADMIN): feed paginado leyendo la tabla `logs` que ya se alimenta hoy
 - Generacion de recetas simples en PDF

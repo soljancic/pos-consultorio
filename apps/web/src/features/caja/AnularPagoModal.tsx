@@ -23,6 +23,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
   const qc = useQueryClient()
   const [motivo, setMotivo] = useState('')
   const [error, setError] = useState('')
+  const [advertencia, setAdvertencia] = useState('')
 
   const anular = useMutation({
     mutationFn: () =>
@@ -34,8 +35,9 @@ export function AnularPagoModal({ pago, onClose }: Props) {
       ]) {
         qc.invalidateQueries({ queryKey: [key] })
       }
-      if (res.data?.advertencia) window.alert(res.data.advertencia)
-      onClose()
+      // Con advertencia el modal queda abierto mostrandola (cero alert nativos)
+      if (res.data?.advertencia) setAdvertencia(res.data.advertencia)
+      else onClose()
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message
@@ -62,6 +64,20 @@ export function AnularPagoModal({ pago, onClose }: Props) {
           </button>
         </div>
 
+        {advertencia ? (
+          <div className="p-6 space-y-4">
+            <p className="flex items-start gap-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-3 py-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+              Pago anulado. {advertencia}
+            </p>
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center w-full h-10 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+            >
+              Entendido
+            </button>
+          </div>
+        ) : (
         <div className="p-6 space-y-4">
           <p className="text-sm text-foreground">
             Se anula el pago de{' '}
@@ -105,6 +121,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   )

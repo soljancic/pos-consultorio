@@ -7,6 +7,7 @@ import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { GastoModal, LABEL_CATEGORIA, LABEL_CUENTA, type GastoEditable } from './GastoModal'
 
 export function GastosPage() {
@@ -19,6 +20,7 @@ export function GastosPage() {
   const [categoria, setCategoria] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [gastoEdit, setGastoEdit] = useState<GastoEditable | null>(null)
+  const [gastoBorrar, setGastoBorrar] = useState<any | null>(null)
 
   const { data: gastos = [], isLoading } = useQuery<any[]>({
     queryKey: ['gastos', desde, hasta, categoria],
@@ -34,16 +36,11 @@ export function GastosPage() {
       qc.invalidateQueries({ queryKey: ['gastos'] })
       qc.invalidateQueries({ queryKey: ['gastos-resumen'] })
       qc.invalidateQueries({ queryKey: ['caja-hoy'] })
+      setGastoBorrar(null)
     },
   })
 
   const total = gastos.reduce((acc, g) => acc + Number(g.monto), 0)
-
-  function handleBorrar(g: any) {
-    if (window.confirm(`Borrar el gasto "${g.descripcion}" de ${formatMoneda(Number(g.monto))}?`)) {
-      borrar.mutate(g.id)
-    }
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -120,7 +117,7 @@ export function GastosPage() {
                             <Pencil className="h-4 w-4" aria-hidden="true" />
                           </button>
                           <button
-                            onClick={() => handleBorrar(g)}
+                            onClick={() => setGastoBorrar(g)}
                             aria-label={`Borrar gasto ${g.descripcion}`}
                             className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}
                           >
@@ -157,6 +154,17 @@ export function GastosPage() {
 
       {modalAbierto && (
         <GastoModal gasto={gastoEdit} onClose={() => setModalAbierto(false)} />
+      )}
+
+      {gastoBorrar && (
+        <ConfirmarModal
+          titulo="Borrar gasto"
+          mensaje={`Se borra el gasto "${gastoBorrar.descripcion}" de ${formatMoneda(Number(gastoBorrar.monto))}. Si era en efectivo, el arqueo del día se corrige automáticamente.`}
+          confirmLabel="Borrar gasto"
+          pendiente={borrar.isPending}
+          onConfirm={() => borrar.mutate(gastoBorrar.id)}
+          onClose={() => setGastoBorrar(null)}
+        />
       )}
     </div>
   )

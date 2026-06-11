@@ -109,6 +109,8 @@ ESTADOS DE CITA:
 ✗ Exponer passwordHash en una respuesta (select explicito siempre)
 ✗ Duplicar logica que ya existe en lib/utils.ts
 ✗ queryKey planas que pisen cache de otra vista (usar jerarquia: ['servicios','todos'])
+✗ window.confirm / alert / prompt nativos EN TODO EL PROYECTO (usar modales del design system, patron CancelarCitaModal)
+✗ Copy de UI sin tildes: el texto visible al usuario va en espanol correcto CON acentos (identificadores de codigo siguen sin acentos)
 ```
 
 ---
