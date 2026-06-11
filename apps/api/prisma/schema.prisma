@@ -43,6 +43,12 @@ enum FormaPago {
   VALES
 }
 
+// Origen de la cita: agenda interna o portal publico de reservas (E2.5b)
+enum OrigenCita {
+  INTERNO
+  PORTAL
+}
+
 enum TipoDisponibilidad {
   DISPONIBLE
   VACACIONES
@@ -87,6 +93,9 @@ model Consultorio {
   timezone  String   @default("America/Argentina/Buenos_Aires")
   plan      String   @default("free")
   activo    Boolean  @default(true)
+  // Portal publico de reservas (E2.5b): /reservar/:slug
+  slug         String?  @unique
+  portalActivo Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -231,6 +240,7 @@ model Cita {
   fechaHora       DateTime
   duracionMin     Int
   estado          EstadoCita  @default(PENDIENTE)
+  origen          OrigenCita  @default(INTERNO)
   notasSecretaria String?
   createdById     Int
   createdBy       Usuario     @relation("CitaCreatedBy", fields: [createdById], references: [id])
