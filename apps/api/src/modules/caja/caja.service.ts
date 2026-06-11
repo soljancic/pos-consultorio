@@ -1,5 +1,21 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { IsNumber, Min, IsString, IsOptional } from 'class-validator'
+import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from '../../prisma/prisma.service'
+
+export class CerrarCajaDto {
+  // Arqueo ciego: el efectivo contado se declara SIN ver el esperado
+  @IsNumber() @Min(0)
+  montoDeclarado: number
+
+  @IsString() @IsOptional()
+  notasCierre?: string
+}
+
+export class RevisarCajaDto {
+  @IsString() @IsOptional()
+  nota?: string
+}
 
 // El dia de caja es el dia LOCAL del negocio (server en el timezone del
 // consultorio para el MVP). Con fecha UTC, despues de las 20:00 GMT-4 los
@@ -75,13 +91,95 @@ export class CajaService {
     return { caja, pagos, pagosDeudaAnterior, nuevasDeudas }
   }
 
-  async cerrar(consultorioId: number, usuarioId: number) {
+  // Cierre con arqueo ciego (E2-M2): solo el efectivo participa (QR/tarjeta/
+  // vales son rastreables). Diferencia 0 se auto-aprueba; si no, queda
+  // pendiente de revision del ADMIN. El esperado se snapshotea: una reversa
+  // posterior del mismo dia puede mover totalEfectivo.
+  async cerrar(consultorioId: number, usuarioId: number, dto: CerrarCajaDto) {
     const { clave: hoy } = diaCajaLocal()
 
-    return this.prisma.cajaDiaria.update({
+    const caja = await this.prisma.cajaDiaria.findUnique({
       where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
-      data: { cerrada: true, cierreAt: new Date(), usuarioCierreId: usuarioId },
     })
+    if (!caja) throw new NotFoundException('No hay caja con movimientos hoy')
+    if (caja.cerrada) throw new BadRequestException('La caja de hoy ya esta cerrada')
+
+    const declarado = new Decimal(dto.montoDeclarado)
+    const esperado = caja.totalEfectivo
+    const diferencia = declarado.minus(esperado)
+    const sinDiferencia = diferencia.isZero()
+
+    const [actualizada] = await this.prisma.$transaction([
+      this.prisma.cajaDiaria.update({
+        where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+        data: {
+          cerrada: true,
+          cierreAt: new Date(),
+          usuarioCierreId: usuarioId,
+          montoDeclarado: declarado,
+          montoEsperado: esperado,
+          diferencia,
+          notasCierre: dto.notasCierre,
+          ...(sinDiferencia && {
+            revisadaPorId: usuarioId,
+            revisadaAt: new Date(),
+            notasRevision: 'auto: sin diferencia',
+          }),
+        },
+      }),
+      this.prisma.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'CajaDiaria',
+          entidadId: caja.id,
+          accion: 'UPDATE',
+          payloadAntes: { cerrada: false, totalEfectivo: esperado.toString() },
+          payloadDespues: {
+            cerrada: true,
+            montoDeclarado: declarado.toString(),
+            diferencia: diferencia.toString(),
+            autoAprobada: sinDiferencia,
+          },
+        },
+      }),
+    ])
+
+    return actualizada
+  }
+
+  // Revision del ADMIN para cierres con diferencia (alerta, no bloquea)
+  async revisar(consultorioId: number, cajaId: number, dto: RevisarCajaDto, usuarioId: number) {
+    const caja = await this.prisma.cajaDiaria.findFirst({
+      where: { id: cajaId, consultorioId },
+    })
+    if (!caja) throw new NotFoundException('Caja no encontrada')
+    if (!caja.cerrada) throw new BadRequestException('La caja no esta cerrada')
+    if (caja.revisadaAt) throw new BadRequestException('La caja ya fue revisada')
+
+    const [actualizada] = await this.prisma.$transaction([
+      this.prisma.cajaDiaria.update({
+        where: { id: cajaId },
+        data: {
+          revisadaPorId: usuarioId,
+          revisadaAt: new Date(),
+          notasRevision: dto.nota,
+        },
+      }),
+      this.prisma.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'CajaDiaria',
+          entidadId: cajaId,
+          accion: 'UPDATE',
+          payloadAntes: { diferencia: caja.diferencia?.toString() ?? null, revisada: false },
+          payloadDespues: { revisada: true, nota: dto.nota ?? null },
+        },
+      }),
+    ])
+
+    return actualizada
   }
 
   async getHistorial(consultorioId: number, desde: string, hasta: string) {

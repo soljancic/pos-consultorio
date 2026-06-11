@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Query } from '@nestjs/common'
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
-import { CajaService } from './caja.service'
+import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
+import { CajaService, CerrarCajaDto, RevisarCajaDto } from './caja.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
+import { Roles } from '../../common/decorators/roles.decorator'
+import { Rol } from '@pos/types'
 
 @ApiTags('Caja')
 @ApiBearerAuth()
@@ -13,7 +15,21 @@ export class CajaController {
   getHoy(@CurrentUser() user: JwtPayload) { return this.service.getHoy(user.consultorioId) }
 
   @Post('cerrar')
-  cerrar(@CurrentUser() user: JwtPayload) { return this.service.cerrar(user.consultorioId, user.sub) }
+  @ApiOperation({ summary: 'Cerrar caja con arqueo ciego (declarar efectivo contado)' })
+  cerrar(@CurrentUser() user: JwtPayload, @Body() dto: CerrarCajaDto) {
+    return this.service.cerrar(user.consultorioId, user.sub, dto)
+  }
+
+  @Put(':id/revisar')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Aprobar la revision de un cierre con diferencia' })
+  revisar(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RevisarCajaDto,
+  ) {
+    return this.service.revisar(user.consultorioId, id, dto, user.sub)
+  }
 
   @Get('historial')
   getHistorial(
