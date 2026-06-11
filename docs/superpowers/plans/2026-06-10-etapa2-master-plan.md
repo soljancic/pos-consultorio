@@ -27,7 +27,9 @@ Racional del orden: los hitos operativos/financieros (M7, M1-M2, M8) protegen la
 
 ---
 
-## E2-M1 — Anulacion de pagos con asiento de reversa
+## E2-M1 — Anulacion de pagos con asiento de reversa — ✔ EJECUTADO 2026-06-10
+
+Plan detallado: `2026-06-10-e2-m1-reversa-pagos-plan.md`. Verificado: gate-e2m1 5/5, Playwright 13/13, regresion m2/m4/e2m7 verde. Commits 4e6a6dc..dcaf935. Nota de implementacion: la caja del dia del pago original cerrada NO bloquea (responde `advertencia`); la reversa siempre impacta la caja de HOY.
 
 **Regla (PLAN.md §8):** los pagos nunca se borran ni editan; se corrigen con una reversa.
 

@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2-M1 Anulacion de pagos con reversa** (siguiente hito del plan maestro de Etapa 2; E2-M7 quedo hecho el 2026-06-10). El deploy en Railway + piloto queda diferido a decision del owner (no bloquea el desarrollo).
+**➡️ SIGUIENTE PASO:** **E2-M2 Arqueo de caja ciego** (E2-M7 y E2-M1 hechos el 2026-06-10). El deploy en Railway + piloto queda diferido a decision del owner (no bloquea el desarrollo).
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -48,7 +48,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 13. ✅ Ajuste de precio con motivo (descuento) auditado
 14. ✅ Deudores agrupados por paciente con deuda real y ultimo pago
 15. ✅ Recordatorio de deuda por WhatsApp (link manual)
-16. ⬜ Anulacion de pagos con asiento de reversa (E2-M1)
+16. ✅ Anulacion de pagos con asiento de reversa (E2-M1, 2026-06-10)
 
 ### Caja y finanzas
 17. ✅ Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
@@ -441,7 +441,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - Historia clinica cronologica en la ficha del paciente
 - ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
 - **Gastos administrativos** (E2-M8): tabla `gastos` con categoria, fecha, personal, monto y cuenta de origen; los gastos en efectivo descuentan de la caja diaria (afectan el arqueo); KPI "Gastos del mes" + "Resultado neto" en el dashboard
-- **Anulacion de pagos con asiento de reversa**: campos `anuladoAt/anuladoPor/motivo` + pago espejo negativo; nunca se borra el original (patron probado en produccion en otro proyecto del usuario)
+- ✔ **Anulacion de pagos con asiento de reversa** (E2-M1, HECHO 2026-06-10): `POST /cobros/pagos/:id/anular` (ADMIN) crea pago espejo negativo, restaura saldo/deuda/cita y descuenta la caja de HOY; UI en Caja y CobroModal. Gate: `gate-e2m1.ps1`; E2E: `anular-pago.spec.ts`
 - **Arqueo de caja ciego**: al cerrar, la secretaria declara el efectivo contado SIN ver el esperado; el sistema calcula la diferencia y notifica al admin si no es cero (campos `montoDeclarado`, `montoEsperado`, `diferencia`, revision admin)
 - **Vista de actividad reciente** (`/actividad`, solo ADMIN): feed paginado leyendo la tabla `logs` que ya se alimenta hoy
 - Generacion de recetas simples en PDF
