@@ -342,6 +342,12 @@ model CajaDiaria {
   cierreAt          DateTime?
   createdAt         DateTime    @default(now())
 
+  // Apertura de turno (E2-M9): la jornada arranca declarando la caja chica;
+  // sin caja abierta no se cobra ni se registra gastos
+  montoInicial   Decimal   @default(0) @db.Decimal(10, 2)
+  abiertaAt      DateTime?
+  notasApertura  String?
+
   // Arqueo ciego (E2-M2): declarado vs esperado, solo efectivo
   montoDeclarado Decimal?  @db.Decimal(10, 2)
   montoEsperado  Decimal?  @db.Decimal(10, 2)

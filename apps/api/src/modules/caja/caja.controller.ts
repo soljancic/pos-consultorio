@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CajaService, CerrarCajaDto, RevisarCajaDto } from './caja.service'
+import { CajaService, AbrirCajaDto, CerrarCajaDto, RevisarCajaDto } from './caja.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { Rol } from '@pos/types'
@@ -13,6 +13,12 @@ export class CajaController {
 
   @Get('hoy')
   getHoy(@CurrentUser() user: JwtPayload) { return this.service.getHoy(user.consultorioId) }
+
+  @Post('abrir')
+  @ApiOperation({ summary: 'Abrir el turno del dia declarando la caja chica inicial' })
+  abrir(@CurrentUser() user: JwtPayload, @Body() dto: AbrirCajaDto) {
+    return this.service.abrir(user.consultorioId, user.sub, dto)
+  }
 
   @Post('cerrar')
   @ApiOperation({ summary: 'Cerrar caja con arqueo ciego (declarar efectivo contado)' })

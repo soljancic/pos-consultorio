@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
 import { PartialType } from '@nestjs/swagger'
 import { IsNumber, Min, IsString, IsOptional, IsEnum, IsISO8601, IsNotEmpty } from 'class-validator'
 import { CategoriaGasto, CuentaGasto } from '@prisma/client'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from '../../prisma/prisma.service'
+import { diaCajaLocal } from '../caja/caja.service'
 
 export class CreateGastoDto {
   // Dia calendario del gasto (YYYY-MM-DD)
@@ -84,6 +85,19 @@ export class GastosService {
   }
 
   async create(consultorioId: number, usuarioId: number, dto: CreateGastoDto) {
+    // E2-M9: sin turno abierto no se registra gastos (tampoco tras el cierre)
+    const { clave: hoy } = diaCajaLocal()
+    const cajaHoy = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+      select: { abiertaAt: true, cerrada: true },
+    })
+    if (!cajaHoy?.abiertaAt) {
+      throw new ConflictException('La caja no esta abierta: abra el turno del dia en Caja')
+    }
+    if (cajaHoy.cerrada) {
+      throw new ConflictException('La caja de hoy ya esta cerrada: no se pueden registrar movimientos')
+    }
+
     const gasto = await this.prisma.gasto.create({
       data: {
         consultorioId,

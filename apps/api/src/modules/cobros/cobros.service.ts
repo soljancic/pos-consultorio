@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common'
 import { IsNumber, Min, IsEnum, IsString, IsOptional } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCobro, EstadoCita, FormaPago } from '@pos/types'
@@ -41,6 +41,21 @@ const CAMPO_CAJA: Record<FormaPago, string> = {
 export class CobrosService {
   constructor(private prisma: PrismaService) {}
 
+  // E2-M9: sin turno abierto no entra ni sale dinero (tampoco tras el cierre)
+  private async exigirCajaAbierta(consultorioId: number) {
+    const { clave: hoy } = diaCajaLocal()
+    const caja = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+      select: { abiertaAt: true, cerrada: true },
+    })
+    if (!caja?.abiertaAt) {
+      throw new ConflictException('La caja no esta abierta: abra el turno del dia en Caja')
+    }
+    if (caja.cerrada) {
+      throw new ConflictException('La caja de hoy ya esta cerrada: no se pueden registrar movimientos')
+    }
+  }
+
   async findByCita(consultorioId: number, citaId: number) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { citaId, consultorioId },
@@ -67,6 +82,7 @@ export class CobrosService {
     if (cobro.estado === EstadoCobro.ANULADO) {
       throw new BadRequestException('El cobro esta anulado (cita cancelada o no asistida)')
     }
+    await this.exigirCajaAbierta(consultorioId)
 
     const monto = new Decimal(dto.monto)
     if (monto.lte(0)) throw new BadRequestException('El monto debe ser mayor a cero')
@@ -170,6 +186,8 @@ export class CobrosService {
     if (pago.anuladoAt) {
       throw new BadRequestException('El pago ya fue anulado')
     }
+    // La reversa impacta la caja de HOY: requiere turno abierto
+    await this.exigirCajaAbierta(consultorioId)
 
     const cobro = pago.cobro
     const nuevoSaldo = cobro.saldoPendiente.plus(pago.monto)

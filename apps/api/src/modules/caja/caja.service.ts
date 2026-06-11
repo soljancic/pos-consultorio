@@ -3,6 +3,15 @@ import { IsNumber, Min, IsString, IsOptional } from 'class-validator'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from '../../prisma/prisma.service'
 
+export class AbrirCajaDto {
+  // Caja chica con la que arranca la jornada
+  @IsNumber() @Min(0)
+  montoInicial: number
+
+  @IsString() @IsOptional()
+  notasApertura?: string
+}
+
 export class CerrarCajaDto {
   // Arqueo ciego: el efectivo contado se declara SIN ver el esperado
   @IsNumber() @Min(0)
@@ -108,6 +117,45 @@ export class CajaService {
     return { egresosEfectivo, egresosTotales }
   }
 
+  // Apertura del turno (E2-M9): la jornada arranca declarando la caja chica.
+  // Sin caja abierta no se cobra ni se registra gastos (guards en cobros y
+  // gastos); el arqueo contempla el monto inicial.
+  async abrir(consultorioId: number, usuarioId: number, dto: AbrirCajaDto) {
+    const { clave: hoy } = diaCajaLocal()
+    const existente = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+    })
+    if (existente) {
+      throw new BadRequestException(
+        existente.cerrada ? 'La caja de hoy ya fue cerrada' : 'La caja de hoy ya esta abierta',
+      )
+    }
+
+    const [caja] = await this.prisma.$transaction([
+      this.prisma.cajaDiaria.create({
+        data: {
+          consultorioId,
+          fecha: hoy,
+          usuarioAperturaId: usuarioId,
+          abiertaAt: new Date(),
+          montoInicial: new Decimal(dto.montoInicial),
+          notasApertura: dto.notasApertura,
+        },
+      }),
+      this.prisma.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'CajaDiaria',
+          entidadId: 0,
+          accion: 'CREATE',
+          payloadDespues: { montoInicial: dto.montoInicial, notas: dto.notasApertura ?? null },
+        },
+      }),
+    ])
+    return caja
+  }
+
   // Cierre con arqueo ciego (E2-M2): solo el efectivo participa (QR/tarjeta/
   // vales son rastreables). Diferencia 0 se auto-aprueba; si no, queda
   // pendiente de revision del ADMIN. El esperado se snapshotea: una reversa
@@ -118,13 +166,13 @@ export class CajaService {
     const caja = await this.prisma.cajaDiaria.findUnique({
       where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
     })
-    if (!caja) throw new NotFoundException('No hay caja con movimientos hoy')
+    if (!caja) throw new NotFoundException('No hay caja abierta hoy')
     if (caja.cerrada) throw new BadRequestException('La caja de hoy ya esta cerrada')
 
     const declarado = new Decimal(dto.montoDeclarado)
-    // El esperado es el efectivo NETO: cobros menos gastos en efectivo del dia
+    // Esperado = caja chica inicial + cobros en efectivo - gastos en efectivo
     const { egresosEfectivo } = await this.egresosDelDia(consultorioId)
-    const esperado = caja.totalEfectivo.minus(egresosEfectivo)
+    const esperado = caja.montoInicial.plus(caja.totalEfectivo).minus(egresosEfectivo)
     const diferencia = declarado.minus(esperado)
     const sinDiferencia = diferencia.isZero()
 
