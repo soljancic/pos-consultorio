@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common'
 import {
   IsInt, IsString, IsOptional, IsEnum, IsISO8601, Matches, IsArray, Min, Max,
@@ -70,6 +71,27 @@ function seSolapan(aIni: string, aFin: string, bIni: string, bFin: string) {
 export class DisponibilidadesService {
   constructor(private prisma: PrismaService) {}
 
+  // ADMIN gestiona todo; un usuario DOCTOR solo el calendario de SU doctor
+  // (vinculo Doctor.usuarioId); el resto solo consulta.
+  private async validarGestion(
+    consultorioId: number,
+    rol: string,
+    usuarioId: number,
+    doctorId: number,
+  ) {
+    if (rol === 'ADMIN') return
+    if (rol !== 'DOCTOR') {
+      throw new ForbiddenException('Solo el administrador o el propio doctor gestionan horarios')
+    }
+    const propio = await this.prisma.doctor.findFirst({
+      where: { consultorioId, usuarioId },
+      select: { id: true },
+    })
+    if (propio?.id !== doctorId) {
+      throw new ForbiddenException('Solo puede gestionar su propio calendario de atencion')
+    }
+  }
+
   findAll(consultorioId: number, desde: string, hasta: string, doctorId?: number) {
     return this.prisma.disponibilidad.findMany({
       where: {
@@ -82,7 +104,13 @@ export class DisponibilidadesService {
     })
   }
 
-  async create(consultorioId: number, usuarioId: number, dto: CreateDisponibilidadDto) {
+  async create(
+    consultorioId: number,
+    usuarioId: number,
+    rol: string,
+    dto: CreateDisponibilidadDto,
+  ) {
+    await this.validarGestion(consultorioId, rol, usuarioId, dto.doctorId)
     if (dto.horaInicio >= dto.horaFin) {
       throw new BadRequestException('horaInicio debe ser anterior a horaFin')
     }
@@ -209,10 +237,12 @@ export class DisponibilidadesService {
     consultorioId: number,
     id: number,
     usuarioId: number,
+    rol: string,
     dto: UpdateDisponibilidadDto,
     alcance: Alcance = 'uno',
   ) {
     const disp = await this.disponibilidadDelTenant(consultorioId, id)
+    await this.validarGestion(consultorioId, rol, usuarioId, disp.doctorId)
     const horaInicio = dto.horaInicio ?? disp.horaInicio
     const horaFin = dto.horaFin ?? disp.horaFin
     if (horaInicio >= horaFin) {
@@ -246,8 +276,15 @@ export class DisponibilidadesService {
     return { actualizadas: resultado.count }
   }
 
-  async remove(consultorioId: number, id: number, usuarioId: number, alcance: Alcance = 'uno') {
+  async remove(
+    consultorioId: number,
+    id: number,
+    usuarioId: number,
+    rol: string,
+    alcance: Alcance = 'uno',
+  ) {
     const disp = await this.disponibilidadDelTenant(consultorioId, id)
+    await this.validarGestion(consultorioId, rol, usuarioId, disp.doctorId)
     const where = this.whereAlcance(disp, alcance)
 
     const resultado = await this.prisma.$transaction(async (tx) => {
