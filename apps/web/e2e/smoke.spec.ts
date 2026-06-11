@@ -97,7 +97,7 @@ test('agenda: crear cita, recorrer estados, registrar atencion y cobrar', async 
   // Registrar atencion (estetoscopio) y marcar Atendida en un click
   await page.getByTitle('Atención').first().click()
   const atModal = page.locator('.fixed.inset-0')
-  await atModal.getByText('Diagnostico').locator('..').locator('input').fill('Todo en orden')
+  await atModal.getByText('Diagnóstico').locator('..').locator('input').fill('Todo en orden')
   await atModal.getByText('Tratamiento indicado').locator('..').locator('input').fill('Control en 30 días')
   await atModal.getByRole('button', { name: /guardar y marcar atendida/i }).click()
   await expect(page.getByText('Atendida').first()).toBeVisible({ timeout: 10_000 })
