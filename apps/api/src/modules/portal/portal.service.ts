@@ -42,6 +42,18 @@ export class PortalService {
     private doctores: DoctoresService,
   ) {}
 
+  // El portal no ofrece horas que ya pasaron: fechas previas a hoy quedan
+  // vacias y hoy se corta a la hora actual del server (TZ del consultorio)
+  private filtrarSlotsPasados(fecha: string, slots: string[]) {
+    const ahora = new Date()
+    const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`
+    const dia = fecha.slice(0, 10)
+    if (dia < hoy) return []
+    if (dia > hoy) return slots
+    const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+    return slots.filter((s) => s > horaActual)
+  }
+
   private async consultorioPorSlug(slug: string) {
     const consultorio = await this.prisma.consultorio.findUnique({ where: { slug } })
     if (!consultorio || !consultorio.activo || !consultorio.portalActivo) {
@@ -79,8 +91,12 @@ export class PortalService {
     if (!servicio) throw new NotFoundException('Servicio no encontrado')
 
     const disp = await this.doctores.getDisponibilidad(c.id, doctorId, fecha, servicio.duracionMin)
-    // Solo horas libres: nada de citas ni nombres
-    return { slots: disp.slots, duracionMin: servicio.duracionMin, modo: disp.modo ?? 'calendario' }
+    // Solo horas libres futuras: nada de citas ni nombres
+    return {
+      slots: this.filtrarSlotsPasados(fecha, disp.slots),
+      duracionMin: servicio.duracionMin,
+      modo: disp.modo ?? 'calendario',
+    }
   }
 
   async reservar(slug: string, dto: ReservaPortalDto) {
@@ -92,7 +108,7 @@ export class PortalService {
     })
     if (!servicio) throw new NotFoundException('Servicio no encontrado')
     const disp = await this.doctores.getDisponibilidad(c.id, dto.doctorId, dto.fecha, servicio.duracionMin)
-    if (!disp.slots.includes(dto.hora)) {
+    if (!this.filtrarSlotsPasados(dto.fecha, disp.slots).includes(dto.hora)) {
       throw new ConflictException('Ese horario ya no esta disponible')
     }
 

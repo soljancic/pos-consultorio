@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX } from 'lucide-react'
-import { EstadoCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
+import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe } from 'lucide-react'
+import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { btnIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
@@ -113,6 +113,15 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           >
             {LABEL_ESTADO[cita.estado]}
           </span>
+          {cita.origen === OrigenCita.PORTAL && (
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300 shrink-0"
+              title="Reservada desde el portal público"
+            >
+              <Globe className="h-3 w-3" aria-hidden="true" />
+              Portal
+            </span>
+          )}
         </div>
         <div className="text-sm text-muted-foreground mt-0.5">
           {cita.servicio?.nombre} &bull; {cita.doctor?.nombre}

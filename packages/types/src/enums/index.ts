@@ -18,6 +18,12 @@ export enum EstadoCita {
   REPROGRAMADA = 'REPROGRAMADA',
 }
 
+// Como entro la cita al sistema (E2.5b): el portal publico marca PORTAL
+export enum OrigenCita {
+  INTERNO = 'INTERNO',
+  PORTAL = 'PORTAL',
+}
+
 export enum EstadoCobro {
   PENDIENTE = 'PENDIENTE',
   PARCIAL = 'PARCIAL',

@@ -1,4 +1,4 @@
-﻿import { EstadoCita, EstadoCobro, FormaPago, Rol } from '../enums'
+﻿import { EstadoCita, EstadoCobro, FormaPago, OrigenCita, Rol } from '../enums'
 
 export interface Consultorio {
   id: number
@@ -77,6 +77,7 @@ export interface Cita {
   fechaHora: Date
   duracionMin: number
   estado: EstadoCita
+  origen?: OrigenCita
   notasSecretaria?: string
   createdById: number
   createdAt: Date
