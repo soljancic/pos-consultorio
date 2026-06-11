@@ -3,7 +3,9 @@ $ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmssff"
 $email = "e25b$ts@test.com"
-$hoy = Get-Date -Format "yyyy-MM-dd"
+# Manana: los slots de hoy a horas fijas se filtrarian como pasados (pulido E2.5b)
+$hoy = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
+$ayer = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
 $slug = "portal$ts"
 
 function Esperar-Error($accion, $codigoEsperado, $etiqueta) {
@@ -53,5 +55,9 @@ Write-Output "5 MATCH TELEFONO: pacientes=$(@($pacs2).Count) (esp 1, sin duplica
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000002" } | ConvertTo-Json) } 409 "6 SLOT OCUPADO"
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ consultorioId = 1; doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "X"; apellido = "Y"; telefono = "+59170000003" } | ConvertTo-Json) } 400 "7 CONSULTORIOID FORJADO"
 
-# 8) Slug inexistente -> 404
-Esperar-Error { Invoke-RestMethod -Uri "$base/public/no-existe-$ts" } 404 "8 SLUG INEXISTENTE"
+# 8) Fecha pasada -> sin slots (filtro de slots pasados)
+$slotsAyer = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&servicioId=$($srv.id)&fecha=$ayer"
+Write-Output "8 SLOTS PASADOS: count=$(@($slotsAyer.slots).Count) (esp 0)"
+
+# 9) Slug inexistente -> 404
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/no-existe-$ts" } 404 "9 SLUG INEXISTENTE"

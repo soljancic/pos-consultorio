@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2-M4 fase 2** (linea de tiempo dedicada + adjuntos) o **E2-M5 recetas PDF** o **E2-M10 emails** (decidir proveedor SMTP/Resend). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, E2.5a nucleo, E2.5b portal, kardex CI, usuario-doctor, cero dialogos nativos, acentos, E2-M4 fase 1 guard duro (06-11). Deploy diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** **E2-M5 recetas PDF** o **E2-M10 emails** (decidir proveedor SMTP/Resend) o **fase 2 del calendario** (plantillas, servicios-por-doctor). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, E2.5a nucleo, E2.5b portal + pulidos (badge Portal, slots pasados), kardex CI, usuario-doctor, cero dialogos nativos, acentos, E2-M4 completo (06-11). Deploy diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -40,7 +40,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 ### Pacientes
 8. ✅ CRUD con busqueda (nombre, DNI, telefono) y ficha completa
 9. ✅ Historial de citas con atencion expandible y deuda visible
-10. 🔄 Historia clinica completa (E2-M4). Fase 1 hecha 2026-06-11: guard duro 403 en PUT /atenciones (solo ADMIN o el doctor de la cita), agenda DOCTOR forzada en backend, AtencionModal solo lectura para staff, boton "Agendar control" desde proximoControl. Gate: `gate-e2m4.ps1`. Pendiente fase 2: linea de tiempo dedicada + adjuntos
+10. ✅ Historia clinica completa (E2-M4, 2026-06-11). F1: guard duro 403 en PUT /atenciones (solo ADMIN o el doctor de la cita), agenda DOCTOR forzada en backend, AtencionModal solo lectura para staff, boton "Agendar control" desde proximoControl. F2: tab "Historia clínica" en la ficha (timeline con busqueda via GET /atenciones/paciente/:id?q=) + adjuntos a disco local (subida 5MB JPG/PNG/WebP/PDF, streaming autenticado, borrado con ConfirmarModal y log). Gates: `gate-e2m4.ps1`, `gate-e2m4-f2.ps1`
 11. ⬜ Contador de no-shows + requierePrepago (E3)
 
 ### Cobros y deudas
@@ -58,7 +58,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 21. ⬜ Comisiones por doctor y liquidacion mensual (E4)
 22. ⬜ Facturacion electronica (E4)
 43. ✅ Apertura de caja con monto inicial (caja chica) + bloqueo de cobros/gastos sin turno abierto (E2-M9, 2026-06-11)
-44. ⬜ Cero dialogos nativos EN TODO EL PROYECTO: reemplazar los window.confirm/alert restantes por modales del design system (GastosPage borrar, DisponibilidadModal eliminar, advertencia de AnularPagoModal) — convencion en CLAUDE.md Don'ts
+44. ✅ Cero dialogos nativos EN TODO EL PROYECTO (verificado 2026-06-11: grep sin window.confirm/alert en apps/web/src; GastosPage y DisponibilidadModal usan ConfirmarModal, AnularPagoModal muestra la advertencia inline en el modal) — convencion en CLAUDE.md Don'ts
 45. ✅ Pase de acentos (2026-06-11): labels, titulos, badges y mensajes principales con tildes (script reusable `scripts/pase-acentos.ps1`, specs actualizados en el mismo commit). El copy NUEVO se escribe con acentos (CLAUDE.md); refinamiento de frases menores: continuo
 46. ✅ Usuario DOCTOR asociado a su Doctor (2026-06-11): selector en UsuarioModal (1:1 sobre Doctor.usuarioId, 409 si esta tomado, cambiar de rol suelta el vinculo); el doctor logueado edita SOLO su fila del Calendario de Atencion (403 para ajenos; guard en backend) y desde E2-M4 f1 su agenda y sus atenciones tambien estan acotadas en backend. Gates: `gate-usuario-doctor.ps1`, `gate-e2m4.ps1`
 47. ⬜ Emails de cuenta (E2-M10): al crear un usuario se envia correo con link de un solo uso para definir su contrasena; "Olvidaste tu contrasena?" en el login envia el mismo flujo de reset
@@ -443,7 +443,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 **Trigger:** ~~al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas~~ → **se adelanta por decision del owner (2026-06-10)**: se ejecuta en orden de hitos sin esperar piloto. Solo E2-M6 (decision Visitas) requiere datos de uso real.
 **Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 8 hitos ordenados (cancelar/reprogramar → reversal de pagos → arqueo ciego → gastos → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
 
-- 🔄 **Historia clinica completa** (E2-M4, fase 1 HECHA 2026-06-11): guard duro en `PUT /atenciones` (solo ADMIN o el doctor de la cita; 403 al resto, lectura abierta al staff); agenda DOCTOR forzada en backend (`GET /citas` ignora el doctorId del query para rol DOCTOR y usa el Doctor vinculado al token); AtencionModal solo lectura para SECRETARIA/CAJA; boton "Agendar control" en la ficha precarga NuevaCitaModal con paciente + fecha del proximo control. Gate: `gate-e2m4.ps1` 8/8. Pendiente fase 2: linea de tiempo dedicada con busqueda + adjuntos (fotos, estudios)
+- ✔ **Historia clinica completa** (E2-M4, HECHO 2026-06-11): F1 — guard duro en `PUT /atenciones` (solo ADMIN o el doctor de la cita; 403 al resto, lectura abierta al staff); agenda DOCTOR forzada en backend (`GET /citas` ignora el doctorId del query para rol DOCTOR y usa el Doctor vinculado al token); AtencionModal solo lectura para SECRETARIA/CAJA; boton "Agendar control" precarga NuevaCitaModal. F2 — tab "Historia clínica" en la ficha: timeline con busqueda (`GET /atenciones/paciente/:id?q=`) y adjuntos a disco local (`UPLOADS_DIR`, 5MB JPG/PNG/WebP/PDF, max 10 por atencion, streaming autenticado con guard de path traversal, borrado logueado). Gates: `gate-e2m4.ps1` 8/8, `gate-e2m4-f2.ps1` 9/9
 - Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
 - Historia clinica cronologica en la ficha del paciente
 - ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
@@ -466,7 +466,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 **Specs:** `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md` y `2026-06-10-portal-agendamiento-design.md` (planes de implementacion just-in-time, como E1/E2).
 
 - 🔄 **2.5a — Calendario de Atencion** (NUCLEO HECHO 2026-06-11): cada doctor define su horario por dia (lunes 9-17, etc.) en `/calendario-atencion` (nav "Horarios"). Hecho: scheduler semanal (filas = doctores), presets, series semanales materializadas con fecha limite, edicion/borrado por alcance (uno/serie/desde), bloqueos (vacaciones/ausencia/capacitacion/reunion/bloqueado), validacion de citas (bloqueos 409; fuera de horario 400 si el doctor tiene calendario; sin calendario = legacy), edicion por ADMIN o el propio doctor. ✔ `GET /doctores/:id/disponibilidad` reescrito sobre el modelo nuevo (slots = bloques DISPONIBLE − citas − bloqueos; gate-slots 5/5) — el portal 2.5b ya tiene su base. Gates: `gate-e25a.ps1`, `gate-usuario-doctor.ps1`, `gate-slots.ps1`; E2E: `calendario-atencion.spec.ts`. **Fase 2 pendiente**: plantillas de horarios y servicios por doctor. Sedes/ambientes → Etapa 5.
-- ✔ **2.5b — Portal publico de agendamiento (tipo Calendly)** (HECHO 2026-06-11): link `/reservar/:slug` (con `?doctor=` para doctor fijo); el cliente ve los slots reales del calendario, elige horario y deja sus datos; se crea paciente (match por telefono sin duplicar ni revelar existencia) + cita PENDIENTE origen PORTAL atribuida al primer ADMIN. Endpoints `/public/:slug|/slots|/reservas` con throttle por ruta y consultorioId SIEMPRE derivado del slug; slug + toggle + link copiable en Configuracion. Gate: `gate-e25b.ps1` 8/8. Pendiente menor: badge "Portal" en la agenda y filtro min-fecha en slots pasados.
+- ✔ **2.5b — Portal publico de agendamiento (tipo Calendly)** (HECHO 2026-06-11): link `/reservar/:slug` (con `?doctor=` para doctor fijo); el cliente ve los slots reales del calendario, elige horario y deja sus datos; se crea paciente (match por correo o telefono sin duplicar ni revelar existencia) y envío de correo autoamtico de gracias por tu reserva + cita PENDIENTE origen PORTAL atribuida al primer ADMIN. Endpoints `/public/:slug|/slots|/reservas` con throttle por ruta y consultorioId SIEMPRE derivado del slug; slug + toggle + link copiable en Configuracion. Gate: `gate-e25b.ps1` 8/8. Pendiente menor: badge "Portal" en la agenda y filtro min-fecha en slots pasados.
 
 ---
 
