@@ -54,8 +54,8 @@ export class AtencionesService {
 
   // E2-M4: guard duro de historia clinica — escribe el ADMIN o el doctor
   // de la cita (via Doctor.usuarioId); la UI ya lo ocultaba, ahora el
-  // backend lo garantiza.
-  private async citaConGuardDeEscritura(
+  // backend lo garantiza. Publico: RecetasService aplica el mismo guard.
+  async citaConGuardDeEscritura(
     consultorioId: number,
     citaId: number,
     usuarioId: number,

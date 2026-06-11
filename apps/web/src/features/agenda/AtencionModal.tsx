@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
+import { X, AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
-import { abrirAdjunto, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
+import { abrirAdjunto, abrirRecetaPdf, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { RecetaModal } from './RecetaModal'
 
 interface Props {
   cita: Cita
@@ -89,6 +90,14 @@ export function AtencionModal({ cita, onClose }: Props) {
       const msg = err.response?.data?.message
       setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al subir el adjunto')
     },
+  })
+
+  // Recetas (E2-M5)
+  const [recetaAbierta, setRecetaAbierta] = useState(false)
+  const { data: recetas = [] } = useQuery<Array<{ id: number; createdAt: string; contenido: { medicamentos: string[] } }>>({
+    queryKey: ['recetas', cita.id],
+    queryFn: () => api.get(`/atenciones/cita/${cita.id}/recetas`).then((r) => r.data),
+    enabled: !!atencion,
   })
 
   const borrarAdjunto = useMutation({
@@ -216,6 +225,49 @@ export function AtencionModal({ cita, onClose }: Props) {
               )}
             </div>
 
+            {/* Recetas: solo con atencion guardada */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="block text-sm font-medium text-foreground">Recetas</span>
+                {puedeEditar && atencion && (
+                  <button
+                    type="button"
+                    onClick={() => setRecetaAbierta(true)}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                  >
+                    <FileSignature className="h-3.5 w-3.5" aria-hidden="true" />
+                    Nueva receta
+                  </button>
+                )}
+              </div>
+              {recetas.length === 0 ? (
+                <p className="text-xs text-muted-foreground/70">
+                  {atencion ? 'Sin recetas emitidas' : 'Guarde la atención para poder emitir recetas'}
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {recetas.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2 text-sm border rounded-md px-2.5 py-1.5">
+                      <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                      <span className="flex-1 min-w-0 truncate text-foreground">
+                        {new Date(r.createdAt).toLocaleDateString('es-BO')} &bull; {r.contenido.medicamentos.length}{' '}
+                        {r.contenido.medicamentos.length === 1 ? 'medicamento' : 'medicamentos'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => abrirRecetaPdf(r.id)}
+                        aria-label={`Descargar receta ${r.id} en PDF`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150 shrink-0"
+                      >
+                        <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                        PDF
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {error && (
               <p role="alert" className={errorUI}>
                 <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -245,6 +297,8 @@ export function AtencionModal({ cita, onClose }: Props) {
           </div>
         )}
       </div>
+
+      {recetaAbierta && <RecetaModal cita={cita} onClose={() => setRecetaAbierta(false)} />}
 
       {adjuntoABorrar !== null && (
         <ConfirmarModal

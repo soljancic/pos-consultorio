@@ -7,13 +7,17 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagg
 import type { Response } from 'express'
 import { createReadStream } from 'fs'
 import { AtencionesService, UpsertAtencionDto } from './atenciones.service'
+import { RecetasService, CreateRecetaDto } from './recetas.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Atenciones')
 @ApiBearerAuth()
 @Controller('atenciones')
 export class AtencionesController {
-  constructor(private service: AtencionesService) {}
+  constructor(
+    private service: AtencionesService,
+    private recetas: RecetasService,
+  ) {}
 
   @Get('paciente/:pacienteId')
   @ApiOperation({ summary: 'Linea de tiempo clinica del paciente (q busca en los campos)' })
@@ -78,5 +82,36 @@ export class AtencionesController {
     @Param('indice', ParseIntPipe) indice: number,
   ) {
     return this.service.eliminarAdjunto(user.consultorioId, citaId, indice, user.sub, user.rol)
+  }
+
+  @Post('cita/:citaId/recetas')
+  @ApiOperation({ summary: 'Emitir receta (ADMIN o el doctor de la cita)' })
+  crearReceta(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Body() dto: CreateRecetaDto,
+  ) {
+    return this.recetas.crear(user.consultorioId, citaId, dto, user.sub, user.rol)
+  }
+
+  @Get('cita/:citaId/recetas')
+  @ApiOperation({ summary: 'Recetas emitidas de una atencion' })
+  listarRecetas(@CurrentUser() user: JwtPayload, @Param('citaId', ParseIntPipe) citaId: number) {
+    return this.recetas.listar(user.consultorioId, citaId)
+  }
+
+  @Get('recetas/:id/pdf')
+  @ApiOperation({ summary: 'Descargar la receta en PDF (membrete del consultorio)' })
+  async recetaPdf(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { buffer, nombre } = await this.recetas.pdf(user.consultorioId, id)
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${nombre}"`,
+    })
+    return new StreamableFile(buffer)
   }
 }

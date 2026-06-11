@@ -8,15 +8,21 @@ export type AdjuntoMeta = {
   subidoAt: string
 }
 
-// Los adjuntos viajan autenticados (JWT), asi que no hay URL directa para
+// Los archivos viajan autenticados (JWT), asi que no hay URL directa para
 // <a href>: se baja el blob y se abre en otra pestana
-export async function abrirAdjunto(citaId: number, indice: number) {
-  const r = await api.get(`/atenciones/cita/${citaId}/adjuntos/${indice}`, {
-    responseType: 'blob',
-  })
+export async function abrirArchivoAutenticado(ruta: string) {
+  const r = await api.get(ruta, { responseType: 'blob' })
   const url = URL.createObjectURL(r.data)
   window.open(url, '_blank', 'noopener')
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+export function abrirAdjunto(citaId: number, indice: number) {
+  return abrirArchivoAutenticado(`/atenciones/cita/${citaId}/adjuntos/${indice}`)
+}
+
+export function abrirRecetaPdf(recetaId: number) {
+  return abrirArchivoAutenticado(`/atenciones/recetas/${recetaId}/pdf`)
 }
 
 export function formatTamano(bytes: number) {
