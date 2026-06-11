@@ -12,13 +12,17 @@ interface Props {
   // Prefill al crear desde un slot vacio de la grilla
   doctorIdInicial?: number
   horaInicial?: string
+  // Prefill al agendar un control desde la ficha del paciente (E2-M4)
+  pacienteInicial?: Pick<Paciente, 'id' | 'nombre' | 'apellido'>
   onClose: () => void
 }
 
-export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, onClose }: Props) {
+export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pacienteInicial, onClose }: Props) {
   const qc = useQueryClient()
-  const [pacienteQuery, setPacienteQuery] = useState('')
-  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Pick<Paciente, 'id' | 'nombre' | 'apellido'> | null>(null)
+  const [pacienteQuery, setPacienteQuery] = useState(
+    pacienteInicial ? `${pacienteInicial.apellido}, ${pacienteInicial.nombre}` : '',
+  )
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Pick<Paciente, 'id' | 'nombre' | 'apellido'> | null>(pacienteInicial ?? null)
   const [showPacienteList, setShowPacienteList] = useState(false)
   const [doctorId, setDoctorId] = useState(doctorIdInicial ? String(doctorIdInicial) : '')
   const [servicioId, setServicioId] = useState('')

@@ -5,6 +5,7 @@ import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { useAuthStore } from '../../stores/auth.store'
 
 interface Props {
   cita: Cita
@@ -13,8 +14,12 @@ interface Props {
 
 export function AtencionModal({ cita, onClose }: Props) {
   const qc = useQueryClient()
+  const user = useAuthStore((s) => s.user)
   const [error, setError] = useState('')
-  const puedeMarcarAtendida = cita.estado === EstadoCita.EN_ATENCION
+  // Guard duro en backend (E2-M4): solo ADMIN o el doctor de la cita escriben;
+  // el resto consulta en modo solo lectura
+  const puedeEditar = user?.rol === 'ADMIN' || user?.rol === 'DOCTOR'
+  const puedeMarcarAtendida = puedeEditar && cita.estado === EstadoCita.EN_ATENCION
 
   const { data: atencion, isLoading } = useQuery({
     queryKey: ['atencion', cita.id],
@@ -122,13 +127,15 @@ export function AtencionModal({ cita, onClose }: Props) {
 
             <div className="flex flex-wrap gap-2 pt-2">
               <button type="button" onClick={onClose} className={btnOutlineUI}>
-                Cancelar
+                {puedeEditar ? 'Cancelar' : 'Cerrar'}
               </button>
-              <button type="button" disabled={guardar.isPending}
-                onClick={() => { setError(''); guardar.mutate({ marcarAtendida: false }) }}
-                className="inline-flex items-center justify-center flex-1 h-10 px-4 border border-primary text-primary rounded-md text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
-                Guardar
-              </button>
+              {puedeEditar && (
+                <button type="button" disabled={guardar.isPending}
+                  onClick={() => { setError(''); guardar.mutate({ marcarAtendida: false }) }}
+                  className="inline-flex items-center justify-center flex-1 h-10 px-4 border border-primary text-primary rounded-md text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
+                  Guardar
+                </button>
+              )}
               {puedeMarcarAtendida && (
                 <button type="button" disabled={guardar.isPending}
                   onClick={() => { setError(''); guardar.mutate({ marcarAtendida: true }) }}
