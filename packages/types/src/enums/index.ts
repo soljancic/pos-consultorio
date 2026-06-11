@@ -35,6 +35,17 @@ export enum FormaPago {
   VALES = 'VALES',
 }
 
+// Calendario de Atencion (E2.5a): tipo de bloque del horario del doctor.
+// Solo DISPONIBLE acepta citas; el resto son bloqueos.
+export enum TipoDisponibilidad {
+  DISPONIBLE = 'DISPONIBLE',
+  VACACIONES = 'VACACIONES',
+  AUSENCIA = 'AUSENCIA',
+  CAPACITACION = 'CAPACITACION',
+  REUNION = 'REUNION',
+  BLOQUEADO = 'BLOQUEADO',
+}
+
 // Gastos administrativos (E2-M8)
 export enum CategoriaGasto {
   INSUMOS = 'INSUMOS',

@@ -43,6 +43,15 @@ enum FormaPago {
   VALES
 }
 
+enum TipoDisponibilidad {
+  DISPONIBLE
+  VACACIONES
+  AUSENCIA
+  CAPACITACION
+  REUNION
+  BLOQUEADO
+}
+
 enum CategoriaGasto {
   INSUMOS
   SUELDOS
@@ -89,6 +98,8 @@ model Consultorio {
   cobros     Cobro[]
   cajaDiaria CajaDiaria[]
   gastos     Gasto[]
+  disponibilidades Disponibilidad[]
+  seriesDisponibilidad SerieDisponibilidad[]
   logs       Log[]
 
   @@map("consultorios")
@@ -156,6 +167,8 @@ model Doctor {
 
   horarios HorarioAtencion[]
   citas    Cita[]
+  disponibilidades Disponibilidad[]
+  seriesDisponibilidad SerieDisponibilidad[]
 
   @@index([consultorioId])
   @@map("doctores")
@@ -342,6 +355,54 @@ model CajaDiaria {
   @@unique([consultorioId, fecha])
   @@index([consultorioId])
   @@map("caja_diaria")
+}
+
+// ─── CALENDARIO DE ATENCION (E2.5a) ──────────────────────────────────────────
+// Horarios reales del doctor. Las series materializan sus ocurrencias hasta
+// la fecha limite (simplifica solapes, excepciones y "editar desde aca").
+// Reemplaza al modelo simple HorarioAtencion (que queda legacy).
+
+model SerieDisponibilidad {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  doctorId      Int
+  doctor        Doctor      @relation(fields: [doctorId], references: [id])
+  diasSemana    Int[]    // 0=domingo .. 6=sabado (Date.getDay)
+  desde         DateTime @db.Date
+  hasta         DateTime @db.Date
+  horaInicio    String   // "HH:mm"
+  horaFin       String
+  tipo          TipoDisponibilidad @default(DISPONIBLE)
+  nota          String?
+  createdAt     DateTime @default(now())
+
+  ocurrencias Disponibilidad[]
+
+  @@index([consultorioId, doctorId])
+  @@map("series_disponibilidad")
+}
+
+model Disponibilidad {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  doctorId      Int
+  doctor        Doctor      @relation(fields: [doctorId], references: [id])
+  fecha         DateTime @db.Date
+  horaInicio    String   // "HH:mm" — comparable lexicograficamente
+  horaFin       String
+  tipo          TipoDisponibilidad @default(DISPONIBLE)
+  nota          String?
+  serieId       Int?
+  serie         SerieDisponibilidad? @relation(fields: [serieId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([consultorioId, fecha])
+  @@index([consultorioId, doctorId, fecha])
+  @@map("disponibilidades")
 }
 
 // Gastos administrativos (E2-M8): egresos con categoria y cuenta de origen.
