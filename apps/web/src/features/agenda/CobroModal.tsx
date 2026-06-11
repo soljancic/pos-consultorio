@@ -186,7 +186,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                         setErrorAjuste('')
                       }}
                       title="Cancelar"
-                      aria-label="Cancelar edicion de precio"
+                      aria-label="Cancelar edición de precio"
                       className={cn(btnIconUI, 'border border-input text-muted-foreground hover:bg-muted')}
                     >
                       <X className="h-4 w-4" aria-hidden="true" />
@@ -314,7 +314,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                   value={referencia}
                   onChange={(e) => setReferencia(e.target.value)}
                   className={inputUI}
-                  placeholder="Numero de comprobante"
+                  placeholder="Número de comprobante"
                 />
               </div>
             )}

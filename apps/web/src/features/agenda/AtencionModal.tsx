@@ -71,7 +71,7 @@ export function AtencionModal({ cita, onClose }: Props) {
       <div className="bg-card rounded-xl border shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Atencion</h2>
+            <h2 className="text-lg font-semibold text-foreground">Atención</h2>
             <p className="text-sm text-muted-foreground">
               {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre} &bull;{' '}
               {formatHora(cita.fechaHora)}
@@ -108,7 +108,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                 className={textareaUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Proximo control</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Próximo control</label>
               <input type="date" value={form.proximoControl} onChange={(e) => set('proximoControl', e.target.value)}
                 className={inputUI} />
             </div>

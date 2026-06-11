@@ -65,7 +65,7 @@ export function PacientesPage() {
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Paciente</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">CI</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Telefono</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Teléfono</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Deuda</th>
                 </tr>
               </thead>

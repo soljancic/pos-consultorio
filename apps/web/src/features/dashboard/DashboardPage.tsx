@@ -128,19 +128,19 @@ export function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="Citas hoy" value={citas.length} icon={CalendarDays} tone="primary" />
         <StatCard label="En espera" value={enEspera} icon={Clock} tone="warning" />
-        <StatCard label="En atencion" value={enAtencion} icon={Activity} tone="info" />
+        <StatCard label="En atención" value={enAtencion} icon={Activity} tone="info" />
         <StatCard label="Atendidos" value={atendidosHoy} icon={CheckCircle2} tone="success" />
         <StatCard label="Por cobrar" value={porCobrar} icon={CircleDollarSign} tone="danger" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Caja del dia */}
+        {/* Caja del día */}
         <div className="bg-card rounded-xl border shadow-sm p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4">
             <span className="bg-primary/10 text-primary rounded-md p-1.5">
               <Wallet className="h-4 w-4" aria-hidden="true" />
             </span>
-            Caja del dia
+            Caja del día
           </h2>
           {caja ? (
             <div className="space-y-2 text-sm">
@@ -209,11 +209,11 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Proximas citas */}
+      {/* Próximas citas */}
       {proximasCitas.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">
-            Proximas citas de hoy
+            Próximas citas de hoy
           </h2>
           <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
             <table className="w-full text-sm">

@@ -13,13 +13,13 @@ import { CobroModal } from '../agenda/CobroModal'
 import { PacienteModal } from './PacienteModal'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
-  PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llego',
-  EN_ATENCION: 'En atencion', ATENDIDA: 'Atendida', COBRADO: 'Cobrado',
-  CON_DEUDA: 'Con deuda', CANCELADA: 'Cancelada', NO_ASISTIO: 'No asistio',
+  PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llegó',
+  EN_ATENCION: 'En atención', ATENDIDA: 'Atendida', COBRADO: 'Cobrado',
+  CON_DEUDA: 'Con deuda', CANCELADA: 'Cancelada', NO_ASISTIO: 'No asistió',
   REPROGRAMADA: 'Reprogramada',
 } as Record<EstadoCita, string>
 
-type Atencion = {
+type Atención = {
   motivo: string | null
   diagnostico: string | null
   tratamiento: string | null
@@ -32,7 +32,7 @@ type PacienteDetalle = Paciente & {
     doctor: { nombre: string }
     servicio: { nombre: string; precioBase: number }
     cobro: { id: number; total: number; saldoPendiente: number; estado: string } | null
-    atencion: Atencion | null
+    atencion: Atención | null
   }>
 }
 
@@ -108,19 +108,19 @@ export function PacienteDetallePage() {
         <div className={cn(cardUI, 'p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm')}>
           {paciente.dni && <div><span className="text-muted-foreground">CI:</span> <span className="font-medium tabular-nums">{paciente.dni}</span></div>}
           {(paciente.telefono || paciente.whatsapp) && (
-            <div><span className="text-muted-foreground">Telefono:</span> <span className="font-medium tabular-nums">{paciente.telefono || paciente.whatsapp}</span></div>
+            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium tabular-nums">{paciente.telefono || paciente.whatsapp}</span></div>
           )}
           {paciente.email && <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium">{paciente.email}</span></div>}
           {paciente.fechaNacimiento && (
             <div>
               <span className="text-muted-foreground">Nacimiento:</span>{' '}
               <span className="font-medium">
-                {formatDia(String(paciente.fechaNacimiento))}{edad !== null ? ` (${edad} anos)` : ''}
+                {formatDia(String(paciente.fechaNacimiento))}{edad !== null ? ` (${edad} años)` : ''}
               </span>
             </div>
           )}
           {paciente.direccion && (
-            <div><span className="text-muted-foreground">Direccion:</span> <span className="font-medium">{paciente.direccion}</span></div>
+            <div><span className="text-muted-foreground">Dirección:</span> <span className="font-medium">{paciente.direccion}</span></div>
           )}
           {paciente.notas && (
             <div className="sm:col-span-2">
@@ -163,8 +163,8 @@ export function PacienteDetallePage() {
                             <button
                               onClick={() => setCitaExpandida(citaExpandida === cita.id ? null : cita.id)}
                               className="inline-flex items-center justify-center h-7 w-7 rounded text-violet-500 hover:text-violet-700 hover:bg-violet-500/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
-                              title="Ver atencion"
-                              aria-label="Ver atencion"
+                              title="Ver atención"
+                              aria-label="Ver atención"
                               aria-expanded={citaExpandida === cita.id}
                             >
                               {citaExpandida === cita.id
@@ -220,7 +220,7 @@ export function PacienteDetallePage() {
                           {cita.atencion.diagnostico && <p><span className="font-medium">Diagnostico:</span> {cita.atencion.diagnostico}</p>}
                           {cita.atencion.tratamiento && <p><span className="font-medium">Tratamiento:</span> {cita.atencion.tratamiento}</p>}
                           {cita.atencion.evolucion && <p><span className="font-medium">Evolucion:</span> {cita.atencion.evolucion}</p>}
-                          {cita.atencion.proximoControl && <p><span className="font-medium">Proximo control:</span> {formatDia(cita.atencion.proximoControl)}</p>}
+                          {cita.atencion.proximoControl && <p><span className="font-medium">Próximo control:</span> {formatDia(cita.atencion.proximoControl)}</p>}
                         </td>
                       </tr>
                     )}

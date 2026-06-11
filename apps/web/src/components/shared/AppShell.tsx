@@ -32,9 +32,9 @@ const NAV_ITEMS = [
   { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },
   { to: '/gastos', icon: Receipt, label: 'Gastos' },
-  { to: '/catalogo', icon: Settings, label: 'Catalogo' },
+  { to: '/catalogo', icon: Settings, label: 'Catálogo' },
   { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
-  { to: '/configuracion', icon: Cog, label: 'Configuracion', soloAdmin: true },
+  { to: '/configuracion', icon: Cog, label: 'Configuración', soloAdmin: true },
 ]
 
 const COLAPSADO_KEY = 'pos-sidebar-colapsado'

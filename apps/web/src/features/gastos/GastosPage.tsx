@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, startOfMonth } from 'date-fns'
 import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
@@ -67,7 +67,7 @@ export function GastosPage() {
           <input id="gastos-hasta" type="date" value={hasta}
             onChange={(e) => setHasta(e.target.value)} className={cn(inputUI, 'w-auto')} />
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
-            aria-label="Filtrar por categoria" className={cn(inputUI, 'w-auto')}>
+            aria-label="Filtrar por categoría" className={cn(inputUI, 'w-auto')}>
             <option value="">Todas las categorias</option>
             {Object.values(CategoriaGasto).map((c) => (
               <option key={c} value={c}>{LABEL_CATEGORIA[c]}</option>
@@ -83,8 +83,8 @@ export function GastosPage() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Categoria</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Descripcion</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Categoría</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Descripción</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Personal</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Monto</th>

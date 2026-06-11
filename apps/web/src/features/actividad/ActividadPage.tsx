@@ -12,8 +12,8 @@ const ENTIDADES = ['Cita', 'Cobro', 'Pago', 'Paciente', 'Gasto', 'CajaDiaria', '
 const ACCIONES = ['CREATE', 'UPDATE', 'DELETE', 'STATE_CHANGE', 'PAYMENT'] as const
 
 const LABEL_ACCION: Record<string, string> = {
-  CREATE: 'Creacion',
-  UPDATE: 'Edicion',
+  CREATE: 'Creación',
+  UPDATE: 'Edición',
   DELETE: 'Borrado',
   STATE_CHANGE: 'Cambio de estado',
   PAYMENT: 'Pago',
@@ -89,7 +89,7 @@ export function ActividadPage() {
             <option value="">Todas las entidades</option>
             {ENTIDADES.map((e) => <option key={e} value={e}>{e}</option>)}
           </select>
-          <select value={accion} onChange={filtrar(setAccion)} aria-label="Filtrar por accion" className={cn(inputUI, 'w-auto')}>
+          <select value={accion} onChange={filtrar(setAccion)} aria-label="Filtrar por acción" className={cn(inputUI, 'w-auto')}>
             <option value="">Todas las acciones</option>
             {ACCIONES.map((a) => <option key={a} value={a}>{LABEL_ACCION[a]}</option>)}
           </select>

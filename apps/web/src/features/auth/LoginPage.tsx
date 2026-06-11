@@ -6,7 +6,7 @@ import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { Stethoscope, CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
 
 const BENEFICIOS = [
-  { icon: CalendarCheck, texto: 'Agenda del dia con estados en un vistazo' },
+  { icon: CalendarCheck, texto: 'Agenda del día con estados en un vistazo' },
   { icon: Wallet, texto: 'Cobros, deudas y caja siempre cuadrados' },
   { icon: BellRing, texto: 'Recordatorios por WhatsApp en un click' },
 ]

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-// Vistas de agenda: Lista (default), Dia (columnas por doctor), Semana.
+// Vistas de agenda: Lista (default), Día (columnas por doctor), Semana.
 
 const API = 'http://localhost:3000/api/v1'
 const ts = Date.now().toString().slice(-6)
@@ -37,15 +37,15 @@ test.beforeAll(async ({ request }) => {
   })
 })
 
-test('vista Dia muestra columnas por doctor y la cita en la grilla', async ({ page }) => {
+test('vista Día muestra columnas por doctor y la cita en la grilla', async ({ page }) => {
   await page.goto('/login')
   await page.locator('input[type="email"]').fill(EMAIL)
   await page.locator('input[type="password"]').fill(PASS)
   await page.getByRole('button', { name: /ingresar/i }).click()
   await page.waitForURL(/\/agenda$/)
 
-  // Cambiar a vista Dia: columna del doctor + cita posicionada
-  await page.getByRole('button', { name: 'Dia' }).click()
+  // Cambiar a vista Día: columna del doctor + cita posicionada
+  await page.getByRole('button', { name: 'Día' }).click()
   // .last(): el nombre tambien aparece como opcion del filtro de doctores
   await expect(page.getByText('Dr. Grilla').last()).toBeVisible()
   await expect(page.getByText(/Grid, Gema/)).toBeVisible()

@@ -49,7 +49,7 @@ test('login y dashboard con metricas', async ({ page }) => {
   await login(page)
   await page.goto('/')
   await expect(page.getByText('Citas hoy')).toBeVisible()
-  await expect(page.getByText('Caja del dia')).toBeVisible()
+  await expect(page.getByText('Caja del día')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Deudas pendientes' })).toBeVisible()
 })
 
@@ -60,7 +60,7 @@ test('crear paciente desde la UI navega a su ficha', async ({ page }) => {
   const modal = page.locator('.fixed.inset-0')
   await modal.getByText('Nombre *').locator('..').locator('input').fill('Elena')
   await modal.getByText('Apellido *').locator('..').locator('input').fill('Smoke')
-  await modal.getByText('Telefono', { exact: true }).locator('..').locator('input').fill('+5491155557777')
+  await modal.getByText('Teléfono', { exact: true }).locator('..').locator('input').fill('+5491155557777')
   await page.getByRole('button', { name: /crear paciente/i }).click()
   await page.waitForURL(/\/pacientes\/.+/, { timeout: 10_000 })
   await expect(page.getByRole('heading', { name: /Smoke, Elena/ })).toBeVisible()
@@ -71,7 +71,7 @@ test('agenda: crear cita, recorrer estados, registrar atencion y cobrar', async 
   await login(page)
   await page.goto('/agenda')
 
-  // Nueva cita para Elena a una hora segura del dia
+  // Nueva cita para Elena a una hora segura del día
   await page.getByRole('button', { name: /nueva cita/i }).click()
   const modal = page.locator('.fixed.inset-0')
   await modal.locator('input[placeholder*="aciente"], input[placeholder*="uscar"]').first().fill('Elena')
@@ -88,17 +88,17 @@ test('agenda: crear cita, recorrer estados, registrar atencion y cobrar', async 
   await modal.getByRole('button', { name: /crear|guardar|agendar/i }).last().click()
   await expect(page.getByText(/Smoke, Elena/)).toBeVisible({ timeout: 10_000 })
 
-  // Avanzar estados: Confirmada -> Llego -> En atencion
-  for (const estado of ['Confirmada', 'Llego', 'En atencion']) {
+  // Avanzar estados: Confirmada -> Llegó -> En atención
+  for (const estado of ['Confirmada', 'Llegó', 'En atención']) {
     await page.getByRole('button', { name: new RegExp(estado, 'i') }).first().click()
     await page.waitForTimeout(400)
   }
 
   // Registrar atencion (estetoscopio) y marcar Atendida en un click
-  await page.getByTitle('Atencion').first().click()
+  await page.getByTitle('Atención').first().click()
   const atModal = page.locator('.fixed.inset-0')
   await atModal.getByText('Diagnostico').locator('..').locator('input').fill('Todo en orden')
-  await atModal.getByText('Tratamiento indicado').locator('..').locator('input').fill('Control en 30 dias')
+  await atModal.getByText('Tratamiento indicado').locator('..').locator('input').fill('Control en 30 días')
   await atModal.getByRole('button', { name: /guardar y marcar atendida/i }).click()
   await expect(page.getByText('Atendida').first()).toBeVisible({ timeout: 10_000 })
 
@@ -136,11 +136,11 @@ test('catalogo y configuracion (ADMIN ve CRUD; ficha muestra atencion)', async (
   await page.getByRole('tab', { name: 'consultorio' }).click()
   await expect(page.getByText('Nombre del consultorio')).toBeVisible()
 
-  // Ficha de Elena: la atencion registrada es legible (criterio MVP #3)
+  // Ficha de Elena: la atención registrada es legible (criterio MVP #3)
   await page.goto('/pacientes')
   await page.getByText(/Smoke, Elena/).click()
   await page.waitForURL(/\/pacientes\/.+/)
-  await page.getByTitle('Ver atencion').first().click()
+  await page.getByTitle('Ver atención').first().click()
   await expect(page.getByText('Todo en orden')).toBeVisible()
-  await expect(page.getByText('Control en 30 dias')).toBeVisible()
+  await expect(page.getByText('Control en 30 días')).toBeVisible()
 })

@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 // Verifica que la UI respeta los roles (la seguridad real es el backend,
 // ya cubierta por scripts/gate-m3.ps1 y gate-negativos.ps1).
@@ -29,9 +29,9 @@ async function loginAs(page: any, email: string) {
   await page.waitForURL(/\/agenda$/, { timeout: 10_000 })
 }
 
-test('SECRETARIA no ve Configuracion en el nav y la ruta la expulsa', async ({ page }) => {
+test('SECRETARIA no ve Configuración en el nav y la ruta la expulsa', async ({ page }) => {
   await loginAs(page, SEC_EMAIL)
-  await expect(page.getByRole('link', { name: 'Configuracion' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Configuración' })).toHaveCount(0)
   await page.goto('/configuracion')
   await page.waitForURL(/\/agenda$/, { timeout: 10_000 })
 })
@@ -44,9 +44,9 @@ test('SECRETARIA ve el catalogo en solo lectura', async ({ page }) => {
   await expect(page.getByRole('button', { name: /nuevo doctor/i })).toHaveCount(0)
 })
 
-test('ADMIN si ve Configuracion y los botones CRUD', async ({ page }) => {
+test('ADMIN si ve Configuración y los botones CRUD', async ({ page }) => {
   await loginAs(page, ADMIN_EMAIL)
-  await expect(page.getByRole('link', { name: 'Configuracion' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Configuración' })).toBeVisible()
   await page.goto('/catalogo')
   await expect(page.getByRole('button', { name: /nuevo servicio/i })).toBeVisible()
 })

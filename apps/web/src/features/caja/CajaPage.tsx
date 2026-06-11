@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
 import { Lock, Unlock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
@@ -265,7 +265,7 @@ export function CajaPage() {
                         </span>
                         {pendienteRevision && (
                           <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-                            Pendiente revision
+                            Pendiente revisión
                           </span>
                         )}
                         {c.revisadaAt && tieneDiferencia && (

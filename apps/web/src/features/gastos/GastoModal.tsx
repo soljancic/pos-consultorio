@@ -114,7 +114,7 @@ export function GastoModal({ gasto, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Categoria *</label>
+              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Categoría *</label>
               <select id="gasto-categoria" value={form.categoria}
                 onChange={(e) => set('categoria', e.target.value as CategoriaGasto)}
                 className={inputUI}>
@@ -137,12 +137,12 @@ export function GastoModal({ gasto, onClose }: Props) {
 
           {form.cuenta === CuentaGasto.CAJA_EFECTIVO && (
             <p className="text-xs text-muted-foreground">
-              Los gastos en efectivo descuentan del arqueo de la caja del dia.
+              Los gastos en efectivo descuentan del arqueo de la caja del día.
             </p>
           )}
 
           <div>
-            <label htmlFor="gasto-descripcion" className="block text-sm font-medium text-foreground mb-1.5">Descripcion *</label>
+            <label htmlFor="gasto-descripcion" className="block text-sm font-medium text-foreground mb-1.5">Descripción *</label>
             <input id="gasto-descripcion" required value={form.descripcion}
               onChange={(e) => set('descripcion', e.target.value)}
               placeholder="Ej: compra de guantes y gasas" className={inputUI} />

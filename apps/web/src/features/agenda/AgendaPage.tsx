@@ -24,7 +24,7 @@ const VISTA_KEY = 'pos-agenda-vista'
 
 const VISTAS: Array<{ id: Vista; label: string; icon: typeof List }> = [
   { id: 'lista', label: 'Lista', icon: List },
-  { id: 'dia', label: 'Dia', icon: Columns3 },
+  { id: 'dia', label: 'Día', icon: Columns3 },
   { id: 'semana', label: 'Semana', icon: CalendarRange },
 ]
 
@@ -69,7 +69,7 @@ export function AgendaPage() {
     if (doctorPropio) setDoctorId(String(doctorPropio.id))
   }, [doctorPropio?.id])
 
-  // Dia (lista y grilla diaria)
+  // Día (lista y grilla diaria)
   const { data: citas = [], isLoading } = useQuery<Cita[]>({
     queryKey: ['citas', fechaStr, doctorId],
     queryFn: () =>
@@ -322,11 +322,11 @@ export function AgendaPage() {
         />
       )}
 
-      {/* Modal no asistio */}
+      {/* Modal no asistió */}
       {citaNoAsistio && (
         <CancelarCitaModal
           cita={citaNoAsistio}
-          modo="no-asistio"
+          modo="no-asistió"
           onClose={() => setCitaNoAsistio(null)}
         />
       )}

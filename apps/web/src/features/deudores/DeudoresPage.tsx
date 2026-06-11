@@ -88,9 +88,9 @@ export function DeudoresPage() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Paciente</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ultima cita</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Última cita</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Citas</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ultimo pago</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Último pago</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Deuda</th>
                   <th className="px-4 py-3" />
                 </tr>

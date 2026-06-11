@@ -80,14 +80,14 @@ export function ServicioModal({ servicio, onClose }: Props) {
               className={inputUI} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Descripcion</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Descripción</label>
             <input value={form.descripcion}
               onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
               className={inputUI} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Duracion (min) *</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Duración (min) *</label>
               <input required type="number" min={5} step={5} value={form.duracionMin}
                 onChange={(e) => setForm((f) => ({ ...f, duracionMin: Number(e.target.value) }))}
                 className={inputUI} />

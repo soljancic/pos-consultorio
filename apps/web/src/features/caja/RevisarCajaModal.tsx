@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, AlertCircle, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
@@ -80,7 +80,7 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
 
           <div>
             <label htmlFor="revision-nota" className="block text-sm font-medium text-foreground mb-1.5">
-              Nota de revision <span className="text-muted-foreground/70 font-normal">(opcional)</span>
+              Nota de revisión <span className="text-muted-foreground/70 font-normal">(opcional)</span>
             </label>
             <input
               id="revision-nota"

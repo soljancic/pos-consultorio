@@ -15,13 +15,13 @@ const ESTADOS_CON_ATENCION = [
 const LABEL_ESTADO: Record<EstadoCita, string> = {
   [EstadoCita.PENDIENTE]: 'Pendiente',
   [EstadoCita.CONFIRMADA]: 'Confirmada',
-  [EstadoCita.LLEGO]: 'Llego',
-  [EstadoCita.EN_ATENCION]: 'En atencion',
+  [EstadoCita.LLEGO]: 'Llegó',
+  [EstadoCita.EN_ATENCION]: 'En atención',
   [EstadoCita.ATENDIDA]: 'Atendida',
   [EstadoCita.COBRADO]: 'Cobrado',
   [EstadoCita.CON_DEUDA]: 'Con deuda',
   [EstadoCita.CANCELADA]: 'Cancelada',
-  [EstadoCita.NO_ASISTIO]: 'No asistio',
+  [EstadoCita.NO_ASISTIO]: 'No asistió',
   [EstadoCita.REPROGRAMADA]: 'Reprogramada',
 }
 
@@ -86,7 +86,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
 
   function handleWhatsApp() {
     if (!telefonoWhatsApp) return
-    const msg = `Hola ${cita.paciente?.nombre}, le recordamos su cita el dia de hoy a las ${formatHora(cita.fechaHora)}.`
+    const msg = `Hola ${cita.paciente?.nombre}, le recordamos su cita el día de hoy a las ${formatHora(cita.fechaHora)}.`
     window.open(buildWhatsAppUrl(telefonoWhatsApp, msg), '_blank')
   }
 
@@ -141,8 +141,8 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           <button
             onClick={onAtencion}
             className={cn(btnIconUI, 'text-violet-600 hover:bg-violet-500/10')}
-            title="Atencion"
-            aria-label="Registrar o ver atencion"
+            title="Atención"
+            aria-label="Registrar o ver atención"
           >
             <Stethoscope className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -173,7 +173,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setMenuAbierto((v) => !v)}
-              aria-label="Mas acciones"
+              aria-label="Más acciones"
               aria-haspopup="menu"
               aria-expanded={menuAbierto}
               className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
@@ -202,7 +202,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
                   >
                     <UserX className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    No asistio
+                    No asistió
                   </button>
                 )}
                 {puedeCancelar && (

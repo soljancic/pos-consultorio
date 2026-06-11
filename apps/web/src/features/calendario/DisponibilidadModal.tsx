@@ -11,8 +11,8 @@ export const LABEL_TIPO: Record<TipoDisponibilidad, string> = {
   [TipoDisponibilidad.DISPONIBLE]: 'Disponible',
   [TipoDisponibilidad.VACACIONES]: 'Vacaciones',
   [TipoDisponibilidad.AUSENCIA]: 'Ausencia',
-  [TipoDisponibilidad.CAPACITACION]: 'Capacitacion',
-  [TipoDisponibilidad.REUNION]: 'Reunion',
+  [TipoDisponibilidad.CAPACITACION]: 'Capacitación',
+  [TipoDisponibilidad.REUNION]: 'Reunión',
   [TipoDisponibilidad.BLOQUEADO]: 'Bloqueado',
 }
 
@@ -206,7 +206,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                         key={d.valor}
                         type="button"
                         aria-pressed={diasSemana.includes(d.valor)}
-                        aria-label={`Dia ${d.label}`}
+                        aria-label={`Día ${d.label}`}
                         onClick={() =>
                           setDiasSemana((prev) =>
                             prev.includes(d.valor) ? prev.filter((v) => v !== d.valor) : [...prev, d.valor],

@@ -31,8 +31,8 @@ test('registrar un gasto lo muestra en la tabla y en el KPI del dashboard', asyn
   await page.getByRole('button', { name: 'Nuevo gasto' }).click()
 
   await page.getByLabel('Monto *').fill('1234')
-  await page.getByLabel('Categoria *').selectOption('INSUMOS')
-  await page.getByLabel('Descripcion *').fill('material descartable')
+  await page.getByLabel('Categoría *').selectOption('INSUMOS')
+  await page.getByLabel('Descripción *').fill('material descartable')
   await page.getByRole('button', { name: 'Registrar gasto' }).click()
 
   // fila visible con categoria y monto (scope a la tabla: el filtro tambien dice Insumos)

@@ -18,7 +18,7 @@ export function formatHora(date: Date | string) {
 // Dias calendario (@db.Date): llegan como medianoche UTC y new Date() los
 // corre un dia hacia atras en GMT-4. Formatear SIEMPRE desde el string
 // YYYY-MM-DD sin pasar por el timezone (gastos, historial de caja,
-// nacimiento, proximo control, calendario de atencion).
+// nacimiento, proximo control, calendario de atención).
 export function formatDia(fechaIso: string, fmt = 'dd/MM/yyyy') {
   const [y, m, d] = fechaIso.slice(0, 10).split('-').map(Number)
   return format(new Date(y, m - 1, d), fmt, { locale: es })

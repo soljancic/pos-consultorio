@@ -153,7 +153,7 @@ export function CerrarCajaModal({ onClose }: Props) {
             ) : (
               <p className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-3 py-2.5">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Hay diferencia: el cierre queda pendiente de revision del administrador.
+                Hay diferencia: el cierre queda pendiente de revisión del administrador.
               </p>
             )}
 

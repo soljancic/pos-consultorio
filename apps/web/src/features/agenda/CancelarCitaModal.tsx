@@ -6,7 +6,7 @@ import { api } from '../../lib/api-client'
 import { formatFecha, formatHora, cn } from '../../lib/utils'
 import { inputUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
-type Modo = 'cancelar' | 'no-asistio'
+type Modo = 'cancelar' | 'no-asistió'
 
 interface Props {
   cita: Cita
@@ -28,16 +28,16 @@ const TEXTOS: Record<Modo, {
     botonCargando: 'Cancelando...',
     placeholderMotivo: 'Ej: el paciente aviso que no puede venir',
   },
-  'no-asistio': {
-    titulo: 'Marcar No asistio',
-    verbo: 'Se marca como No asistio',
-    boton: 'Marcar No asistio',
+  'no-asistió': {
+    titulo: 'Marcar No asistió',
+    verbo: 'Se marca como No asistió',
+    boton: 'Marcar No asistió',
     botonCargando: 'Guardando...',
     placeholderMotivo: 'Ej: no vino ni aviso',
   },
 }
 
-// Cancelar / No asistio con confirmacion + motivo opcional. El backend anula
+// Cancelar / No asistió con confirmacion + motivo opcional. El backend anula
 // el cobro (sin pagos) o responde 409 si la cita ya tiene pagos registrados.
 export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   const qc = useQueryClient()

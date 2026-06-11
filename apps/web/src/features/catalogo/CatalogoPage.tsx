@@ -35,7 +35,7 @@ export function CatalogoPage() {
         <span className={chipIconUI}>
           <ClipboardList className="h-4 w-4" aria-hidden="true" />
         </span>
-        Catalogo
+        Catálogo
       </h1>
 
       {/* Servicios */}
@@ -54,7 +54,7 @@ export function CatalogoPage() {
             <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Duracion</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Duración</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Precio base</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
                 {esAdmin && <th className="px-4 py-3" />}

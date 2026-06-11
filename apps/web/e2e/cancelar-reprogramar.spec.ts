@@ -73,7 +73,7 @@ test('cancelar una cita desde el menu deja el badge Cancelada', async ({ page })
   await login(page)
 
   const card = cardDe(page, 'Cancelable, Carla')
-  await card.getByRole('button', { name: 'Mas acciones' }).click()
+  await card.getByRole('button', { name: 'Más acciones' }).click()
   await page.getByRole('menuitem', { name: 'Cancelar cita' }).click()
 
   await page.getByLabel(/motivo/i).fill('aviso que no viene')
@@ -87,7 +87,7 @@ test('reprogramar cambia la hora y vuelve a Pendiente', async ({ page }) => {
   await login(page)
 
   const card = cardDe(page, 'Reprogramable, Rita')
-  await card.getByRole('button', { name: 'Mas acciones' }).click()
+  await card.getByRole('button', { name: 'Más acciones' }).click()
   await page.getByRole('menuitem', { name: 'Reprogramar' }).click()
 
   await page.getByLabel('Nueva hora').fill('15:30')

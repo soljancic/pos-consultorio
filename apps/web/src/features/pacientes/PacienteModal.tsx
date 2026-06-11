@@ -105,7 +105,7 @@ export function PacienteModal({ paciente, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
             <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
             <p className="text-xs text-muted-foreground mt-1.5">
               Se usa tambien para los mensajes de WhatsApp.
@@ -129,7 +129,7 @@ export function PacienteModal({ paciente, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Direccion</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Dirección</label>
             <input value={form.direccion} onChange={(e) => set('direccion', e.target.value)} className={inputUI} />
           </div>
 

@@ -37,6 +37,6 @@ test('crear horario con preset y verlo como bloque en la grilla', async ({ page 
   await page.getByRole('button', { name: '09:00 - 17:00' }).click()
   await page.getByRole('button', { name: 'Crear', exact: true }).click()
 
-  // el bloque aparece en la celda del dia
+  // el bloque aparece en la celda del día
   await expect(page.getByRole('button', { name: /09:00–17:00/ })).toBeVisible()
 })

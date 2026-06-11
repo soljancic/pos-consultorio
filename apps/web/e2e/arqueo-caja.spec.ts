@@ -64,16 +64,16 @@ test('cierre ciego con faltante queda pendiente y el admin lo revisa', async ({ 
   // el boton del modal comparte nombre con el del header: usar el del formulario
   await page.locator('form').getByRole('button', { name: 'Cerrar caja' }).click()
 
-  // Resultado: diferencia visible y aviso de revision pendiente
+  // Resultado: diferencia visible y aviso de revisión pendiente
   await expect(page.getByText('Diferencia', { exact: true })).toBeVisible()
-  await expect(page.getByText(/pendiente de revision/i)).toBeVisible()
+  await expect(page.getByText(/pendiente de revisión/i)).toBeVisible()
   await page.getByRole('button', { name: 'Entendido' }).click()
 
   // Historial: badge pendiente + revisar como ADMIN
   await page.getByRole('tab', { name: 'historial' }).click()
-  await expect(page.getByText('Pendiente revision')).toBeVisible()
+  await expect(page.getByText('Pendiente revisión')).toBeVisible()
   await page.getByRole('button', { name: /revisar cierre del/i }).click()
-  await page.getByLabel(/nota de revision/i).fill('faltante asumido por el admin')
+  await page.getByLabel(/nota de revisión/i).fill('faltante asumido por el admin')
   await page.getByRole('button', { name: 'Aprobar revision' }).click()
   await expect(page.getByText('Revisada')).toBeVisible()
 })

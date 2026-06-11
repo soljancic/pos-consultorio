@@ -127,7 +127,7 @@ export function UsuarioModal({ usuario, onClose }: Props) {
                 ))}
               </select>
               <p className="text-xs text-muted-foreground mt-1.5">
-                Al loguearse vera y editara solo su agenda y su calendario de atencion.
+                Al loguearse vera y editara solo su agenda y su calendario de atención.
               </p>
             </div>
           )}

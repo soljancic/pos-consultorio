@@ -85,7 +85,7 @@ export function ConfiguracionPage() {
           <span className={chipIconUI}>
             <Settings className="h-4 w-4" aria-hidden="true" />
           </span>
-          Configuracion
+          Configuración
         </h1>
         <div className="flex gap-1 mt-3" role="tablist">
           {(['usuarios', 'consultorio'] as const).map((t) => (
@@ -167,12 +167,12 @@ export function ConfiguracionPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
                 <input type="tel" value={consForm.telefono} onChange={(e) => setConsForm((f) => ({ ...f, telefono: e.target.value }))}
                   className={inputUI} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Direccion</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Dirección</label>
                 <input value={consForm.direccion} onChange={(e) => setConsForm((f) => ({ ...f, direccion: e.target.value }))}
                   className={inputUI} />
               </div>

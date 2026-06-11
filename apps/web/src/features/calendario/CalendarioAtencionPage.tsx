@@ -77,7 +77,7 @@ export function CalendarioAtencionPage() {
           <span className={chipIconUI}>
             <CalendarClock className="h-4 w-4" aria-hidden="true" />
           </span>
-          Calendario de Atencion
+          Calendario de Atención
         </h1>
         <div className="flex items-center gap-2">
           <button onClick={() => navegar(-1)} aria-label="Semana anterior"
@@ -101,7 +101,7 @@ export function CalendarioAtencionPage() {
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {doctores.length === 0 ? (
           <div className="text-center text-muted-foreground/70 py-12">
-            No hay doctores activos. Cree uno en Catalogo.
+            No hay doctores activos. Cree uno en Catálogo.
           </div>
         ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
