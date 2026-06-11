@@ -239,7 +239,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             <fieldset className="border-t pt-4">
               <legend className="text-sm font-medium text-foreground pb-2">Aplicar a</legend>
               <div className="space-y-1.5 text-sm">
-                {([['uno', 'Solo este bloque'], ['desde', 'Desde esta fecha en adelante'], ['serie', 'Toda la serie']] as const).map(([v, l]) => (
+                {([['uno', 'Solo esta fecha'], ['desde', 'Desde esta fecha en adelante'], ['serie', 'Toda la serie']] as const).map(([v, l]) => (
                   <label key={v} className="flex items-center gap-2 cursor-pointer text-foreground">
                     <input type="radio" name="alcance" value={v} checked={alcance === v}
                       onChange={() => setAlcance(v)} />

@@ -51,9 +51,13 @@ export function CalendarioAtencionPage() {
     queryFn: () => api.get(`/disponibilidades?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
   })
 
+  // La fecha del bloque es un dia calendario guardado como medianoche UTC:
+  // new Date(...) la corre un dia hacia atras en GMT-4 (el viernes se pintaba
+  // el jueves). Comparar SIEMPRE por el string YYYY-MM-DD, sin pasar por Date.
   function bloquesDe(doctorId: number, dia: Date) {
+    const diaStr = format(dia, 'yyyy-MM-dd')
     return bloques.filter(
-      (b) => b.doctorId === doctorId && isSameDay(new Date(b.fecha), dia),
+      (b) => b.doctorId === doctorId && b.fecha.slice(0, 10) === diaStr,
     )
   }
 
