@@ -35,7 +35,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
 5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
 6. ✅ Calendario de Atencion nucleo (E2.5a, 2026-06-11): horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. Pendiente fase 2: plantillas y servicios-por-doctor
-7. ⬜ Portal publico de agendamiento tipo Calendly (E2.5b)
+7. ✅ Portal publico de agendamiento tipo Calendly (E2.5b, 2026-06-11): /reservar/:slug con slots reales, reserva crea paciente + cita PENDIENTE origen PORTAL; slug + toggle en Configuracion. Gate: `gate-e25b.ps1`
 
 ### Pacientes
 8. ✅ CRUD con busqueda (nombre, DNI, telefono) y ficha completa
@@ -466,7 +466,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 **Specs:** `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md` y `2026-06-10-portal-agendamiento-design.md` (planes de implementacion just-in-time, como E1/E2).
 
 - 🔄 **2.5a — Calendario de Atencion** (NUCLEO HECHO 2026-06-11): cada doctor define su horario por dia (lunes 9-17, etc.) en `/calendario-atencion` (nav "Horarios"). Hecho: scheduler semanal (filas = doctores), presets, series semanales materializadas con fecha limite, edicion/borrado por alcance (uno/serie/desde), bloqueos (vacaciones/ausencia/capacitacion/reunion/bloqueado), validacion de citas (bloqueos 409; fuera de horario 400 si el doctor tiene calendario; sin calendario = legacy), edicion por ADMIN o el propio doctor. ✔ `GET /doctores/:id/disponibilidad` reescrito sobre el modelo nuevo (slots = bloques DISPONIBLE − citas − bloqueos; gate-slots 5/5) — el portal 2.5b ya tiene su base. Gates: `gate-e25a.ps1`, `gate-usuario-doctor.ps1`, `gate-slots.ps1`; E2E: `calendario-atencion.spec.ts`. **Fase 2 pendiente**: plantillas de horarios y servicios por doctor. Sedes/ambientes → Etapa 5.
-- **2.5b — Portal publico de agendamiento (tipo Calendly)**: link `/reservar/:slug` (con `?doctor=` opcional para doctor fijo); el cliente ve disponibilidad real del calendario, elige slot y deja sus datos; se crea paciente (match por telefono) + cita en PENDIENTE con origen PORTAL. Rate limit, slug → consultorioId solo en server, toggle on/off en Configuracion. Depende de 2.5a.
+- ✔ **2.5b — Portal publico de agendamiento (tipo Calendly)** (HECHO 2026-06-11): link `/reservar/:slug` (con `?doctor=` para doctor fijo); el cliente ve los slots reales del calendario, elige horario y deja sus datos; se crea paciente (match por telefono sin duplicar ni revelar existencia) + cita PENDIENTE origen PORTAL atribuida al primer ADMIN. Endpoints `/public/:slug|/slots|/reservas` con throttle por ruta y consultorioId SIEMPRE derivado del slug; slug + toggle + link copiable en Configuracion. Gate: `gate-e25b.ps1` 8/8. Pendiente menor: badge "Portal" en la agenda y filtro min-fecha en slots pasados.
 
 ---
 
