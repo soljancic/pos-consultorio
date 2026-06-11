@@ -27,6 +27,7 @@ const ESTILO_TIPO: Record<TipoDisponibilidad, string> = {
 export function CalendarioAtencionPage() {
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
+  const esDoctor = user?.rol === 'DOCTOR'
   const [fecha, setFecha] = useState(new Date())
   const [modal, setModal] = useState<{
     doctorId: number
@@ -50,6 +51,10 @@ export function CalendarioAtencionPage() {
     queryKey: ['disponibilidades', desde, hasta],
     queryFn: () => api.get(`/disponibilidades?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
   })
+
+  // ADMIN edita todo; un usuario DOCTOR solo la fila de su doctor vinculado
+  const doctorPropio = esDoctor ? doctores.find((d) => d.usuarioId === user?.id) : undefined
+  const puedeEditar = (doctorId: number) => esAdmin || doctorPropio?.id === doctorId
 
   // La fecha del bloque es un dia calendario guardado como medianoche UTC:
   // new Date(...) la corre un dia hacia atras en GMT-4 (el viernes se pintaba
@@ -135,13 +140,13 @@ export function CalendarioAtencionPage() {
                         {delDia.map((b) => (
                           <button
                             key={b.id}
-                            onClick={() => esAdmin && setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr, bloque: b })}
-                            disabled={!esAdmin}
+                            onClick={() => puedeEditar(doc.id) && setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr, bloque: b })}
+                            disabled={!puedeEditar(doc.id)}
                             title={`${LABEL_TIPO[b.tipo]}${b.nota ? ` — ${b.nota}` : ''}`}
                             className={cn(
                               'block w-full text-left text-xs font-medium px-1.5 py-1 rounded border tabular-nums transition-colors duration-150',
                               ESTILO_TIPO[b.tipo],
-                              esAdmin && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                             )}
                           >
                             {b.horaInicio}–{b.horaFin}
@@ -150,7 +155,7 @@ export function CalendarioAtencionPage() {
                             )}
                           </button>
                         ))}
-                        {esAdmin && (
+                        {puedeEditar(doc.id) && (
                           <button
                             onClick={() => setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr })}
                             aria-label={`Agregar horario a ${doc.nombre} el ${fechaStr}`}

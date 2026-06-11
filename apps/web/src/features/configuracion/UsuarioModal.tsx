@@ -1,13 +1,21 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, AlertCircle } from 'lucide-react'
+import type { Doctor } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
 const ROLES = ['ADMIN', 'SECRETARIA', 'DOCTOR', 'CAJA'] as const
 
-interface Usuario { id?: number; nombre: string; email: string; rol: string; activo: boolean }
+interface Usuario {
+  id?: number
+  nombre: string
+  email: string
+  rol: string
+  activo: boolean
+  doctor?: { id: number; nombre: string } | null
+}
 interface Props { usuario?: Usuario | null; onClose: () => void }
 
 export function UsuarioModal({ usuario, onClose }: Props) {
@@ -20,22 +28,41 @@ export function UsuarioModal({ usuario, onClose }: Props) {
     password: '',
     rol: usuario?.rol ?? 'SECRETARIA',
     activo: usuario?.activo ?? true,
+    doctorId: usuario?.doctor ? String(usuario.doctor.id) : '',
   })
+
+  const { data: doctores = [] } = useQuery<Doctor[]>({
+    queryKey: ['doctores'],
+    queryFn: () => api.get('/doctores').then((r) => r.data),
+    enabled: form.rol === 'DOCTOR',
+  })
+  // Solo doctores libres o el ya vinculado a este usuario
+  const doctoresElegibles = doctores.filter(
+    (d) => d.usuarioId == null || d.usuarioId === usuario?.id,
+  )
 
   const mutation = useMutation({
     mutationFn: (data: typeof form) => {
+      const doctorId =
+        data.rol === 'DOCTOR' && data.doctorId ? Number(data.doctorId) : undefined
       if (editando) {
         const payload: Record<string, unknown> = {
           nombre: data.nombre, email: data.email, rol: data.rol, activo: data.activo,
+          ...(doctorId && { doctorId }),
         }
         if (data.password) payload.password = data.password
         return api.put(`/usuarios/${usuario!.id}`, payload)
       }
       return api.post('/usuarios', {
         nombre: data.nombre, email: data.email, rol: data.rol, password: data.password,
+        ...(doctorId && { doctorId }),
       })
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); onClose() },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['usuarios'] })
+      qc.invalidateQueries({ queryKey: ['doctores'] })
+      onClose()
+    },
     onError: (err: any) => {
       const msg = err.response?.data?.message
       setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
@@ -86,6 +113,24 @@ export function UsuarioModal({ usuario, onClose }: Props) {
               {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
+          {form.rol === 'DOCTOR' && (
+            <div>
+              <label htmlFor="usuario-doctor" className="block text-sm font-medium text-foreground mb-1.5">
+                Doctor asociado
+              </label>
+              <select id="usuario-doctor" value={form.doctorId}
+                onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value }))}
+                className={inputUI}>
+                <option value="">Sin asociar</option>
+                {doctoresElegibles.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Al loguearse vera y editara solo su agenda y su calendario de atencion.
+              </p>
+            </div>
+          )}
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} className="rounded" />
