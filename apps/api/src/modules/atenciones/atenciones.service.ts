@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { IsString, IsOptional, IsISO8601 } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCita } from '@prisma/client'
@@ -40,12 +40,35 @@ export class AtencionesService {
     return atencion
   }
 
-  async upsert(consultorioId: number, citaId: number, dto: UpsertAtencionDto, usuarioId: number) {
+  async upsert(
+    consultorioId: number,
+    citaId: number,
+    dto: UpsertAtencionDto,
+    usuarioId: number,
+    rol: string,
+  ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
       include: { atencion: true },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
+
+    // E2-M4: guard duro de historia clinica — escribe el ADMIN o el doctor
+    // de la cita (via Doctor.usuarioId); la UI ya lo ocultaba, ahora el
+    // backend lo garantiza.
+    if (rol !== 'ADMIN') {
+      if (rol !== 'DOCTOR') {
+        throw new ForbiddenException('Solo el doctor o el administrador registran la atencion')
+      }
+      const propio = await this.prisma.doctor.findFirst({
+        where: { consultorioId, usuarioId },
+        select: { id: true },
+      })
+      if (propio?.id !== cita.doctorId) {
+        throw new ForbiddenException('Solo puede registrar atenciones de sus propias citas')
+      }
+    }
+
     if (!ESTADOS_ATENDIBLES.includes(cita.estado)) {
       throw new BadRequestException(
         `No se puede registrar atencion en una cita ${cita.estado}`,

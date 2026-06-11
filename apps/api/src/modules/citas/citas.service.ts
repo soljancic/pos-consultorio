@@ -59,7 +59,24 @@ const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
 export class CitasService {
   constructor(private prisma: PrismaService) {}
 
-  async findByFecha(consultorioId: number, fecha: string, doctorId?: number, hasta?: string) {
+  async findByFecha(
+    consultorioId: number,
+    fecha: string,
+    doctorId?: number,
+    hasta?: string,
+    rol?: string,
+    usuarioId?: number,
+  ) {
+    // E2-M4: la agenda del rol DOCTOR se fuerza en el backend (su doctor
+    // vinculado via Doctor.usuarioId); el filtro de la UI era solo UX.
+    if (rol === 'DOCTOR' && usuarioId) {
+      const propio = await this.prisma.doctor.findFirst({
+        where: { consultorioId, usuarioId },
+        select: { id: true },
+      })
+      doctorId = propio?.id ?? -1 // sin doctor vinculado: agenda vacia
+    }
+
     // "fecha" es el dia calendario LOCAL del consultorio (server en el mismo
     // timezone para el MVP). Con rango UTC, una cita de las 21:00 local en
     // GMT-4 caia en el dia UTC siguiente y desaparecia de la agenda.

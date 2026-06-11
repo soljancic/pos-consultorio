@@ -16,12 +16,12 @@ export class AtencionesController {
   }
 
   @Put('cita/:citaId')
-  @ApiOperation({ summary: 'Registrar o actualizar la atencion de una cita' })
+  @ApiOperation({ summary: 'Registrar o actualizar la atencion (ADMIN o el doctor de la cita)' })
   upsert(
     @CurrentUser() user: JwtPayload,
     @Param('citaId', ParseIntPipe) citaId: number,
     @Body() dto: UpsertAtencionDto,
   ) {
-    return this.service.upsert(user.consultorioId, citaId, dto, user.sub)
+    return this.service.upsert(user.consultorioId, citaId, dto, user.sub, user.rol)
   }
 }

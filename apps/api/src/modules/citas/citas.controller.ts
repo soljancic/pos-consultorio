@@ -22,6 +22,8 @@ export class CitasController {
       fecha,
       doctorId ? Number(doctorId) : undefined,
       hasta,
+      user.rol,
+      user.sub,
     )
   }
 
