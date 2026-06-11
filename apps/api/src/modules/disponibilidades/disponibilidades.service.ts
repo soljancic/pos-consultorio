@@ -117,7 +117,10 @@ export class DisponibilidadesService {
       fechas = [claveDia(dto.fecha)]
     }
 
-    // Solapes contra los bloques existentes del doctor en el rango
+    // Solapes contra los bloques existentes del doctor en el rango.
+    // Un bloqueo (vacaciones, etc.) PUEDE pisar un bloque Disponible — esa es
+    // su funcion; el conflicto es solo entre bloques del mismo grupo.
+    const esBloqueo = tipo !== TipoDisponibilidad.DISPONIBLE
     const existentes = await this.prisma.disponibilidad.findMany({
       where: {
         consultorioId,
@@ -125,17 +128,19 @@ export class DisponibilidadesService {
         deletedAt: null,
         fecha: { gte: fechas[0], lte: fechas[fechas.length - 1] },
       },
-      select: { fecha: true, horaInicio: true, horaFin: true },
+      select: { fecha: true, horaInicio: true, horaFin: true, tipo: true },
     })
-    const porDia = new Map<number, { horaInicio: string; horaFin: string }[]>()
+    const porDia = new Map<number, typeof existentes>()
     for (const e of existentes) {
       const k = e.fecha.getTime()
       if (!porDia.has(k)) porDia.set(k, [])
       porDia.get(k)!.push(e)
     }
     for (const f of fechas) {
-      const conflicto = (porDia.get(f.getTime()) ?? []).some((e) =>
-        seSolapan(dto.horaInicio, dto.horaFin, e.horaInicio, e.horaFin),
+      const conflicto = (porDia.get(f.getTime()) ?? []).some(
+        (e) =>
+          (e.tipo !== TipoDisponibilidad.DISPONIBLE) === esBloqueo &&
+          seSolapan(dto.horaInicio, dto.horaFin, e.horaInicio, e.horaFin),
       )
       if (conflicto) {
         throw new ConflictException(
