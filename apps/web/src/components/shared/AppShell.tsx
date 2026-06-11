@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Receipt,
+  CalendarClock,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -25,6 +26,7 @@ import { cn } from '../../lib/utils'
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Inicio', end: true },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
+  { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },

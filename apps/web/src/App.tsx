@@ -7,6 +7,7 @@ import { PacientesPage } from './features/pacientes/PacientesPage'
 import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
 import { CajaPage } from './features/caja/CajaPage'
 import { GastosPage } from './features/gastos/GastosPage'
+import { CalendarioAtencionPage } from './features/calendario/CalendarioAtencionPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
@@ -37,6 +38,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="agenda" element={<AgendaPage />} />
+        <Route path="calendario-atencion" element={<CalendarioAtencionPage />} />
         <Route path="pacientes" element={<PacientesPage />} />
         <Route path="pacientes/:id" element={<PacienteDetallePage />} />
         <Route path="caja" element={<CajaPage />} />
