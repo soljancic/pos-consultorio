@@ -1,27 +1,55 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, AlertTriangle } from 'lucide-react'
+import { X, AlertCircle, AlertTriangle, UserX } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, formatHora, cn } from '../../lib/utils'
 import { inputUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
+type Modo = 'cancelar' | 'no-asistio'
+
 interface Props {
   cita: Cita
+  modo?: Modo
   onClose: () => void
 }
 
-// Cancelar con confirmacion + motivo opcional. El backend anula el cobro
-// (sin pagos) o responde 409 si la cita ya tiene pagos registrados.
-export function CancelarCitaModal({ cita, onClose }: Props) {
+const TEXTOS: Record<Modo, {
+  titulo: string
+  verbo: string
+  boton: string
+  botonCargando: string
+  placeholderMotivo: string
+}> = {
+  'cancelar': {
+    titulo: 'Cancelar cita',
+    verbo: 'Se cancela',
+    boton: 'Cancelar cita',
+    botonCargando: 'Cancelando...',
+    placeholderMotivo: 'Ej: el paciente aviso que no puede venir',
+  },
+  'no-asistio': {
+    titulo: 'Marcar No asistio',
+    verbo: 'Se marca como No asistio',
+    boton: 'Marcar No asistio',
+    botonCargando: 'Guardando...',
+    placeholderMotivo: 'Ej: no vino ni aviso',
+  },
+}
+
+// Cancelar / No asistio con confirmacion + motivo opcional. El backend anula
+// el cobro (sin pagos) o responde 409 si la cita ya tiene pagos registrados.
+export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   const qc = useQueryClient()
   const [motivo, setMotivo] = useState('')
   const [error, setError] = useState('')
+  const t = TEXTOS[modo]
+  const Icono = modo === 'cancelar' ? AlertTriangle : UserX
 
   const cancelar = useMutation({
     mutationFn: () =>
       api.put(`/citas/${cita.id}/estado`, {
-        estado: EstadoCita.CANCELADA,
+        estado: modo === 'cancelar' ? EstadoCita.CANCELADA : EstadoCita.NO_ASISTIO,
         motivo: motivo || undefined,
       }),
     onSuccess: () => {
@@ -32,7 +60,7 @@ export function CancelarCitaModal({ cita, onClose }: Props) {
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al cancelar')
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
     },
   })
 
@@ -42,9 +70,9 @@ export function CancelarCitaModal({ cita, onClose }: Props) {
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className="bg-destructive/10 text-destructive rounded-md p-1.5">
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              <Icono className="h-4 w-4" aria-hidden="true" />
             </span>
-            Cancelar cita
+            {t.titulo}
           </h2>
           <button
             onClick={onClose}
@@ -57,7 +85,7 @@ export function CancelarCitaModal({ cita, onClose }: Props) {
 
         <div className="p-6 space-y-4">
           <p className="text-sm text-foreground">
-            Se cancela la cita de{' '}
+            {t.verbo} la cita de{' '}
             <span className="font-semibold">
               {cita.paciente?.apellido}, {cita.paciente?.nombre}
             </span>{' '}
@@ -73,7 +101,7 @@ export function CancelarCitaModal({ cita, onClose }: Props) {
               id="cancelar-motivo"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej: el paciente aviso que no puede venir"
+              placeholder={t.placeholderMotivo}
               className={inputUI}
             />
           </div>
@@ -95,7 +123,7 @@ export function CancelarCitaModal({ cita, onClose }: Props) {
               disabled={cancelar.isPending}
               className="inline-flex items-center justify-center flex-1 h-10 px-4 bg-destructive text-destructive-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
             >
-              {cancelar.isPending ? 'Cancelando...' : 'Cancelar cita'}
+              {cancelar.isPending ? t.botonCargando : t.boton}
             </button>
           </div>
         </div>

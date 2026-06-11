@@ -35,9 +35,10 @@ interface CitaCardProps {
   onAtencion: () => void
   onReprogramar: () => void
   onCancelar: () => void
+  onNoAsistio: () => void
 }
 
-export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar }: CitaCardProps) {
+export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio }: CitaCardProps) {
   const user = useAuthStore((s) => s.user)
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
@@ -63,10 +64,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
 
   function handleNoAsistio() {
     setMenuAbierto(false)
-    const nombre = `${cita.paciente?.apellido}, ${cita.paciente?.nombre}`
-    if (window.confirm(`Marcar la cita de ${nombre} como No asistio?`)) {
-      onCambiarEstado(EstadoCita.NO_ASISTIO)
-    }
+    onNoAsistio()
   }
 
   // Registrar (EN_ATENCION) es del doctor/admin; consultar (estados posteriores) es de todos

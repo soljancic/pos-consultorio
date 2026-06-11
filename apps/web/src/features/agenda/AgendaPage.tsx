@@ -42,6 +42,7 @@ export function AgendaPage() {
   const [modalAtencion, setModalAtencion] = useState(false)
   const [citaReprogramar, setCitaReprogramar] = useState<Cita | null>(null)
   const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
+  const [citaNoAsistio, setCitaNoAsistio] = useState<Cita | null>(null)
   const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
   const queryClient = useQueryClient()
 
@@ -236,6 +237,7 @@ export function AgendaPage() {
                   onAtencion={() => abrirAtencion(cita)}
                   onReprogramar={() => setCitaReprogramar(cita)}
                   onCancelar={() => setCitaCancelar(cita)}
+                  onNoAsistio={() => setCitaNoAsistio(cita)}
                 />
               ))}
             </div>
@@ -296,6 +298,10 @@ export function AgendaPage() {
             setCitaDetalle(null)
             setCitaCancelar(citaDetalle)
           }}
+          onNoAsistio={() => {
+            setCitaDetalle(null)
+            setCitaNoAsistio(citaDetalle)
+          }}
           onClose={() => setCitaDetalle(null)}
         />
       )}
@@ -313,6 +319,15 @@ export function AgendaPage() {
         <CancelarCitaModal
           cita={citaCancelar}
           onClose={() => setCitaCancelar(null)}
+        />
+      )}
+
+      {/* Modal no asistio */}
+      {citaNoAsistio && (
+        <CancelarCitaModal
+          cita={citaNoAsistio}
+          modo="no-asistio"
+          onClose={() => setCitaNoAsistio(null)}
         />
       )}
 
