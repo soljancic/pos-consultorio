@@ -26,6 +26,7 @@ type Consultorio = {
   id: number; nombre: string; logoUrl: string | null
   telefono: string | null; direccion: string | null
   moneda: string; timezone: string
+  slug: string | null; portalActivo: boolean
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
@@ -38,7 +39,9 @@ export function ConfiguracionPage() {
   const [consForm, setConsForm] = useState({
     nombre: '', logoUrl: '', telefono: '', direccion: '',
     moneda: 'ARS', timezone: 'America/Argentina/Buenos_Aires',
+    slug: '', portalActivo: false,
   })
+  const [linkCopiado, setLinkCopiado] = useState(false)
 
   const { data: usuarios = [] } = useQuery<Usuario[]>({
     queryKey: ['usuarios'],
@@ -59,6 +62,8 @@ export function ConfiguracionPage() {
         direccion: consultorio.direccion ?? '',
         moneda: consultorio.moneda,
         timezone: consultorio.timezone,
+        slug: consultorio.slug ?? '',
+        portalActivo: consultorio.portalActivo ?? false,
       })
     }
   }, [consultorio])
@@ -70,6 +75,7 @@ export function ConfiguracionPage() {
         logoUrl: data.logoUrl || undefined,
         telefono: data.telefono || undefined,
         direccion: data.direccion || undefined,
+        slug: data.slug || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
@@ -193,6 +199,51 @@ export function ConfiguracionPage() {
                 </select>
               </div>
             </div>
+            {/* Portal publico de reservas (E2.5b) */}
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Portal de reservas en línea</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="cons-slug" className="block text-sm font-medium text-foreground mb-1.5">
+                    Enlace (slug)
+                  </label>
+                  <input id="cons-slug" value={consForm.slug}
+                    placeholder="mi-consultorio"
+                    onChange={(e) => setConsForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))}
+                    className={inputUI} />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Minúsculas, números y guiones (3-40).
+                  </p>
+                </div>
+                <div className="flex items-start pt-7">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
+                    <input type="checkbox" checked={consForm.portalActivo}
+                      onChange={(e) => setConsForm((f) => ({ ...f, portalActivo: e.target.checked }))}
+                      className="rounded" />
+                    Portal activo
+                  </label>
+                </div>
+              </div>
+              {consultorio?.slug && consultorio?.portalActivo && (
+                <div className="flex flex-wrap items-center gap-2 text-sm bg-muted/50 rounded-md px-3 py-2">
+                  <span className="text-muted-foreground truncate">
+                    {`${window.location.origin}/reservar/${consultorio.slug}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/reservar/${consultorio.slug}`)
+                      setLinkCopiado(true)
+                      setTimeout(() => setLinkCopiado(false), 2000)
+                    }}
+                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                  >
+                    {linkCopiado ? 'Copiado ✓' : 'Copiar enlace'}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-3 pt-2">
               <button onClick={() => updateConsultorio.mutate(consForm)} disabled={updateConsultorio.isPending}
                 className={btnPrimaryUI}>

@@ -9,6 +9,7 @@ import { CajaPage } from './features/caja/CajaPage'
 import { GastosPage } from './features/gastos/GastosPage'
 import { CalendarioAtencionPage } from './features/calendario/CalendarioAtencionPage'
 import { ActividadPage } from './features/actividad/ActividadPage'
+import { ReservarPage } from './features/portal/ReservarPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
@@ -29,6 +30,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Portal publico de reservas: sin auth ni AppShell */}
+      <Route path="/reservar/:slug" element={<ReservarPage />} />
       <Route
         path="/"
         element={
