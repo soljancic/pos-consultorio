@@ -1,8 +1,8 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, AlertCircle, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, cn } from '../../lib/utils'
+import { formatMoneda, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
 export interface CajaRevisable {
@@ -46,7 +46,7 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
             <span className="bg-primary/10 text-primary rounded-md p-1.5">
               <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             </span>
-            Revisar cierre del {formatFecha(caja.fecha)}
+            Revisar cierre del {formatDia(caja.fecha)}
           </h2>
           <button
             onClick={onClose}

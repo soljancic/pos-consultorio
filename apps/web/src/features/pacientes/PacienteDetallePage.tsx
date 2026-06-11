@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope } from 'lu
 import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, formatDia, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
@@ -115,7 +115,7 @@ export function PacienteDetallePage() {
             <div>
               <span className="text-muted-foreground">Nacimiento:</span>{' '}
               <span className="font-medium">
-                {formatFecha(paciente.fechaNacimiento)}{edad !== null ? ` (${edad} anos)` : ''}
+                {formatDia(String(paciente.fechaNacimiento))}{edad !== null ? ` (${edad} anos)` : ''}
               </span>
             </div>
           )}
@@ -220,7 +220,7 @@ export function PacienteDetallePage() {
                           {cita.atencion.diagnostico && <p><span className="font-medium">Diagnostico:</span> {cita.atencion.diagnostico}</p>}
                           {cita.atencion.tratamiento && <p><span className="font-medium">Tratamiento:</span> {cita.atencion.tratamiento}</p>}
                           {cita.atencion.evolucion && <p><span className="font-medium">Evolucion:</span> {cita.atencion.evolucion}</p>}
-                          {cita.atencion.proximoControl && <p><span className="font-medium">Proximo control:</span> {formatFecha(cita.atencion.proximoControl)}</p>}
+                          {cita.atencion.proximoControl && <p><span className="font-medium">Proximo control:</span> {formatDia(cita.atencion.proximoControl)}</p>}
                         </td>
                       </tr>
                     )}

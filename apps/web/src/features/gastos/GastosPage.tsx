@@ -1,10 +1,10 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, startOfMonth } from 'date-fns'
 import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
 import { CategoriaGasto } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, cn } from '../../lib/utils'
+import { formatMoneda, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
@@ -94,7 +94,7 @@ export function GastosPage() {
               <tbody>
                 {gastos.map((g) => (
                   <tr key={g.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
-                    <td className="px-4 py-3 tabular-nums">{formatFecha(g.fecha)}</td>
+                    <td className="px-4 py-3 tabular-nums">{formatDia(g.fecha)}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
                         {LABEL_CATEGORIA[g.categoria as CategoriaGasto] ?? g.categoria}
@@ -159,7 +159,7 @@ export function GastosPage() {
       {gastoBorrar && (
         <ConfirmarModal
           titulo="Borrar gasto"
-          mensaje={`Se borra el gasto "${gastoBorrar.descripcion}" de ${formatMoneda(Number(gastoBorrar.monto))}. Si era en efectivo, el arqueo del día se corrige automáticamente.`}
+          mensaje={`Se borra el gasto "${gastoBorrar.descripcion}" de ${formatMoneda(Number(gastoBorrar.monto))}. Si era en efectivo, el arqueo del dÃ­a se corrige automÃ¡ticamente.`}
           confirmLabel="Borrar gasto"
           pendiente={borrar.isPending}
           onConfirm={() => borrar.mutate(gastoBorrar.id)}

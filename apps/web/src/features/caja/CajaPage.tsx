@@ -1,9 +1,9 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
 import { Lock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatHora, formatFecha, cn } from '../../lib/utils'
+import { formatMoneda, formatHora, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnOutlineUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
@@ -234,7 +234,7 @@ export function CajaPage() {
                   const pendienteRevision = c.cerrada && tieneDiferencia && !c.revisadaAt
                   return (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
-                    <td className="px-4 py-3 font-medium tabular-nums">{formatFecha(c.fecha)}</td>
+                    <td className="px-4 py-3 font-medium tabular-nums">{formatDia(c.fecha)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalEfectivo))}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalQr))}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalVales))}</td>
@@ -262,7 +262,7 @@ export function CajaPage() {
                           <button
                             onClick={() => setCajaRevisar(c)}
                             title="Revisar cierre"
-                            aria-label={`Revisar cierre del ${formatFecha(c.fecha)}`}
+                            aria-label={`Revisar cierre del ${formatDia(c.fecha)}`}
                             className={cn(btnIconUI, 'h-8 w-8 text-primary hover:bg-primary/10')}
                           >
                             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
