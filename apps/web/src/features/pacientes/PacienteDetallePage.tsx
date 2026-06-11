@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope } from 'lu
 import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, formatDia, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { formatMoneda, formatDia, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
