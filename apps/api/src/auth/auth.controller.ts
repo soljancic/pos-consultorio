@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { RefreshDto } from './dto/refresh.dto'
 import { GoogleLoginDto } from './dto/google-login.dto'
+import { SolicitarPasswordDto, EstablecerPasswordDto } from './dto/password.dto'
 import { IS_PUBLIC_KEY } from '../common/guards/jwt-auth.guard'
 
 const Public = () => SetMetadata(IS_PUBLIC_KEY, true)
@@ -56,5 +57,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Login con Google OAuth' })
   loginGoogle(@Body() dto: GoogleLoginDto) {
     return this.authService.loginGoogle(dto.credential)
+  }
+
+  @Public()
+  @Post('password/solicitar')
+  @Throttle({ default: { ttl: 60_000, limit: LOGIN_LIMIT } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Olvido de contraseña: envia email con link de un solo uso (respuesta identica exista o no la cuenta)' })
+  solicitarPassword(@Body() dto: SolicitarPasswordDto) {
+    return this.authService.solicitarPassword(dto.email)
+  }
+
+  @Public()
+  @Post('password/establecer')
+  @Throttle({ default: { ttl: 60_000, limit: LOGIN_LIMIT } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Definir la contraseña con un token vigente (alta de usuario o reset)' })
+  establecerPassword(@Body() dto: EstablecerPasswordDto) {
+    return this.authService.establecerPassword(dto.token, dto.password)
   }
 }

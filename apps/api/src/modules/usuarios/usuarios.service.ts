@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsEmail, MinLength, IsIn, IsOptional, IsBoolean, IsInt } from 'class-validator'
+import { randomBytes } from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+import { MailService } from '../mail/mail.service'
+import { AuthService } from '../../auth/auth.service'
 import * as argon2 from 'argon2'
 import { Rol, Prisma } from '@prisma/client'
 
 const ROLES = ['ADMIN', 'SECRETARIA', 'DOCTOR', 'CAJA'] as const
+
+// Solo dev/tests (espejo de auth.service): expone el token de invitacion
+const MAIL_DEBUG = process.env.NODE_ENV !== 'production' && process.env.MAIL_DEBUG === '1'
 
 export class CreateUsuarioDto {
   @IsString() @IsNotEmpty()
@@ -13,8 +19,9 @@ export class CreateUsuarioDto {
   @IsEmail()
   email: string
 
-  @IsString() @MinLength(8)
-  password: string
+  // E2-M10: sin password se envia una invitacion por email para definirla
+  @IsString() @MinLength(8) @IsOptional()
+  password?: string
 
   @IsIn(ROLES)
   rol: Rol
@@ -58,7 +65,11 @@ const USUARIO_SELECT = {
 
 @Injectable()
 export class UsuariosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mail: MailService,
+    private auth: AuthService,
+  ) {}
 
   // Incluye inactivos: el admin debe poder verlos y reactivarlos
   findAll(consultorioId: number) {
@@ -79,16 +90,33 @@ export class UsuariosService {
     }
 
     const { password, doctorId, ...rest } = dto
-    const passwordHash = await argon2.hash(password)
+    // Sin password la cuenta nace inaccesible (hash de bytes aleatorios) y el
+    // usuario la habilita con el link del email de invitacion (E2-M10)
+    const passwordHash = await argon2.hash(password ?? randomBytes(32).toString('hex'))
 
-    return this.prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.create({
+    const usuario = await this.prisma.$transaction(async (tx) => {
+      const creado = await tx.usuario.create({
         data: { ...rest, passwordHash, consultorioId },
         select: USUARIO_SELECT,
       })
-      if (doctorId) await this.asociarDoctor(tx, consultorioId, usuario.id, doctorId)
-      return tx.usuario.findUnique({ where: { id: usuario.id }, select: USUARIO_SELECT })
+      if (doctorId) await this.asociarDoctor(tx, consultorioId, creado.id, doctorId)
+      return tx.usuario.findUnique({ where: { id: creado.id }, select: USUARIO_SELECT })
     })
+
+    if (!password && usuario) {
+      const consultorio = await this.prisma.consultorio.findUnique({
+        where: { id: consultorioId },
+        select: { nombre: true },
+      })
+      const token = await this.auth.crearTokenPassword(usuario.id)
+      void this.mail.enviar(
+        dto.email,
+        `Tu cuenta en ${consultorio?.nombre ?? 'el consultorio'}`,
+        this.mail.htmlInvitacion(dto.nombre, consultorio?.nombre ?? 'el consultorio', this.mail.linkEstablecerPassword(token)),
+      )
+      if (MAIL_DEBUG) return { ...usuario, devToken: token }
+    }
+    return usuario
   }
 
   async update(consultorioId: number, id: number, dto: UpdateUsuarioDto) {

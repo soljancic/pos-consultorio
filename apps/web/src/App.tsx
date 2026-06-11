@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/auth.store'
 import { AppShell } from './components/shared/AppShell'
 import { LoginPage } from './features/auth/LoginPage'
+import { EstablecerPasswordPage } from './features/auth/EstablecerPasswordPage'
 import { AgendaPage } from './features/agenda/AgendaPage'
 import { PacientesPage } from './features/pacientes/PacientesPage'
 import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
@@ -30,8 +31,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      {/* Portal publico de reservas: sin auth ni AppShell */}
+      {/* Publicas: sin auth ni AppShell */}
       <Route path="/reservar/:slug" element={<ReservarPage />} />
+      <Route path="/establecer-password" element={<EstablecerPasswordPage />} />
       <Route
         path="/"
         element={

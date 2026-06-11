@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { api } from '../../lib/api-client'
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { Stethoscope, CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
+import { RecuperarPasswordModal } from './RecuperarPasswordModal'
 
 const BENEFICIOS = [
   { icon: CalendarCheck, texto: 'Agenda del día con estados en un vistazo' },
@@ -18,6 +19,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [recuperando, setRecuperando] = useState(false)
   const { setTokens, setUser } = useAuthStore()
   const navigate = useNavigate()
 
@@ -123,9 +125,18 @@ export function LoginPage() {
                 />
               </div>
               <div>
-                <label htmlFor="login-password" className="block text-sm font-medium text-foreground mb-1.5">
-                  Contrasena
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="login-password" className="block text-sm font-medium text-foreground">
+                    Contraseña
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setRecuperando(true)}
+                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
                 <input
                   id="login-password"
                   type="password"
@@ -177,6 +188,10 @@ export function LoginPage() {
           </div>
         </div>
       </div>
+
+      {recuperando && (
+        <RecuperarPasswordModal emailInicial={email} onClose={() => setRecuperando(false)} />
+      )}
     </div>
   )
 }

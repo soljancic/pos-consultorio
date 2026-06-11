@@ -53,8 +53,10 @@ export function UsuarioModal({ usuario, onClose }: Props) {
         if (data.password) payload.password = data.password
         return api.put(`/usuarios/${usuario!.id}`, payload)
       }
+      // Sin contraseña el backend envia una invitacion por correo (E2-M10)
       return api.post('/usuarios', {
-        nombre: data.nombre, email: data.email, rol: data.rol, password: data.password,
+        nombre: data.nombre, email: data.email, rol: data.rol,
+        ...(data.password && { password: data.password }),
         ...(doctorId && { doctorId }),
       })
     },
@@ -97,13 +99,16 @@ export function UsuarioModal({ usuario, onClose }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
-              {editando ? 'Nueva contrasena (dejar vacio para no cambiar)' : 'Contrasena *'}
+              {editando ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}
             </label>
-            <input type="password" autoComplete="new-password" required={!editando} minLength={8} value={form.password}
+            <input type="password" autoComplete="new-password" minLength={8} value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               className={inputUI} />
             {!editando && (
-              <p className="text-xs text-muted-foreground mt-1.5">Minimo 8 caracteres</p>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Mínimo 8 caracteres. Si la dejás vacía, el usuario recibe un correo con un enlace para
+                definirla él mismo.
+              </p>
             )}
           </div>
           <div>

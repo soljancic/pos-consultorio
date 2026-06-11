@@ -18,6 +18,7 @@ import { GastosModule } from './modules/gastos/gastos.module'
 import { DisponibilidadesModule } from './modules/disponibilidades/disponibilidades.module'
 import { LogsModule } from './modules/logs/logs.module'
 import { PortalModule } from './modules/portal/portal.module'
+import { MailModule } from './modules/mail/mail.module'
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PortalModule } from './modules/portal/portal.module'
     // Limite global generoso; /auth/login y /register tienen limites estrictos propios
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 200 }]),
     PrismaModule,
+    MailModule,
     AuthModule,
     ConsultoriosModule,
     UsuariosModule,
