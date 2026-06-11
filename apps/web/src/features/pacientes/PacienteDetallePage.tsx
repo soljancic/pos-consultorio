@@ -19,8 +19,6 @@ const LABEL_ESTADO: Record<EstadoCita, string> = {
   REPROGRAMADA: 'Reprogramada',
 } as Record<EstadoCita, string>
 
-const LABEL_SEXO: Record<string, string> = { M: 'Masculino', F: 'Femenino', X: 'Otro' }
-
 type Atencion = {
   motivo: string | null
   diagnostico: string | null
@@ -87,9 +85,9 @@ export function PacienteDetallePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {paciente.whatsapp && (
+          {(paciente.whatsapp || paciente.telefono) && (
             <a
-              href={buildWhatsAppUrl(paciente.whatsapp, `Hola ${paciente.nombre}, le contactamos desde el consultorio.`)}
+              href={buildWhatsAppUrl(paciente.whatsapp || paciente.telefono!, `Hola ${paciente.nombre}, le contactamos desde el consultorio.`)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-accent text-accent-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
@@ -108,10 +106,11 @@ export function PacienteDetallePage() {
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full">
         {/* Datos personales */}
         <div className={cn(cardUI, 'p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm')}>
-          {paciente.dni && <div><span className="text-muted-foreground">DNI:</span> <span className="font-medium tabular-nums">{paciente.dni}</span></div>}
-          {paciente.telefono && <div><span className="text-muted-foreground">Telefono:</span> <span className="font-medium tabular-nums">{paciente.telefono}</span></div>}
-          {paciente.whatsapp && <div><span className="text-muted-foreground">WhatsApp:</span> <span className="font-medium tabular-nums">{paciente.whatsapp}</span></div>}
-          {paciente.email && <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{paciente.email}</span></div>}
+          {paciente.dni && <div><span className="text-muted-foreground">CI:</span> <span className="font-medium tabular-nums">{paciente.dni}</span></div>}
+          {(paciente.telefono || paciente.whatsapp) && (
+            <div><span className="text-muted-foreground">Telefono:</span> <span className="font-medium tabular-nums">{paciente.telefono || paciente.whatsapp}</span></div>
+          )}
+          {paciente.email && <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium">{paciente.email}</span></div>}
           {paciente.fechaNacimiento && (
             <div>
               <span className="text-muted-foreground">Nacimiento:</span>{' '}
@@ -119,9 +118,6 @@ export function PacienteDetallePage() {
                 {formatFecha(paciente.fechaNacimiento)}{edad !== null ? ` (${edad} anos)` : ''}
               </span>
             </div>
-          )}
-          {paciente.sexo && (
-            <div><span className="text-muted-foreground">Sexo:</span> <span className="font-medium">{LABEL_SEXO[paciente.sexo] ?? paciente.sexo}</span></div>
           )}
           {paciente.direccion && (
             <div><span className="text-muted-foreground">Direccion:</span> <span className="font-medium">{paciente.direccion}</span></div>

@@ -1,4 +1,4 @@
-import { EstadoCita, EstadoCobro, FormaPago, Rol } from '../enums'
+﻿import { EstadoCita, EstadoCobro, FormaPago, Rol } from '../enums'
 
 export interface Consultorio {
   id: number
@@ -81,7 +81,7 @@ export interface Cita {
   createdById: number
   createdAt: Date
   // Relations (populated when requested)
-  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'whatsapp' | 'deudaTotal'>
+  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'whatsapp' | 'deudaTotal'>
   doctor?: Pick<Doctor, 'id' | 'nombre' | 'colorAgenda'>
   servicio?: Pick<Servicio, 'id' | 'nombre' | 'precioBase' | 'duracionMin'>
   cobro?: Pick<Cobro, 'id' | 'total' | 'saldoPendiente' | 'estado'>

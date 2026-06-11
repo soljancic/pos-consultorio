@@ -50,7 +50,7 @@ export function PacientesPage() {
           <input
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Buscar por nombre, DNI, telefono..."
+            placeholder="Buscar por nombre, CI, telefono..."
             aria-label="Buscar pacientes"
             className={cn(inputUI, 'pl-9')}
           />
@@ -64,8 +64,8 @@ export function PacientesPage() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Paciente</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">DNI</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">WhatsApp</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">CI</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Telefono</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Deuda</th>
                 </tr>
               </thead>
@@ -80,7 +80,7 @@ export function PacientesPage() {
                       {p.apellido}, {p.nombre}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.whatsapp || p.telefono || '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono || p.whatsapp || '-'}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {Number(p.deudaTotal) > 0 ? (
                         <span className="text-destructive font-medium">

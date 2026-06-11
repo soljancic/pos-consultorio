@@ -379,7 +379,7 @@ export class CobrosService {
         pagos: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
         cita: {
           include: {
-            paciente: { select: { id: true, nombre: true, apellido: true, whatsapp: true } },
+            paciente: { select: { id: true, nombre: true, apellido: true, whatsapp: true, telefono: true } },
             servicio: { select: { nombre: true } },
           },
         },
@@ -420,7 +420,8 @@ export class CobrosService {
           pacienteId: pac.id,
           nombre: pac.nombre,
           apellido: pac.apellido,
-          whatsapp: pac.whatsapp,
+          // el telefono sirve para WhatsApp si no hay numero dedicado
+          whatsapp: pac.whatsapp ?? pac.telefono,
           deudaTotal: Number(cobro.saldoPendiente),
           ultimaCitaFecha: fechaCita,
           ultimoServicio: cobro.cita.servicio.nombre,

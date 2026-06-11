@@ -95,7 +95,7 @@ export function PacienteModal({ paciente, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">DNI</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">CI</label>
               <input inputMode="numeric" value={form.dni} onChange={(e) => set('dni', e.target.value)} className={inputUI} />
             </div>
             <div>
@@ -104,15 +104,12 @@ export function PacienteModal({ paciente, onClose }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
-              <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">WhatsApp</label>
-              <input type="tel" value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} className={inputUI} />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Telefono</label>
+            <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Se usa tambien para los mensajes de WhatsApp.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

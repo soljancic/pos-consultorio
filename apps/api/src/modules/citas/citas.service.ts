@@ -76,7 +76,7 @@ export class CitasService {
         ...(doctorId && { doctorId }),
       },
       include: {
-        paciente: { select: { id: true, nombre: true, apellido: true, whatsapp: true, deudaTotal: true } },
+        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, whatsapp: true, deudaTotal: true } },
         doctor: { select: { id: true, nombre: true, colorAgenda: true } },
         servicio: { select: { id: true, nombre: true, precioBase: true, duracionMin: true } },
         cobro: { select: { id: true, total: true, saldoPendiente: true, estado: true } },

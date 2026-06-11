@@ -81,10 +81,13 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       t !== EstadoCita.COBRADO,
   )
 
+  // El telefono del paciente sirve tambien para WhatsApp (decision owner)
+  const telefonoWhatsApp = cita.paciente?.whatsapp || cita.paciente?.telefono
+
   function handleWhatsApp() {
-    if (!cita.paciente?.whatsapp) return
-    const msg = `Hola ${cita.paciente.nombre}, le recordamos su cita el dia de hoy a las ${formatHora(cita.fechaHora)}.`
-    window.open(buildWhatsAppUrl(cita.paciente.whatsapp, msg), '_blank')
+    if (!telefonoWhatsApp) return
+    const msg = `Hola ${cita.paciente?.nombre}, le recordamos su cita el dia de hoy a las ${formatHora(cita.fechaHora)}.`
+    window.open(buildWhatsAppUrl(telefonoWhatsApp, msg), '_blank')
   }
 
   return (
@@ -123,7 +126,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
 
       {/* Acciones */}
       <div className="flex items-center gap-1 shrink-0">
-        {cita.paciente?.whatsapp && (
+        {telefonoWhatsApp && (
           <button
             onClick={handleWhatsApp}
             className={cn(btnIconUI, 'text-accent hover:bg-accent/10')}
