@@ -95,6 +95,7 @@ model Usuario {
   pagosAnulados    Pago[]       @relation("PagoAnuladoPor")
   cajasAbiertas    CajaDiaria[] @relation("CajaAbiertaPor")
   cajasCerradas    CajaDiaria[] @relation("CajaCerradaPor")
+  cajasRevisadas   CajaDiaria[] @relation("CajaRevisadaPor")
   logs             Log[]
   doctor           Doctor?
 
@@ -310,6 +311,16 @@ model CajaDiaria {
   cerrada           Boolean     @default(false)
   cierreAt          DateTime?
   createdAt         DateTime    @default(now())
+
+  // Arqueo ciego (E2-M2): declarado vs esperado, solo efectivo
+  montoDeclarado Decimal?  @db.Decimal(10, 2)
+  montoEsperado  Decimal?  @db.Decimal(10, 2)
+  diferencia     Decimal?  @db.Decimal(10, 2)
+  notasCierre    String?
+  revisadaPorId  Int?
+  revisadaPor    Usuario?  @relation("CajaRevisadaPor", fields: [revisadaPorId], references: [id])
+  revisadaAt     DateTime?
+  notasRevision  String?
 
   @@unique([consultorioId, fecha])
   @@index([consultorioId])
