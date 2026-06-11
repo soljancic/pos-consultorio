@@ -19,6 +19,7 @@ import { DisponibilidadesModule } from './modules/disponibilidades/disponibilida
 import { LogsModule } from './modules/logs/logs.module'
 import { PortalModule } from './modules/portal/portal.module'
 import { MailModule } from './modules/mail/mail.module'
+import { ReportesModule } from './modules/reportes/reportes.module'
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { MailModule } from './modules/mail/mail.module'
     DisponibilidadesModule,
     LogsModule,
     PortalModule,
+    ReportesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

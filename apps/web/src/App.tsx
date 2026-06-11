@@ -14,6 +14,7 @@ import { ReservarPage } from './features/portal/ReservarPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
+import { ReportesPage } from './features/reportes/ReportesPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="deudores" element={<DeudoresPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
+        <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />
         <Route path="actividad" element={<AdminRoute><ActividadPage /></AdminRoute>} />
       </Route>
     </Routes>
