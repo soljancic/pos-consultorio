@@ -73,12 +73,14 @@ Fase 2 ✔ (mismo dia, commit ade28d2):
 - **Linea de tiempo** ✔: tab "Historia clínica" en la ficha (`GET /atenciones/paciente/:id?q=`, busqueda case-insensitive sobre motivo/diagnostico/tratamiento/evolucion, orden cronologico desc, Agendar control desde cada entrada).
 - **Adjuntos** ✔: disco local (`UPLOADS_DIR`, default `apps/api/uploads` gitignored — migrar a volumen/R2 cuando el owner active el deploy). `POST/GET/DELETE /atenciones/cita/:citaId/adjuntos[/:indice]`: 5MB max, JPG/PNG/WebP/PDF, max 10 por atencion, nombre en disco controlado por el server + guard de path traversal, streaming autenticado (el frontend abre blob), borrado con ConfirmarModal y log. Mismo guard de escritura que la atencion. Verificado: `gate-e2m4-f2.ps1` 9/9.
 
-## E2-M5 — Recetas PDF
+## E2-M5 — Recetas PDF — ✔ EJECUTADO 2026-06-11
 
-- Modelo `Receta` ya existe (atencionId, contenido Json, pdfUrl).
-- Generacion server-side (pdfkit o similar) con membrete del consultorio (logoUrl, nombre, telefono, direccion — ya capturados en Configuracion).
-- `POST /atenciones/:citaId/recetas` + descarga; boton en AtencionModal.
-- Para WhatsApp manual: link de descarga copiable (wa.me con el link).
+- Modelo `Receta` ya existia; `contenido = { medicamentos: string[], indicaciones }`, `pdfUrl` reservado para hosting.
+- `POST /atenciones/cita/:citaId/recetas` (guard de escritura de la atencion: ADMIN o el doctor de la cita; exige atencion registrada), `GET .../recetas` (staff) y `GET /atenciones/recetas/:id/pdf`.
+- PDF A5 generado AL DESCARGAR con pdfkit (siempre membrete vigente: nombre/direccion/telefono del consultorio, Rp/, indicaciones, firma + especialidad del doctor). GOTCHA: el tsconfig del api no tiene esModuleInterop — `import PDFDocument = require('pdfkit')` o el constructor llega undefined en runtime (tsc no lo detecta, fue 500 en el gate).
+- UI: RecetaModal (medicamentos uno por linea + indicaciones) y seccion Recetas en AtencionModal (lista + descarga blob autenticado).
+- Verificado: `gate-e2m5.ps1` 7/7, Playwright 16/16. Commit 614197b.
+- Pendiente para el deploy: link wa.me con URL publica del PDF (hoy la descarga es autenticada).
 
 ## E2-M7 — Cancelar / No asistio / Reprogramar (UI + API) — ✔ EJECUTADO 2026-06-10
 

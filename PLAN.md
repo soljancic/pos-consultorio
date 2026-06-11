@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2-M5 recetas PDF** o **E2-M10 emails** (decidir proveedor SMTP/Resend) o **fase 2 del calendario** (plantillas, servicios-por-doctor). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, E2.5a nucleo, E2.5b portal + pulidos (badge Portal, slots pasados), kardex CI, usuario-doctor, cero dialogos nativos, acentos, E2-M4 completo (06-11). Deploy diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** **E2-M10 emails** (decidir proveedor SMTP/Resend con el owner) o **fase 2 del calendario** (plantillas, servicios-por-doctor) o **reportes mensual/por doctor** (item 29). De Etapa 2 solo queda E2-M6 (decision Visitas: espera piloto) y E2-M10. Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, M4 completo, M5 recetas PDF, E2.5a nucleo, E2.5b portal + pulidos, kardex CI, usuario-doctor, cero dialogos nativos, acentos (06-11). Deploy diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -78,7 +78,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 
 ### Clinico
 31. ✅ Atencion basica por cita (modulo atenciones)
-32. ⬜ Recetas PDF con membrete (E2-M5)
+32. ✅ Recetas PDF con membrete (E2-M5, 2026-06-11): emision desde AtencionModal (medicamentos por linea + indicaciones), PDF A5 generado al descargar con membrete del consultorio y firma del doctor; mismo guard que la atencion. Gate: `gate-e2m5.ps1`. Pendiente para hosting: link wa.me con URL publica del PDF
 33. ⬜ Decision entidad Visitas / walk-ins (E2-M6)
 34. ⬜ Verticales: odontograma, consentimientos, notas privadas (E7)
 
@@ -454,7 +454,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - ✔ **Apertura de caja / turno** (E2-M9, HECHO 2026-06-11): `POST /caja/abrir { montoInicial }` crea la caja del dia (ya no se auto-crea con el primer pago); cobrar, anular pagos y registrar gastos exigen turno abierto y no cerrado (409); arqueo `esperado = inicial + cobros efectivo - gastos efectivo`. UI: boton/modal Abrir caja, banner de estado y card "Caja inicial". Gates y specs existentes actualizados para abrir el turno en su setup. Gate: `gate-e2m9.ps1`
 - ✔ **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
 - ✔ **Vista de actividad reciente** (E2-M3, HECHO 2026-06-11): `GET /logs` paginado con filtros (ADMIN) + pagina `/actividad` agrupada por dia con payloads antes/despues expandibles. Gate: `gate-e2m3.ps1`
-- Generacion de recetas simples en PDF
+- ✔ **Recetas PDF** (E2-M5, HECHO 2026-06-11): `POST /atenciones/cita/:citaId/recetas` + `GET /atenciones/recetas/:id/pdf` (PDF A5 con membrete generado al descargar via pdfkit; guard de escritura de la atencion, lectura staff, tenant en toda query); RecetaModal + seccion Recetas en AtencionModal. Gate: `gate-e2m5.ps1` 7/7. El link wa.me con el PDF requiere URL publica (queda para el deploy)
 - Adjuntos por atencion (fotos, estudios)
 - Flujo del doctor: agenda → registrar atencion → receta, en un solo flow sin salir de la pantalla
 
