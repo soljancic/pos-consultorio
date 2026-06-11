@@ -92,7 +92,7 @@ export class DoctoresService {
       // pero no hay slots que ofrecer (el portal exigira calendario)
       return {
         disponible: false,
-        slots: [],
+        slots: [] as string[],
         modo: tieneCalendario > 0 ? 'sin-horario-ese-dia' : 'sin-calendario',
       }
     }

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { transicionValida } from '@pos/types'
-import { EstadoCita, EstadoCobro, TipoDisponibilidad, Prisma } from '@prisma/client'
+import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
@@ -85,7 +85,12 @@ export class CitasService {
     })
   }
 
-  async create(consultorioId: number, usuarioId: number, dto: CreateCitaDto) {
+  async create(
+    consultorioId: number,
+    usuarioId: number,
+    dto: CreateCitaDto,
+    origen: OrigenCita = OrigenCita.INTERNO,
+  ) {
     const servicio = await this.prisma.servicio.findFirst({
       where: { id: dto.servicioId, consultorioId },
     })
@@ -107,6 +112,7 @@ export class CitasService {
         duracionMin: servicio.duracionMin,
         notasSecretaria: dto.notasSecretaria,
         createdById: usuarioId,
+        origen,
       },
       include: {
         paciente: { select: { nombre: true, apellido: true } },
