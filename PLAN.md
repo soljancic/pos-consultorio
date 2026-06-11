@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2.5b Portal de agendamiento** (el calendario ya valida disponibilidad real) o **E2-M3 Actividad** (hito barato). Hechos: E2-M7, E2-M1, E2-M2 (2026-06-10), E2-M8 y E2.5a nucleo (2026-06-11; fase 2 pendiente: plantillas, servicios-por-doctor, reescritura de /doctores/:id/disponibilidad). El deploy en Railway + piloto queda diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** **pase de acentos** (item 45; actualizar selectores de specs en el mismo commit) o **E2-M4 historia clinica** / **E2.5b portal**. Hechos: E2-M7, E2-M1, E2-M2 (2026-06-10), E2-M8, E2-M9, E2-M3, E2.5a nucleo, kardex CI, usuario-doctor, cero dialogos nativos (2026-06-11). El deploy en Railway + piloto queda diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -74,7 +74,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 27. ✅ Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
 28. ✅ KPI de gastos y resultado neto (E2-M8, 2026-06-11)
 29. ⬜ Reportes mensual y por doctor (E2+)
-30. ⬜ Vista de actividad reciente sobre logs (E2-M3)
+30. ✅ Vista de actividad reciente sobre logs (E2-M3, 2026-06-11)
 
 ### Clinico
 31. ✅ Atencion basica por cita (modulo atenciones)
@@ -453,7 +453,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 - **Emails de cuenta** (E2-M10, owner 2026-06-11, pendiente): (a) al crear un usuario NO se define contrasena a mano: se envia un correo con link de un solo uso (token con expiracion, tabla `password_tokens`) para que el usuario la establezca; (b) "Olvidaste tu contrasena?" en el login dispara el mismo flujo. Requisitos: proveedor de email por env (SMTP/Resend, a decidir en el plan detallado), rate limit en el endpoint publico, respuesta identica exista o no el email (cero enumeracion), token invalidado al usarse, y el flujo convive con Google Sign-In
 - ✔ **Apertura de caja / turno** (E2-M9, HECHO 2026-06-11): `POST /caja/abrir { montoInicial }` crea la caja del dia (ya no se auto-crea con el primer pago); cobrar, anular pagos y registrar gastos exigen turno abierto y no cerrado (409); arqueo `esperado = inicial + cobros efectivo - gastos efectivo`. UI: boton/modal Abrir caja, banner de estado y card "Caja inicial". Gates y specs existentes actualizados para abrir el turno en su setup. Gate: `gate-e2m9.ps1`
 - ✔ **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
-- **Vista de actividad reciente** (`/actividad`, solo ADMIN): feed paginado leyendo la tabla `logs` que ya se alimenta hoy
+- ✔ **Vista de actividad reciente** (E2-M3, HECHO 2026-06-11): `GET /logs` paginado con filtros (ADMIN) + pagina `/actividad` agrupada por dia con payloads antes/despues expandibles. Gate: `gate-e2m3.ps1`
 - Generacion de recetas simples en PDF
 - Adjuntos por atencion (fotos, estudios)
 - Flujo del doctor: agenda → registrar atencion → receta, en un solo flow sin salir de la pantalla
