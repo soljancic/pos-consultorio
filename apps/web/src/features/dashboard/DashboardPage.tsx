@@ -154,24 +154,27 @@ export function DashboardPage() {
                 <span>Total</span>
                 <span className="tabular-nums">{formatMoneda(Number(caja.totalGeneral))}</span>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground pt-1">
-                <span>Ingresos del mes</span>
-                <span className="tabular-nums">{formatMoneda(ingresosMes)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Gastos del mes</span>
-                <span className="tabular-nums text-destructive">{formatMoneda(gastosMes?.total ?? 0)}</span>
-              </div>
-              <div className="flex justify-between text-xs font-semibold text-foreground">
-                <span>Resultado neto</span>
-                <span className={`tabular-nums ${resultadoNeto >= 0 ? 'text-accent' : 'text-destructive'}`}>
-                  {formatMoneda(resultadoNeto)}
-                </span>
-              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Caja sin movimientos hoy</p>
           )}
+          {/* KPIs del mes: independientes de que haya caja hoy */}
+          <div className="space-y-1 border-t mt-3 pt-2.5">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Ingresos del mes</span>
+              <span className="tabular-nums">{formatMoneda(ingresosMes)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Gastos del mes</span>
+              <span className="tabular-nums text-destructive">{formatMoneda(gastosMes?.total ?? 0)}</span>
+            </div>
+            <div className="flex justify-between text-xs font-semibold text-foreground">
+              <span>Resultado neto</span>
+              <span className={`tabular-nums ${resultadoNeto >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                {formatMoneda(resultadoNeto)}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Deudas pendientes */}

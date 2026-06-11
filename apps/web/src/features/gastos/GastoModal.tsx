@@ -100,13 +100,13 @@ export function GastoModal({ gasto, onClose }: Props) {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Fecha *</label>
-              <input type="date" required value={form.fecha}
+              <label htmlFor="gasto-fecha" className="block text-sm font-medium text-foreground mb-1.5">Fecha *</label>
+              <input id="gasto-fecha" type="date" required value={form.fecha}
                 onChange={(e) => set('fecha', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Monto *</label>
-              <input type="number" inputMode="decimal" required min={0.01} step="0.01"
+              <label htmlFor="gasto-monto" className="block text-sm font-medium text-foreground mb-1.5">Monto *</label>
+              <input id="gasto-monto" type="number" inputMode="decimal" required min={0.01} step="0.01"
                 value={form.monto} onChange={(e) => set('monto', e.target.value)}
                 placeholder="0.00" className={inputUI} />
             </div>
@@ -114,8 +114,8 @@ export function GastoModal({ gasto, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Categoria *</label>
-              <select value={form.categoria}
+              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Categoria *</label>
+              <select id="gasto-categoria" value={form.categoria}
                 onChange={(e) => set('categoria', e.target.value as CategoriaGasto)}
                 className={inputUI}>
                 {Object.values(CategoriaGasto).map((c) => (
@@ -124,8 +124,8 @@ export function GastoModal({ gasto, onClose }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Cuenta *</label>
-              <select value={form.cuenta}
+              <label htmlFor="gasto-cuenta" className="block text-sm font-medium text-foreground mb-1.5">Cuenta *</label>
+              <select id="gasto-cuenta" value={form.cuenta}
                 onChange={(e) => set('cuenta', e.target.value as CuentaGasto)}
                 className={inputUI}>
                 {Object.values(CuentaGasto).map((c) => (
@@ -142,17 +142,17 @@ export function GastoModal({ gasto, onClose }: Props) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Descripcion *</label>
-            <input required value={form.descripcion}
+            <label htmlFor="gasto-descripcion" className="block text-sm font-medium text-foreground mb-1.5">Descripcion *</label>
+            <input id="gasto-descripcion" required value={form.descripcion}
               onChange={(e) => set('descripcion', e.target.value)}
               placeholder="Ej: compra de guantes y gasas" className={inputUI} />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
+            <label htmlFor="gasto-personal" className="block text-sm font-medium text-foreground mb-1.5">
               Personal / beneficiario <span className="text-muted-foreground/70 font-normal">(opcional)</span>
             </label>
-            <input value={form.personal} onChange={(e) => set('personal', e.target.value)}
+            <input id="gasto-personal" value={form.personal} onChange={(e) => set('personal', e.target.value)}
               placeholder="A quien se le pago" className={inputUI} />
           </div>
 
