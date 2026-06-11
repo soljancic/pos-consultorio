@@ -97,8 +97,8 @@ export function CajaPage() {
             ))}
           </div>
 
-          {/* Desglose deuda (MVP: Nuevas deudas / Pagos de deuda) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Desglose deuda + egresos (MVP + E2-M8) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={cn(cardUI, 'border-accent/40 p-4')}>
               <div className="text-xs font-medium text-muted-foreground mb-1">Pagos de deuda anterior</div>
               <div className="text-xl font-bold text-accent tabular-nums">
@@ -109,6 +109,14 @@ export function CajaPage() {
               <div className="text-xs font-medium text-muted-foreground mb-1">Nuevas deudas de hoy</div>
               <div className="text-xl font-bold text-destructive tabular-nums">
                 {formatMoneda(Number(data?.nuevasDeudas || 0))}
+              </div>
+            </div>
+            <div className={cn(cardUI, 'border-destructive/30 p-4')}>
+              <div className="text-xs font-medium text-muted-foreground mb-1">
+                Egresos de hoy <span className="font-normal">(efectivo: {formatMoneda(Number(data?.egresosEfectivo || 0))})</span>
+              </div>
+              <div className="text-xl font-bold text-destructive tabular-nums">
+                {formatMoneda(Number(data?.egresosTotales || 0))}
               </div>
             </div>
           </div>

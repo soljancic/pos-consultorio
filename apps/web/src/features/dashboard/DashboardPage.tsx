@@ -82,6 +82,13 @@ export function DashboardPage() {
   })
   const ingresosMes = historialMes.reduce((acc, c) => acc + Number(c.totalGeneral), 0)
 
+  const { data: gastosMes } = useQuery<{ total: number }>({
+    queryKey: ['gastos-resumen', inicioMes, hoy],
+    queryFn: () =>
+      api.get(`/gastos/resumen?desde=${inicioMes}&hasta=${hoy}`).then((r) => r.data),
+  })
+  const resultadoNeto = ingresosMes - (gastosMes?.total ?? 0)
+
   const enEspera = citas.filter((c) => c.estado === EstadoCita.LLEGO).length
   const enAtencion = citas.filter((c) => c.estado === EstadoCita.EN_ATENCION).length
   const porCobrar = citas.filter(
@@ -150,6 +157,16 @@ export function DashboardPage() {
               <div className="flex justify-between text-xs text-muted-foreground pt-1">
                 <span>Ingresos del mes</span>
                 <span className="tabular-nums">{formatMoneda(ingresosMes)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Gastos del mes</span>
+                <span className="tabular-nums text-destructive">{formatMoneda(gastosMes?.total ?? 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs font-semibold text-foreground">
+                <span>Resultado neto</span>
+                <span className={`tabular-nums ${resultadoNeto >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                  {formatMoneda(resultadoNeto)}
+                </span>
               </div>
             </div>
           ) : (

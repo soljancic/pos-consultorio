@@ -16,6 +16,7 @@ import {
   Sun,
   Menu,
   X,
+  Receipt,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },
+  { to: '/gastos', icon: Receipt, label: 'Gastos' },
   { to: '/catalogo', icon: Settings, label: 'Catalogo' },
   { to: '/configuracion', icon: Cog, label: 'Configuracion', soloAdmin: true },
 ]

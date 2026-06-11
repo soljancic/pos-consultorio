@@ -6,6 +6,7 @@ import { AgendaPage } from './features/agenda/AgendaPage'
 import { PacientesPage } from './features/pacientes/PacientesPage'
 import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
 import { CajaPage } from './features/caja/CajaPage'
+import { GastosPage } from './features/gastos/GastosPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="pacientes" element={<PacientesPage />} />
         <Route path="pacientes/:id" element={<PacienteDetallePage />} />
         <Route path="caja" element={<CajaPage />} />
+        <Route path="gastos" element={<GastosPage />} />
         <Route path="deudores" element={<DeudoresPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
