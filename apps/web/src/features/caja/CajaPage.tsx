@@ -1,12 +1,13 @@
 ﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
-import { Lock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
+import { Lock, Unlock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, formatDia, cn } from '../../lib/utils'
-import { inputUI, btnOutlineUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
+import { AbrirCajaModal } from './AbrirCajaModal'
 import { CerrarCajaModal } from './CerrarCajaModal'
 import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
 
@@ -14,6 +15,7 @@ export function CajaPage() {
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
   const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
+  const [modalAbrir, setModalAbrir] = useState(false)
   const [modalCerrar, setModalCerrar] = useState(false)
   const [cajaRevisar, setCajaRevisar] = useState<CajaRevisable | null>(null)
   const [tab, setTab] = useState<'hoy' | 'historial'>('hoy')
@@ -60,6 +62,12 @@ export function CajaPage() {
             ))}
           </div>
         </div>
+        {tab === 'hoy' && data && !caja && (
+          <button onClick={() => setModalAbrir(true)} className={btnPrimaryUI}>
+            <Unlock className="h-4 w-4" aria-hidden="true" />
+            Abrir caja
+          </button>
+        )}
         {tab === 'hoy' && caja && !caja.cerrada && (
           <button onClick={() => setModalCerrar(true)} className={btnOutlineUI}>
             <Lock className="h-4 w-4" aria-hidden="true" />
@@ -76,9 +84,16 @@ export function CajaPage() {
 
       {tab === 'hoy' && (
         <div className="p-4 sm:p-6 flex-1 overflow-auto space-y-6">
+          {data && !caja && (
+            <p className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-3 py-2.5">
+              <Unlock className="h-4 w-4 shrink-0" aria-hidden="true" />
+              La caja de hoy no esta abierta: abri el turno para poder cobrar y registrar gastos.
+            </p>
+          )}
           {/* Totales */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
             {[
+              { label: 'Caja inicial', value: caja?.montoInicial },
               { label: 'Efectivo', value: caja?.totalEfectivo },
               { label: 'QR / Transferencia', value: caja?.totalQr },
               { label: 'Tarjeta', value: caja?.totalTarjeta },
@@ -294,6 +309,8 @@ export function CajaPage() {
       {pagoAnular && (
         <AnularPagoModal pago={pagoAnular} onClose={() => setPagoAnular(null)} />
       )}
+
+      {modalAbrir && <AbrirCajaModal onClose={() => setModalAbrir(false)} />}
 
       {modalCerrar && <CerrarCajaModal onClose={() => setModalCerrar(false)} />}
 
