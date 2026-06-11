@@ -35,6 +35,23 @@ export enum FormaPago {
   VALES = 'VALES',
 }
 
+// Gastos administrativos (E2-M8)
+export enum CategoriaGasto {
+  INSUMOS = 'INSUMOS',
+  SUELDOS = 'SUELDOS',
+  ALQUILER = 'ALQUILER',
+  SERVICIOS = 'SERVICIOS',
+  IMPUESTOS = 'IMPUESTOS',
+  OTROS = 'OTROS',
+}
+
+// De donde sale el dinero: solo CAJA_EFECTIVO impacta el arqueo
+export enum CuentaGasto {
+  CAJA_EFECTIVO = 'CAJA_EFECTIVO',
+  BANCO = 'BANCO',
+  OTRO = 'OTRO',
+}
+
 export enum AccionLog {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',

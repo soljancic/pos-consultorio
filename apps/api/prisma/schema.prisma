@@ -43,6 +43,21 @@ enum FormaPago {
   VALES
 }
 
+enum CategoriaGasto {
+  INSUMOS
+  SUELDOS
+  ALQUILER
+  SERVICIOS
+  IMPUESTOS
+  OTROS
+}
+
+enum CuentaGasto {
+  CAJA_EFECTIVO
+  BANCO
+  OTRO
+}
+
 enum AccionLog {
   CREATE
   UPDATE
@@ -73,6 +88,7 @@ model Consultorio {
   citas      Cita[]
   cobros     Cobro[]
   cajaDiaria CajaDiaria[]
+  gastos     Gasto[]
   logs       Log[]
 
   @@map("consultorios")
@@ -96,6 +112,7 @@ model Usuario {
   cajasAbiertas    CajaDiaria[] @relation("CajaAbiertaPor")
   cajasCerradas    CajaDiaria[] @relation("CajaCerradaPor")
   cajasRevisadas   CajaDiaria[] @relation("CajaRevisadaPor")
+  gastosRegistrados Gasto[]     @relation("GastoRegistradoPor")
   logs             Log[]
   doctor           Doctor?
 
@@ -325,6 +342,30 @@ model CajaDiaria {
   @@unique([consultorioId, fecha])
   @@index([consultorioId])
   @@map("caja_diaria")
+}
+
+// Gastos administrativos (E2-M8): egresos con categoria y cuenta de origen.
+// Solo CAJA_EFECTIVO participa del arqueo; la caja diaria NO se reescribe
+// (los egresos se computan dinamicamente en /caja/hoy y al cerrar).
+model Gasto {
+  id              Int      @id @default(autoincrement())
+  consultorioId   Int
+  consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
+  fecha           DateTime    @db.Date
+  categoria       CategoriaGasto
+  monto           Decimal     @db.Decimal(10, 2)
+  descripcion     String
+  personal        String?     // a quien se pago (texto libre)
+  cuenta          CuentaGasto @default(CAJA_EFECTIVO)
+  comprobanteUrl  String?
+  registradoPorId Int
+  registradoPor   Usuario     @relation("GastoRegistradoPor", fields: [registradoPorId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  @@index([consultorioId, fecha])
+  @@map("gastos")
 }
 
 // ─── AUDITORIA ───────────────────────────────────────────────────────────────
