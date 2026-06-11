@@ -40,7 +40,9 @@ Mini-spec:
 - UI: boton anular en los movimientos de CajaPage + en CobroModal (lista de pagos del cobro); fila de reversa en rojo con motivo.
 - Gate: anular pago parcial → saldo y deudaTotal restaurados, cita vuelve a CON_DEUDA, caja del dia refleja el negativo, log con antes/despues; reintento de anulacion → 400.
 
-## E2-M2 — Arqueo de caja ciego
+## E2-M2 — Arqueo de caja ciego — ✔ EJECUTADO 2026-06-10
+
+Plan detallado: `2026-06-10-e2-m2-arqueo-ciego-plan.md`. Verificado: gate-e2m2 8/8, Playwright 14/14, regresion verde. Commits 8c2fda0..fa73f3d. Notas: `montoEsperado` se snapshotea al cierre (una reversa posterior mueve totalEfectivo); el modal es ciego pero la pagina de caja sigue mostrando el total de efectivo — ocultarlo a SECRETARIA hasta el cierre queda como mejora futura.
 
 Patron Baby Spa (probado en produccion).
 
