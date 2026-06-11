@@ -8,6 +8,7 @@ import { PacienteDetallePage } from './features/pacientes/PacienteDetallePage'
 import { CajaPage } from './features/caja/CajaPage'
 import { GastosPage } from './features/gastos/GastosPage'
 import { CalendarioAtencionPage } from './features/calendario/CalendarioAtencionPage'
+import { ActividadPage } from './features/actividad/ActividadPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="deudores" element={<DeudoresPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
+        <Route path="actividad" element={<AdminRoute><ActividadPage /></AdminRoute>} />
       </Route>
     </Routes>
   )

@@ -18,6 +18,7 @@ import {
   X,
   Receipt,
   CalendarClock,
+  History,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { to: '/caja', icon: DollarSign, label: 'Caja' },
   { to: '/gastos', icon: Receipt, label: 'Gastos' },
   { to: '/catalogo', icon: Settings, label: 'Catalogo' },
+  { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
   { to: '/configuracion', icon: Cog, label: 'Configuracion', soloAdmin: true },
 ]
 
