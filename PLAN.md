@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **E2-M3 Actividad reciente** (`/actividad` sobre la tabla logs — hito barato). Despues: E2-M4 historia clinica → E2-M5 recetas PDF. Hechos: E2-M7, E2-M1, E2-M2 (2026-06-10) y E2-M8 (2026-06-11). El deploy en Railway + piloto queda diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** **E2.5b Portal de agendamiento** (el calendario ya valida disponibilidad real) o **E2-M3 Actividad** (hito barato). Hechos: E2-M7, E2-M1, E2-M2 (2026-06-10), E2-M8 y E2.5a nucleo (2026-06-11; fase 2 pendiente: plantillas, servicios-por-doctor, reescritura de /doctores/:id/disponibilidad). El deploy en Railway + piloto queda diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -34,7 +34,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
 4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
 5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
-6. ⬜ Calendario de Atencion: horarios por doctor, recurrencias, plantillas, bloqueos (E2.5a)
+6. ✅ Calendario de Atencion nucleo (E2.5a, 2026-06-11): horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. Pendiente fase 2: plantillas y servicios-por-doctor
 7. ⬜ Portal publico de agendamiento tipo Calendly (E2.5b)
 
 ### Pacientes
@@ -455,7 +455,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 **Trigger:** Etapa 2 cerrada, o feedback del piloto pidiendo agenda online.
 **Specs:** `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md` y `2026-06-10-portal-agendamiento-design.md` (planes de implementacion just-in-time, como E1/E2).
 
-- **2.5a — Calendario de Atencion**: cada doctor define su horario de trabajo por dia (ej: doctor 1, lunes 9-17). Scheduler semanal (filas = doctores), creacion rapida con presets, horarios repetibles con fecha limite y edicion de series (solo este / toda la serie / desde esta fecha), plantillas (turno manana/tarde/completa), servicios habilitados por doctor, bloqueos (vacaciones, ausencia, capacitacion, reunion). Reemplaza el modelo simple `horarios_atencion`. Validaciones: sin solapes, citas solo dentro de disponibilidad. Sedes/ambientes quedan para Etapa 5.
+- 🔄 **2.5a — Calendario de Atencion** (NUCLEO HECHO 2026-06-11): cada doctor define su horario por dia (lunes 9-17, etc.) en `/calendario-atencion` (nav "Horarios"). Hecho: scheduler semanal (filas = doctores), presets, series semanales materializadas con fecha limite, edicion/borrado por alcance (uno/serie/desde), bloqueos (vacaciones/ausencia/capacitacion/reunion/bloqueado), validacion de citas (bloqueos 409; fuera de horario 400 si el doctor tiene calendario; sin calendario = legacy), solo ADMIN edita. Gate: `gate-e25a.ps1`; E2E: `calendario-atencion.spec.ts`. **Fase 2 pendiente**: plantillas de horarios, servicios por doctor, reescritura de `GET /doctores/:id/disponibilidad` sobre el modelo nuevo. Sedes/ambientes → Etapa 5.
 - **2.5b — Portal publico de agendamiento (tipo Calendly)**: link `/reservar/:slug` (con `?doctor=` opcional para doctor fijo); el cliente ve disponibilidad real del calendario, elige slot y deja sus datos; se crea paciente (match por telefono) + cita en PENDIENTE con origen PORTAL. Rate limit, slug → consultorioId solo en server, toggle on/off en Configuracion. Depende de 2.5a.
 
 ---
