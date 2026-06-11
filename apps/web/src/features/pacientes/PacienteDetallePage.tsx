@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope } from 'lucide-react'
+import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope, CalendarPlus } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
@@ -10,6 +10,7 @@ import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
 import { CobroModal } from '../agenda/CobroModal'
+import { NuevaCitaModal } from '../agenda/NuevaCitaModal'
 import { PacienteModal } from './PacienteModal'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
@@ -43,6 +44,7 @@ export function PacienteDetallePage() {
   const [editando, setEditando] = useState(false)
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
   const [citaExpandida, setCitaExpandida] = useState<number | null>(null)
+  const [fechaControl, setFechaControl] = useState<string | null>(null)
 
   const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
@@ -217,10 +219,21 @@ export function PacienteDetallePage() {
                       <tr className="bg-violet-500/5 border-b last:border-0">
                         <td colSpan={7} className="px-6 py-3 text-sm text-muted-foreground space-y-1">
                           {cita.atencion.motivo && <p><span className="font-medium">Motivo:</span> {cita.atencion.motivo}</p>}
-                          {cita.atencion.diagnostico && <p><span className="font-medium">Diagnostico:</span> {cita.atencion.diagnostico}</p>}
+                          {cita.atencion.diagnostico && <p><span className="font-medium">Diagnóstico:</span> {cita.atencion.diagnostico}</p>}
                           {cita.atencion.tratamiento && <p><span className="font-medium">Tratamiento:</span> {cita.atencion.tratamiento}</p>}
-                          {cita.atencion.evolucion && <p><span className="font-medium">Evolucion:</span> {cita.atencion.evolucion}</p>}
-                          {cita.atencion.proximoControl && <p><span className="font-medium">Próximo control:</span> {formatDia(cita.atencion.proximoControl)}</p>}
+                          {cita.atencion.evolucion && <p><span className="font-medium">Evolución:</span> {cita.atencion.evolucion}</p>}
+                          {cita.atencion.proximoControl && (
+                            <p className="flex flex-wrap items-center gap-2">
+                              <span><span className="font-medium">Próximo control:</span> {formatDia(cita.atencion.proximoControl)}</span>
+                              <button
+                                onClick={() => setFechaControl(cita.atencion!.proximoControl!.slice(0, 10))}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                              >
+                                <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                                Agendar control
+                              </button>
+                            </p>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -248,6 +261,17 @@ export function PacienteDetallePage() {
           cita={citaCobro}
           onClose={() => {
             setCitaCobro(null)
+            qc.invalidateQueries({ queryKey: ['paciente', id] })
+          }}
+        />
+      )}
+
+      {fechaControl && (
+        <NuevaCitaModal
+          fechaInicial={new Date(`${fechaControl}T09:00:00`)}
+          pacienteInicial={{ id: paciente.id, nombre: paciente.nombre, apellido: paciente.apellido }}
+          onClose={() => {
+            setFechaControl(null)
             qc.invalidateQueries({ queryKey: ['paciente', id] })
           }}
         />

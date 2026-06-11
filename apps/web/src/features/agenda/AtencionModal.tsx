@@ -97,24 +97,24 @@ export function AtencionModal({ cita, onClose }: Props) {
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Motivo de consulta</label>
-              <input value={form.motivo} onChange={(e) => set('motivo', e.target.value)} className={inputUI} />
+              <input value={form.motivo} disabled={!puedeEditar} onChange={(e) => set('motivo', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Diagnostico</label>
-              <input value={form.diagnostico} onChange={(e) => set('diagnostico', e.target.value)} className={inputUI} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Diagnóstico</label>
+              <input value={form.diagnostico} disabled={!puedeEditar} onChange={(e) => set('diagnostico', e.target.value)} className={inputUI} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Tratamiento indicado</label>
-              <input value={form.tratamiento} onChange={(e) => set('tratamiento', e.target.value)} className={inputUI} />
+              <input value={form.tratamiento} disabled={!puedeEditar} onChange={(e) => set('tratamiento', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Evolucion / notas</label>
-              <textarea rows={3} value={form.evolucion} onChange={(e) => set('evolucion', e.target.value)}
+              <label className="block text-sm font-medium text-foreground mb-1.5">Evolución / notas</label>
+              <textarea rows={3} value={form.evolucion} disabled={!puedeEditar} onChange={(e) => set('evolucion', e.target.value)}
                 className={textareaUI} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Próximo control</label>
-              <input type="date" value={form.proximoControl} onChange={(e) => set('proximoControl', e.target.value)}
+              <input type="date" value={form.proximoControl} disabled={!puedeEditar} onChange={(e) => set('proximoControl', e.target.value)}
                 className={inputUI} />
             </div>
 
