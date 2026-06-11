@@ -14,6 +14,7 @@ test.beforeAll(async ({ request }) => {
   const login = await request.post(`${API}/auth/login`, { data: { email: EMAIL, password: PASS } })
   const { accessToken } = await login.json()
   const auth = { Authorization: `Bearer ${accessToken}` }
+  await request.post(`${API}/caja/abrir`, { headers: auth, data: { montoInicial: 0 } }) // E2-M9
   const srv = await (
     await request.post(`${API}/servicios`, {
       headers: auth,

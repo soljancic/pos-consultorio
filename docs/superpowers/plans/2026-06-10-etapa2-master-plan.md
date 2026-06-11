@@ -23,6 +23,8 @@ E2-M5: Recetas PDF                                 ← depende de M4 (cuelga de 
 E2-M6: Evaluacion entidad Visitas (walk-ins)       ← decision de modelado al final, con datos del piloto
 ```
 
+**E2-M9 — Apertura de caja / turno — ✔ EJECUTADO 2026-06-11** (hito agregado por el owner): `POST /caja/abrir { montoInicial }`; cobrar/anular/gastar exigen turno abierto y no cerrado (409); arqueo `esperado = inicial + cobros efectivo - gastos efectivo`. Gate-e2m9 7/7; todos los gates y specs e2e abren turno en su setup desde este hito.
+
 Racional del orden: los hitos operativos/financieros (M7, M1-M2, M8) protegen la confianza del piloto en la operacion y los numeros — una cita que no se puede cancelar o un pago mal cargado sin forma de anularlo rompen la agenda y la caja el dia 1. Lo clinico (M4-M5) es el valor nuevo pero puede esperar 2-3 semanas de feedback.
 
 ---

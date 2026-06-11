@@ -1,4 +1,4 @@
-# Gate E2-M8: gastos administrativos + egresos en el arqueo (API en :3000)
+﻿# Gate E2-M8: gastos administrativos + egresos en el arqueo (API en :3000)
 $ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmss"
@@ -19,6 +19,7 @@ function Esperar-Error($accion, $codigoEsperado, $etiqueta) {
 Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "E2M8 $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
+Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
 
 # Ingreso de 2000 en efectivo (cita atendida + pago)
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 2000 } | ConvertTo-Json)

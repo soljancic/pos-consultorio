@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmss"
 $email = "m4$ts@test.com"
@@ -6,6 +6,7 @@ Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "applicat
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $token = $login.accessToken; if (-not $token) { $token = $login.access_token }
 $h = @{ Authorization = "Bearer $token" }
+Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 5000 } | ConvertTo-Json)
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. M4" } | ConvertTo-Json)
 $pac = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Pedro"; apellido = "Atendido" } | ConvertTo-Json)

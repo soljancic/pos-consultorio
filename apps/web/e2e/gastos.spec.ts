@@ -11,6 +11,13 @@ test.beforeAll(async ({ request }) => {
   await request.post(`${API}/auth/register`, {
     data: { consultorioNombre: `Gastos ${ts}`, adminNombre: 'Admin', email: EMAIL, password: PASS },
   })
+  const login = await request.post(`${API}/auth/login`, { data: { email: EMAIL, password: PASS } })
+  const { accessToken } = await login.json()
+  // E2-M9: sin turno abierto no se registran gastos
+  await request.post(`${API}/caja/abrir`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { montoInicial: 0 },
+  })
 })
 
 test('registrar un gasto lo muestra en la tabla y en el KPI del dashboard', async ({ page }) => {

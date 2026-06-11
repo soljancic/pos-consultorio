@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 // Smoke E2E de Etapa 1: recorre el flujo completo del consultorio en browser
 // real contra la API real. Requiere: API en :3000 (con PostgreSQL) y
@@ -26,6 +26,7 @@ test.beforeAll(async ({ request }) => {
   })
   const { accessToken } = await login.json()
   const auth = { Authorization: `Bearer ${accessToken}` }
+  await request.post(`${API}/caja/abrir`, { headers: auth, data: { montoInicial: 0 } }) // E2-M9
   await request.post(`${API}/servicios`, {
     headers: auth,
     data: { nombre: 'Consulta', duracionMin: 30, precioBase: 5000 },
@@ -59,7 +60,7 @@ test('crear paciente desde la UI navega a su ficha', async ({ page }) => {
   const modal = page.locator('.fixed.inset-0')
   await modal.getByText('Nombre *').locator('..').locator('input').fill('Elena')
   await modal.getByText('Apellido *').locator('..').locator('input').fill('Smoke')
-  await modal.getByText('WhatsApp').locator('..').locator('input').fill('+5491155557777')
+  await modal.getByText('Telefono', { exact: true }).locator('..').locator('input').fill('+5491155557777')
   await page.getByRole('button', { name: /crear paciente/i }).click()
   await page.waitForURL(/\/pacientes\/.+/, { timeout: 10_000 })
   await expect(page.getByRole('heading', { name: /Smoke, Elena/ })).toBeVisible()
