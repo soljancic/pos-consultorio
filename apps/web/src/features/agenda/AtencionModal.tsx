@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle } from 'lucide-react'
+import { X, AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
+import { abrirAdjunto, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 interface Props {
   cita: Cita
@@ -71,6 +73,37 @@ export function AtencionModal({ cita, onClose }: Props) {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
+  // Adjuntos (E2-M4 f2): solo cuando la atencion ya existe
+  const adjuntos: AdjuntoMeta[] = atencion?.adjuntos ?? []
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [adjuntoABorrar, setAdjuntoABorrar] = useState<number | null>(null)
+
+  const subirAdjunto = useMutation({
+    mutationFn: async (archivo: File) => {
+      const fd = new FormData()
+      fd.append('archivo', archivo)
+      await api.post(`/atenciones/cita/${cita.id}/adjuntos`, fd)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['atencion', cita.id] }),
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al subir el adjunto')
+    },
+  })
+
+  const borrarAdjunto = useMutation({
+    mutationFn: (indice: number) => api.delete(`/atenciones/cita/${cita.id}/adjuntos/${indice}`),
+    onSuccess: () => {
+      setAdjuntoABorrar(null)
+      qc.invalidateQueries({ queryKey: ['atencion', cita.id] })
+    },
+    onError: (err: any) => {
+      setAdjuntoABorrar(null)
+      const msg = err.response?.data?.message
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al eliminar el adjunto')
+    },
+  })
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card rounded-xl border shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -118,6 +151,71 @@ export function AtencionModal({ cita, onClose }: Props) {
                 className={inputUI} />
             </div>
 
+            {/* Adjuntos: requieren atencion guardada */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="block text-sm font-medium text-foreground">Adjuntos</span>
+                {puedeEditar && atencion && (
+                  <>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) { setError(''); subirAdjunto.mutate(f) }
+                        e.target.value = ''
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={subirAdjunto.isPending}
+                      onClick={() => fileRef.current?.click()}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded disabled:opacity-60 transition-colors duration-150"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+                      {subirAdjunto.isPending ? 'Subiendo...' : 'Adjuntar archivo'}
+                    </button>
+                  </>
+                )}
+              </div>
+              {adjuntos.length === 0 ? (
+                <p className="text-xs text-muted-foreground/70">
+                  {atencion ? 'Sin adjuntos' : 'Guarde la atención para poder adjuntar archivos'}
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {adjuntos.map((a, i) => (
+                    <li key={`${a.archivo}-${i}`} className="flex items-center gap-2 text-sm border rounded-md px-2.5 py-1.5">
+                      {a.tipo === 'application/pdf'
+                        ? <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                        : <ImageIcon className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />}
+                      <button
+                        type="button"
+                        onClick={() => abrirAdjunto(cita.id, i)}
+                        className="flex-1 min-w-0 text-left truncate text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
+                        title={a.nombre}
+                      >
+                        {a.nombre}
+                      </button>
+                      <span className="text-xs text-muted-foreground/70 tabular-nums shrink-0">{formatTamano(a.tamano)}</span>
+                      {puedeEditar && (
+                        <button
+                          type="button"
+                          onClick={() => setAdjuntoABorrar(i)}
+                          aria-label={`Eliminar adjunto ${a.nombre}`}
+                          className="inline-flex items-center justify-center h-7 w-7 rounded text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150 shrink-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {error && (
               <p role="alert" className={errorUI}>
                 <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -147,6 +245,17 @@ export function AtencionModal({ cita, onClose }: Props) {
           </div>
         )}
       </div>
+
+      {adjuntoABorrar !== null && (
+        <ConfirmarModal
+          titulo="Eliminar adjunto"
+          mensaje={`Se eliminará "${adjuntos[adjuntoABorrar]?.nombre}" de la historia clínica. Esta acción no se puede deshacer.`}
+          confirmLabel="Eliminar"
+          pendiente={borrarAdjunto.isPending}
+          onConfirm={() => borrarAdjunto.mutate(adjuntoABorrar)}
+          onClose={() => setAdjuntoABorrar(null)}
+        />
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import type { EstadoCita, Paciente, Cita } from '@pos/types'
 import { CobroModal } from '../agenda/CobroModal'
 import { NuevaCitaModal } from '../agenda/NuevaCitaModal'
 import { PacienteModal } from './PacienteModal'
+import { HistoriaClinicaTimeline } from './HistoriaClinicaTimeline'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
   PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llegó',
@@ -45,6 +46,7 @@ export function PacienteDetallePage() {
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
   const [citaExpandida, setCitaExpandida] = useState<number | null>(null)
   const [fechaControl, setFechaControl] = useState<string | null>(null)
+  const [tab, setTab] = useState<'citas' | 'historia'>('citas')
 
   const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
@@ -132,12 +134,27 @@ export function PacienteDetallePage() {
           )}
         </div>
 
-        {/* Historial de citas */}
+        {/* Historial de citas / historia clinica */}
         <div>
-          <h2 className="text-sm font-semibold text-foreground mb-3">
-            Historial de citas
-          </h2>
-          {citasOrdenadas.length === 0 ? (
+          <div className="flex gap-1 mb-3" role="tablist">
+            {([
+              ['citas', 'Historial de citas'],
+              ['historia', 'Historia clínica'],
+            ] as const).map(([valor, label]) => (
+              <button key={valor} onClick={() => setTab(valor)}
+                role="tab"
+                aria-selected={tab === valor}
+                className={cn(
+                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  tab === valor ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                )}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {tab === 'historia' ? (
+            <HistoriaClinicaTimeline pacienteId={paciente.id} onAgendarControl={setFechaControl} />
+          ) : citasOrdenadas.length === 0 ? (
             <div className={cn(cardUI, 'p-8 text-center text-muted-foreground/70 text-sm')}>
               Sin citas registradas
             </div>
