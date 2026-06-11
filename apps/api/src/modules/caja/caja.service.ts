@@ -88,7 +88,24 @@ export class CajaService {
     })
     const nuevasDeudas = cobrosHoy.reduce((acc, c) => acc + Number(c.saldoPendiente), 0)
 
-    return { caja, pagos, pagosDeudaAnterior, nuevasDeudas }
+    // Egresos del dia (E2-M8): solo CAJA_EFECTIVO descuenta del arqueo;
+    // el resto (banco/otro) se informa pero no toca el efectivo fisico
+    const { egresosEfectivo, egresosTotales } = await this.egresosDelDia(consultorioId)
+
+    return { caja, pagos, pagosDeudaAnterior, nuevasDeudas, egresosEfectivo, egresosTotales }
+  }
+
+  private async egresosDelDia(consultorioId: number) {
+    const { clave: hoy } = diaCajaLocal()
+    const gastos = await this.prisma.gasto.findMany({
+      where: { consultorioId, fecha: hoy, deletedAt: null },
+      select: { monto: true, cuenta: true },
+    })
+    const egresosTotales = gastos.reduce((acc, g) => acc + Number(g.monto), 0)
+    const egresosEfectivo = gastos
+      .filter((g) => g.cuenta === 'CAJA_EFECTIVO')
+      .reduce((acc, g) => acc + Number(g.monto), 0)
+    return { egresosEfectivo, egresosTotales }
   }
 
   // Cierre con arqueo ciego (E2-M2): solo el efectivo participa (QR/tarjeta/
@@ -105,7 +122,9 @@ export class CajaService {
     if (caja.cerrada) throw new BadRequestException('La caja de hoy ya esta cerrada')
 
     const declarado = new Decimal(dto.montoDeclarado)
-    const esperado = caja.totalEfectivo
+    // El esperado es el efectivo NETO: cobros menos gastos en efectivo del dia
+    const { egresosEfectivo } = await this.egresosDelDia(consultorioId)
+    const esperado = caja.totalEfectivo.minus(egresosEfectivo)
     const diferencia = declarado.minus(esperado)
     const sinDiferencia = diferencia.isZero()
 
