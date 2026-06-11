@@ -172,6 +172,7 @@ model Servicio {
   updatedAt     DateTime    @updatedAt
 
   citas Cita[]
+  doctores Doctor[] @relation("DoctorServicios")
 
   @@index([consultorioId])
   @@map("servicios")
@@ -194,6 +195,9 @@ model Doctor {
   citas    Cita[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
+  // Calendario f2: servicios que atiende. Lista vacia = atiende todos
+  // (compatibilidad con doctores existentes)
+  servicios Servicio[] @relation("DoctorServicios")
 
   @@index([consultorioId])
   @@map("doctores")

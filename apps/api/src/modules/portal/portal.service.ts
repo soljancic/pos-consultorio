@@ -67,7 +67,11 @@ export class PortalService {
     const [doctores, servicios] = await Promise.all([
       this.prisma.doctor.findMany({
         where: { consultorioId: c.id, activo: true },
-        select: { id: true, nombre: true, especialidad: true, colorAgenda: true },
+        select: {
+          id: true, nombre: true, especialidad: true, colorAgenda: true,
+          // Calendario f2: lista vacia = atiende todos los servicios
+          servicios: { select: { id: true } },
+        },
         orderBy: { nombre: 'asc' },
       }),
       this.prisma.servicio.findMany({
@@ -78,7 +82,10 @@ export class PortalService {
     ])
     return {
       consultorio: { nombre: c.nombre, logoUrl: c.logoUrl },
-      doctores,
+      doctores: doctores.map(({ servicios: s, ...d }) => ({
+        ...d,
+        servicioIds: s.map((x) => x.id),
+      })),
       servicios,
     }
   }
@@ -89,6 +96,11 @@ export class PortalService {
       where: { id: servicioId, consultorioId: c.id, activo: true },
     })
     if (!servicio) throw new NotFoundException('Servicio no encontrado')
+
+    // Calendario f2: el doctor solo ofrece slots de sus servicios
+    if (!(await this.doctores.atiendeServicio(doctorId, servicioId))) {
+      return { slots: [] as string[], duracionMin: servicio.duracionMin, modo: 'no-atiende-servicio' }
+    }
 
     const disp = await this.doctores.getDisponibilidad(c.id, doctorId, fecha, servicio.duracionMin)
     // Solo horas libres futuras: nada de citas ni nombres
@@ -107,6 +119,9 @@ export class PortalService {
       where: { id: dto.servicioId, consultorioId: c.id, activo: true },
     })
     if (!servicio) throw new NotFoundException('Servicio no encontrado')
+    if (!(await this.doctores.atiendeServicio(dto.doctorId, dto.servicioId))) {
+      throw new ConflictException('Ese profesional no atiende el servicio elegido')
+    }
     const disp = await this.doctores.getDisponibilidad(c.id, dto.doctorId, dto.fecha, servicio.duracionMin)
     if (!this.filtrarSlotsPasados(dto.fecha, disp.slots).includes(dto.hora)) {
       throw new ConflictException('Ese horario ya no esta disponible')

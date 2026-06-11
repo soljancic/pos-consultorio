@@ -1,13 +1,21 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, AlertCircle } from 'lucide-react'
+import type { Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
 const COLORES = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
-interface Doctor { id?: number; nombre: string; especialidad?: string; colorAgenda: string; activo: boolean }
+interface Doctor {
+  id?: number
+  nombre: string
+  especialidad?: string
+  colorAgenda: string
+  activo: boolean
+  servicios?: Array<{ id: number }>
+}
 interface Props { doctor?: Doctor | null; onClose: () => void }
 
 export function DoctorModal({ doctor, onClose }: Props) {
@@ -20,16 +28,33 @@ export function DoctorModal({ doctor, onClose }: Props) {
     colorAgenda: doctor?.colorAgenda ?? '#3B82F6',
     activo: doctor?.activo ?? true,
   })
+  // Calendario f2: sin seleccion = atiende todos los servicios
+  const [serviciosSel, setServiciosSel] = useState<number[]>(
+    doctor?.servicios?.map((s) => s.id) ?? [],
+  )
+
+  const { data: servicios = [] } = useQuery<Servicio[]>({
+    queryKey: ['servicios', 'activos'],
+    queryFn: () => api.get('/servicios').then((r) => r.data),
+  })
+
+  function toggleServicio(id: number) {
+    setServiciosSel((sel) => (sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]))
+  }
 
   const mutation = useMutation({
-    mutationFn: (data: typeof form) => {
+    mutationFn: async (data: typeof form) => {
       const payload = {
         nombre: data.nombre,
         especialidad: data.especialidad || undefined,
         colorAgenda: data.colorAgenda,
         ...(editando ? { activo: data.activo } : {}),
       }
-      return editando ? api.put(`/doctores/${doctor!.id}`, payload) : api.post('/doctores', payload)
+      const res = editando
+        ? await api.put(`/doctores/${doctor!.id}`, payload)
+        : await api.post('/doctores', payload)
+      const doctorId = editando ? doctor!.id : res.data.id
+      await api.put(`/doctores/${doctorId}/servicios`, { servicioIds: serviciosSel })
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['doctores'] }); onClose() },
     onError: (err: any) => {
@@ -84,6 +109,29 @@ export function DoctorModal({ doctor, onClose }: Props) {
                   style={{ backgroundColor: c }} />
               ))}
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Servicios que atiende</label>
+            {servicios.length === 0 ? (
+              <p className="text-xs text-muted-foreground/70">Todavía no hay servicios en el catálogo</p>
+            ) : (
+              <div className="space-y-1.5 max-h-40 overflow-y-auto border rounded-md p-3">
+                {servicios.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={serviciosSel.includes(s.id)}
+                      onChange={() => toggleServicio(s.id)}
+                      className="rounded"
+                    />
+                    {s.nombre}
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Sin selección, atiende todos los servicios. El portal público solo ofrece los marcados.
+            </p>
           </div>
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">

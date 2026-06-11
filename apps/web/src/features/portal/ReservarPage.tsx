@@ -12,7 +12,7 @@ import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
 
 type Info = {
   consultorio: { nombre: string; logoUrl: string | null }
-  doctores: Array<{ id: number; nombre: string; especialidad: string | null; colorAgenda: string }>
+  doctores: Array<{ id: number; nombre: string; especialidad: string | null; colorAgenda: string; servicioIds: number[] }>
   servicios: Array<{ id: number; nombre: string; duracionMin: number }>
 }
 
@@ -81,9 +81,14 @@ export function ReservarPage() {
     )
   }
 
-  const doctores = doctorFijo
+  // Calendario f2: con servicio elegido, solo profesionales que lo atienden
+  // (lista vacia = atiende todos)
+  const doctores = (doctorFijo
     ? info.doctores.filter((d) => String(d.id) === doctorFijo)
     : info.doctores
+  ).filter(
+    (d) => !servicioId || d.servicioIds.length === 0 || d.servicioIds.includes(Number(servicioId)),
+  )
 
   return (
     <div className="min-h-dvh bg-background">
@@ -122,7 +127,12 @@ export function ReservarPage() {
             <div>
               <label htmlFor="res-servicio" className="block text-sm font-medium text-foreground mb-1.5">Servicio *</label>
               <select id="res-servicio" required value={servicioId}
-                onChange={(e) => { setServicioId(e.target.value); setHora('') }} className={inputUI}>
+                onChange={(e) => {
+                  setServicioId(e.target.value)
+                  setHora('')
+                  // El doctor elegido podria no atender el nuevo servicio
+                  if (!doctorFijo) setDoctorId('')
+                }} className={inputUI}>
                 <option value="">Elegí el servicio...</option>
                 {info.servicios.map((s) => (
                   <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
