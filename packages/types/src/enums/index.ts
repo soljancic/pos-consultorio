@@ -6,6 +6,9 @@ export enum Rol {
 }
 
 export enum EstadoCita {
+  // Reserva del portal sin revisar: la secretaria valida los datos y la
+  // pasa a PENDIENTE (o la cancela). Las citas manuales nacen PENDIENTE.
+  SOLICITADA = 'SOLICITADA',
   PENDIENTE = 'PENDIENTE',
   CONFIRMADA = 'CONFIRMADA',
   LLEGO = 'LLEGO',
@@ -92,6 +95,7 @@ export enum AccionLog {
 
 // Colores de agenda por estado — fuente unica de verdad
 export const COLORES_ESTADO: Record<EstadoCita, string> = {
+  [EstadoCita.SOLICITADA]: '#22D3EE',   // cyan-400
   [EstadoCita.PENDIENTE]: '#94A3B8',    // slate-400
   [EstadoCita.CONFIRMADA]: '#60A5FA',   // blue-400
   [EstadoCita.LLEGO]: '#34D399',        // emerald-400
@@ -106,6 +110,8 @@ export const COLORES_ESTADO: Record<EstadoCita, string> = {
 
 // Maquina de estados: transiciones validas por estado
 export const TRANSICIONES_VALIDAS: Record<EstadoCita, EstadoCita[]> = {
+  // La solicitud del portal se acepta (PENDIENTE) o se rechaza (CANCELADA)
+  [EstadoCita.SOLICITADA]: [EstadoCita.PENDIENTE, EstadoCita.CANCELADA],
   [EstadoCita.PENDIENTE]: [EstadoCita.CONFIRMADA, EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO],
   [EstadoCita.CONFIRMADA]: [EstadoCita.LLEGO, EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO],
   [EstadoCita.LLEGO]: [EstadoCita.EN_ATENCION, EstadoCita.CANCELADA],

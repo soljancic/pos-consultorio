@@ -121,6 +121,8 @@ export function AgendaPage() {
   }
 
   const estadosOrden: EstadoCita[] = [
+    // Las solicitudes del portal van primero: requieren revision
+    EstadoCita.SOLICITADA,
     EstadoCita.LLEGO,
     EstadoCita.EN_ATENCION,
     EstadoCita.CONFIRMADA,

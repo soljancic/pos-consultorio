@@ -7,6 +7,7 @@ import { formatMoneda, cn } from '../../lib/utils'
 import { inputUI, cardUI, btnOutlineUI } from '../../lib/ui'
 
 const LABEL_ESTADO: Record<string, string> = {
+  SOLICITADA: 'Solicitada',
   PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llegó',
   EN_ATENCION: 'En atención', ATENDIDA: 'Atendida', COBRADO: 'Cobrado',
   CON_DEUDA: 'Con deuda', CANCELADA: 'Cancelada', NO_ASISTIO: 'No asistió',

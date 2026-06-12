@@ -17,6 +17,7 @@ import { PacienteModal } from './PacienteModal'
 import { HistoriaClinicaTimeline } from './HistoriaClinicaTimeline'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
+  SOLICITADA: 'Solicitada',
   PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llegó',
   EN_ATENCION: 'En atención', ATENDIDA: 'Atendida', COBRADO: 'Cobrado',
   CON_DEUDA: 'Con deuda', CANCELADA: 'Cancelada', NO_ASISTIO: 'No asistió',

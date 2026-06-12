@@ -14,6 +14,7 @@ const ESTADOS_CON_ATENCION = [
 ]
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
+  [EstadoCita.SOLICITADA]: 'Solicitada',
   [EstadoCita.PENDIENTE]: 'Pendiente',
   [EstadoCita.CONFIRMADA]: 'Confirmada',
   [EstadoCita.LLEGO]: 'Llegó',

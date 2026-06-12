@@ -134,6 +134,9 @@ export class CitasService {
         notasSecretaria: dto.notasSecretaria,
         createdById: usuarioId,
         origen,
+        // Las reservas del portal nacen SOLICITADA: la secretaria revisa los
+        // datos y las acepta (PENDIENTE) o las cancela. Las manuales no.
+        estado: origen === OrigenCita.PORTAL ? EstadoCita.SOLICITADA : EstadoCita.PENDIENTE,
       },
       include: {
         paciente: { select: { nombre: true, apellido: true } },

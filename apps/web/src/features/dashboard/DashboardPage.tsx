@@ -102,7 +102,12 @@ export function DashboardPage() {
   ).length
 
   const proximasCitas = citas
-    .filter((c) => c.estado === EstadoCita.PENDIENTE || c.estado === EstadoCita.CONFIRMADA)
+    .filter(
+      (c) =>
+        c.estado === EstadoCita.SOLICITADA ||
+        c.estado === EstadoCita.PENDIENTE ||
+        c.estado === EstadoCita.CONFIRMADA,
+    )
     .sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime())
     .slice(0, 5)
 

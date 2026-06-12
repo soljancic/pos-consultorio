@@ -45,6 +45,19 @@ describe('maquina de estados de citas', () => {
     expect(origenes).toEqual([EstadoCita.EN_ATENCION])
   })
 
+  it('SOLICITADA (portal) solo se acepta como PENDIENTE o se cancela', () => {
+    expect(transicionValida(EstadoCita.SOLICITADA, EstadoCita.PENDIENTE)).toBe(true)
+    expect(transicionValida(EstadoCita.SOLICITADA, EstadoCita.CANCELADA)).toBe(true)
+    expect(transicionValida(EstadoCita.SOLICITADA, EstadoCita.CONFIRMADA)).toBe(false)
+    expect(transicionValida(EstadoCita.SOLICITADA, EstadoCita.NO_ASISTIO)).toBe(false)
+  })
+
+  it('ningun estado vuelve a SOLICITADA (solo nace asi desde el portal)', () => {
+    for (const desde of Object.values(EstadoCita)) {
+      expect(transicionValida(desde, EstadoCita.SOLICITADA)).toBe(false)
+    }
+  })
+
   it('cancelada y no-asistio pueden reabrirse como PENDIENTE', () => {
     expect(transicionValida(EstadoCita.CANCELADA, EstadoCita.PENDIENTE)).toBe(true)
     expect(transicionValida(EstadoCita.NO_ASISTIO, EstadoCita.PENDIENTE)).toBe(true)
