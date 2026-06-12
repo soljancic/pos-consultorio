@@ -1,9 +1,11 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth.store'
 
+// Sin Content-Type fijo: axios pone application/json para objetos y
+// multipart/form-data (con boundary) para FormData. Forzarlo a JSON rompia
+// los uploads (multer no veia el archivo).
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
 })
 
 // Inyectar token en cada request
