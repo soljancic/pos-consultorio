@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { X, Search, AlertCircle, AlertTriangle } from 'lucide-react'
+import { X, Search, AlertCircle, AlertTriangle, MessageCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn } from '../../lib/utils'
+import { cn, buildWhatsAppUrl } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 
@@ -20,6 +20,9 @@ interface Props {
 type PacienteBusqueda = Pick<Paciente, 'id' | 'nombre' | 'apellido'> & {
   requierePrepago?: boolean
   deudaTotal?: number
+  telefono?: string | null
+  pais?: string
+  email?: string | null
 }
 
 export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pacienteInicial, onClose }: Props) {
@@ -54,6 +57,13 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     queryFn: () => api.get('/servicios').then((r) => r.data),
   })
 
+  // Para el link de reserva precargado (solo si el portal esta activo)
+  const { data: consultorio } = useQuery<{ slug: string | null; portalActivo: boolean }>({
+    queryKey: ['consultorio'],
+    queryFn: () => api.get('/consultorio').then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+
   const crearCita = useMutation({
     mutationFn: (data: object) => api.post('/citas', data),
     onSuccess: () => {
@@ -79,6 +89,33 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     setPacienteSeleccionado(p)
     setPacienteQuery(`${p.apellido}, ${p.nombre}`)
     setShowPacienteList(false)
+  }
+
+  // Alternativa a crear la cita: mandar al paciente el link del portal con
+  // doctor, servicio y sus datos precargados para que el elija fecha y hora.
+  // (pacienteInicial de la ficha no trae telefono: el boton no aparece ahi)
+  const puedeEnviarLink = !!(
+    consultorio?.slug && consultorio.portalActivo &&
+    pacienteSeleccionado?.telefono && doctorId && servicioId
+  )
+
+  function enviarLinkReserva() {
+    if (!puedeEnviarLink || !pacienteSeleccionado?.telefono) return
+    const query = new URLSearchParams({
+      doctor: doctorId,
+      servicio: servicioId,
+      nombre: pacienteSeleccionado.nombre,
+      apellido: pacienteSeleccionado.apellido,
+      telefono: pacienteSeleccionado.telefono,
+      pais: pacienteSeleccionado.pais ?? '',
+      email: pacienteSeleccionado.email ?? '',
+    })
+    for (const [clave, valor] of [...query]) if (!valor) query.delete(clave)
+    const link = `${window.location.origin}/reservar/${consultorio!.slug}?${query.toString()}`
+    const servicio = servicios.find((s) => String(s.id) === servicioId)?.nombre ?? 'su cita'
+    const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre ?? ''
+    const msg = `Hola ${pacienteSeleccionado.nombre}! Reservá tu cita de ${servicio}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${link}`
+    window.open(buildWhatsAppUrl(pacienteSeleccionado.telefono, msg, pacienteSeleccionado.pais), '_blank')
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -192,6 +229,20 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
               ))}
             </select>
           </div>
+
+          {/* Con doctor, servicio y paciente elegidos, la secretaria puede
+              delegarle la fecha al paciente via portal precargado */}
+          {puedeEnviarLink && (
+            <div>
+              <button type="button" onClick={enviarLinkReserva} className={cn(btnOutlineUI, 'w-full')}>
+                <MessageCircle className="h-4 w-4 text-accent" aria-hidden="true" />
+                Enviar link de reserva por WhatsApp
+              </button>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                El paciente recibe el link con sus datos precargados y elige fecha y hora en el portal.
+              </p>
+            </div>
+          )}
 
           {/* Fecha y hora */}
           <div className="grid grid-cols-2 gap-3">

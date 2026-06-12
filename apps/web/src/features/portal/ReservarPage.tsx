@@ -6,7 +6,7 @@ import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2 } from 'lucide-re
 import { api } from '../../lib/api-client'
 import { formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
-import { PAIS_DEFAULT } from '../../lib/paises'
+import { PAIS_DEFAULT, PAISES } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
 
 // Portal publico de reservas (E2.5b): pagina SIN auth ni AppShell, mobile-first.
@@ -20,17 +20,24 @@ type Info = {
 
 export function ReservarPage() {
   const { slug } = useParams<{ slug: string }>()
+  // El link puede venir precargado: ?doctor= ?servicio= y/o los datos del
+  // paciente (?nombre= ?apellido= ?telefono= ?pais= ?email=). Asi la
+  // secretaria manda un link donde el cliente solo elige fecha y hora.
   const [params] = useSearchParams()
   const doctorFijo = params.get('doctor')
+  const paisParam = params.get('pais')
 
-  const [servicioId, setServicioId] = useState('')
+  const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
   const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [hora, setHora] = useState('')
-  const [nombre, setNombre] = useState('')
-  const [apellido, setApellido] = useState('')
-  const [telefono, setTelefono] = useState('')
-  const [pais, setPais] = useState(PAIS_DEFAULT)
+  const [nombre, setNombre] = useState(params.get('nombre') ?? '')
+  const [apellido, setApellido] = useState(params.get('apellido') ?? '')
+  const [telefono, setTelefono] = useState(params.get('telefono') ?? '')
+  const [pais, setPais] = useState(
+    paisParam && PAISES.some((p) => p.codigo === paisParam) ? paisParam : PAIS_DEFAULT,
+  )
+  const [email, setEmail] = useState(params.get('email') ?? '')
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
 
@@ -61,6 +68,8 @@ export function ReservarPage() {
         apellido,
         telefono,
         pais,
+        // el backend rechaza el string vacio (@IsEmail)
+        email: email || undefined,
       }),
     onSuccess: (res) => setConfirmacion(res.data),
     onError: (err: any) => {
@@ -215,6 +224,13 @@ export function ReservarPage() {
                     <input id="res-telefono" type="tel" required value={telefono} autoComplete="tel"
                       placeholder="71234567" onChange={(e) => setTelefono(e.target.value)} className={inputUI} />
                   </div>
+                </div>
+                <div>
+                  <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">
+                    Email <span className="text-muted-foreground/70 font-normal">(opcional)</span>
+                  </label>
+                  <input id="res-email" type="email" value={email} autoComplete="email"
+                    onChange={(e) => setEmail(e.target.value)} className={inputUI} />
                 </div>
               </div>
             )}
