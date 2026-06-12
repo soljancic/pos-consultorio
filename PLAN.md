@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** quedan solo items que dependen de decisiones del owner — **41b WhatsApp Business API (PAUSADO)**, **22 facturacion electronica (PAUSADO)**, E2-M6 Visitas (espera piloto), deploy (lo activa el owner). Candidatos sin bloqueo: reportes con export CSV, arqueo ciego estricto (ocultar efectivo a SECRETARIA hasta cerrar), badge de pendientes en el nav de Mensajes, adjuntos en recetas/portal. **ETAPA 2 COMPLETA · ETAPA 2.5 COMPLETA · ETAPA 3 COMPLETA en su canal manual** (items 11, 26, 41a) **· E4 item 21 comisiones HECHO**.
+**➡️ SIGUIENTE PASO:** todo lo ejecutable sin decisiones esta HECHO (incl. pulidos 2026-06-11: badge de Mensajes en el nav, export CSV de reportes, arqueo ciego estricto). Quedan solo items que dependen del owner: **41b WhatsApp Business API (PAUSADO)**, **22 facturacion electronica (PAUSADO)**, E2-M6 Visitas (espera piloto), deploy Railway (lo activa el owner) — y las etapas grandes 4 (paquetes prepagos, inventario/insumos, modelo POS de modelo.jpeg), 5 (multi-sucursal), 6 (portal del paciente con pagos) y 7 (verticales). **ETAPAS 1, 2, 2.5 y 3 (canal manual) COMPLETAS · E4 comisiones HECHO**.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -53,7 +53,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 ### Caja y finanzas
 17. ✅ Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
 18. ✅ Desglose: pagos de deuda anterior vs nuevas deudas del dia
-19. ✅ Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10)
+19. ✅ Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10). ESTRICTO desde 2026-06-11: con el turno abierto /caja/hoy oculta inicial/efectivo/total a quien no es ADMIN (gate `gate-arqueo-estricto.ps1`)
 20. ✅ Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
 21. ✅ Comisiones por doctor y liquidacion mensual (E4, 2026-06-11): Doctor.comisionPct (0-100, opcional); /reportes/mensual calcula comision por doctor sobre pagos netos + total a liquidar; campo % en DoctorModal y columna en /reportes. Gate: caso 5b de `gate-reportes.ps1`
 22. ⬜ Facturacion electronica (E4)
