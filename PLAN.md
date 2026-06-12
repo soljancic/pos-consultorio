@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** pulidos menores (plantillas de horarios nombradas, refinamiento continuo de copy) o arrancar Etapa 3 (templates WhatsApp, cron no-show, contador no-shows). **ETAPA 2 COMPLETA** salvo E2-M6 (decision Visitas: espera piloto). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, M4, M5, M10 emails Resend (dominio toptech.com.bo verificado), E2.5a+b con servicios-por-doctor, reportes item 29, kardex CI, usuario-doctor, cero dialogos nativos, acentos (06-11). Deploy diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** lo que queda de Etapa 3 es la **cola de mensajes pendientes / automatizacion WhatsApp** (item 41, requiere decidir canal: manual asistido vs Business API) — o pulidos/E4 (comisiones por doctor, item 21). **ETAPA 2 COMPLETA** (salvo E2-M6, espera piloto) **y de ETAPA 3 ya estan hechos** el cron no-show + contador + requierePrepago (item 11) y los templates WhatsApp (item 26). Calendario E2.5 COMPLETO (f2a servicios-por-doctor + f2b plantillas). Deploy diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -34,14 +34,14 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
 4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
 5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
-6. ✅ Calendario de Atencion (E2.5a, 2026-06-11): horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. F2a servicios-por-doctor HECHO (M2M; lista vacia = atiende todos; el portal filtra profesionales y rechaza reservas de servicios no atendidos; checkboxes en DoctorModal; gate `gate-doctor-servicios.ps1`). Pendiente menor: plantillas de horarios nombradas (los presets fijos 9-17/9-20/8-18 ya cubren la creacion rapida)
+6. ✅ Calendario de Atencion (E2.5a, 2026-06-11) COMPLETO: horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. F2a servicios-por-doctor (M2M; lista vacia = atiende todos; el portal filtra y rechaza; gate `gate-doctor-servicios.ps1`). F2b plantillas de horario nombradas (tabla `plantillas_horario`, chips en DisponibilidadModal + guardar inline; gate `gate-plantillas.ps1`)
 7. ✅ Portal publico de agendamiento tipo Calendly (E2.5b, 2026-06-11): /reservar/:slug con slots reales, reserva crea paciente + cita PENDIENTE origen PORTAL; slug + toggle en Configuracion. Gate: `gate-e25b.ps1`
 
 ### Pacientes
 8. ✅ CRUD con busqueda (nombre, DNI, telefono) y ficha completa
 9. ✅ Historial de citas con atencion expandible y deuda visible
 10. ✅ Historia clinica completa (E2-M4, 2026-06-11). F1: guard duro 403 en PUT /atenciones (solo ADMIN o el doctor de la cita), agenda DOCTOR forzada en backend, AtencionModal solo lectura para staff, boton "Agendar control" desde proximoControl. F2: tab "Historia clínica" en la ficha (timeline con busqueda via GET /atenciones/paciente/:id?q=) + adjuntos a disco local (subida 5MB JPG/PNG/WebP/PDF, streaming autenticado, borrado con ConfirmarModal y log). Gates: `gate-e2m4.ps1`, `gate-e2m4-f2.ps1`
-11. ⬜ Contador de no-shows + requierePrepago (E3)
+11. ✅ Contador de no-shows + requierePrepago (E3, 2026-06-11): cron cada 30 min marca NO_ASISTIO las citas PENDIENTE/CONFIRMADA vencidas (gracia `NO_SHOW_GRACIA_HORAS`=2h, manual con POST /citas/no-shows/procesar); al 3er no-show (`NO_SHOWS_PREPAGO`) el paciente queda requierePrepago automatico (desmarcable); ficha muestra contador + badge; NuevaCitaModal alerta sin bloquear. Gate: `gate-e3-noshow.ps1`
 
 ### Cobros y deudas
 12. ✅ Cobro automatico por cita; pagos parciales y divididos (multi forma de pago)
@@ -68,7 +68,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 23. ✅ CRUD de servicios y doctores (con color de agenda)
 24. ✅ Gestion de usuarios con roles (ADMIN, SECRETARIA, DOCTOR, CAJA)
 25. ✅ Datos del consultorio (nombre, logo, moneda, timezone)
-26. ⬜ Templates de mensajes WhatsApp editables (E3)
+26. ✅ Templates de mensajes WhatsApp editables (E3, 2026-06-11): msjRecordatorio/msjDeuda/msjContacto en Consultorio (vacio = default), variables {nombre} {hora} {fecha} {monto} {consultorio}; edicion en Configuracion (ADMIN), usados por agenda/deudores/ficha via lib/whatsapp.ts. Gate: `gate-whatsapp-templates.ps1`
 
 ### Dashboard y reportes
 27. ✅ Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
