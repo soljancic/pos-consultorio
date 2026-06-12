@@ -48,6 +48,20 @@ export function diaCajaLocal(): { clave: Date; inicioLocal: Date; finLocal: Date
 export class CajaService {
   constructor(private prisma: PrismaService) {}
 
+  // Chip global del shell: sin montos, solo el estado del turno de hoy
+  async getEstado(consultorioId: number) {
+    const { clave: hoy } = diaCajaLocal()
+    const caja = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+      select: { cerrada: true },
+    })
+    return {
+      existe: !!caja,
+      abierta: !!caja && !caja.cerrada,
+      cerrada: !!caja && caja.cerrada,
+    }
+  }
+
   async getHoy(consultorioId: number, rol?: string) {
     const { clave: hoy, inicioLocal, finLocal } = diaCajaLocal()
 

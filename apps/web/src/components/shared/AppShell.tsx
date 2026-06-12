@@ -27,6 +27,7 @@ import {
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
 import { cn } from '../../lib/utils'
+import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Inicio', end: true },
@@ -54,6 +55,7 @@ export function AppShell() {
   )
   const [abiertoMovil, setAbiertoMovil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaActual)
+  const [modalAbrirCaja, setModalAbrirCaja] = useState(false)
 
   function toggleColapsado() {
     setColapsado((c) => {
@@ -90,6 +92,14 @@ export function AppShell() {
     staleTime: 60 * 1000,
   })
   const badgeMensajes = pendientes?.pendientes ?? 0
+
+  // Estado del turno visible en todo el sistema; sin turno abierto no se
+  // cobra ni se gasta (E2-M9), asi que se puede abrir desde aca mismo
+  const { data: turno } = useQuery<{ existe: boolean; abierta: boolean; cerrada: boolean }>({
+    queryKey: ['caja-estado'],
+    queryFn: () => api.get('/caja/estado').then((r) => r.data),
+    refetchInterval: 60 * 1000,
+  })
 
   // En movil el drawer siempre se ve expandido; "colapsado" solo aplica en lg+
   const ocultarTexto = colapsado ? 'lg:hidden' : ''
@@ -196,6 +206,46 @@ export function AppShell() {
           )}
         </nav>
 
+        {/* Estado del turno (E2-M9): visible siempre, apertura desde aca */}
+        {turno && (
+          <div className="px-2 pb-1">
+            {!turno.existe ? (
+              <button
+                onClick={() => { setModalAbrirCaja(true); setAbiertoMovil(false) }}
+                title={colapsado ? 'Caja sin abrir: abrir turno' : undefined}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-amber-400/15 text-amber-300 hover:bg-amber-400/25 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                  centrarItem,
+                )}
+              >
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shrink-0 animate-pulse" aria-hidden="true" />
+                <span className={cn('truncate', ocultarTexto)}>Caja sin abrir · Abrir</span>
+              </button>
+            ) : (
+              <NavLink
+                to="/caja"
+                onClick={() => setAbiertoMovil(false)}
+                title={colapsado ? (turno.abierta ? 'Caja abierta' : 'Turno cerrado') : undefined}
+                className={cn(
+                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                  turno.abierta
+                    ? 'bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20'
+                    : 'bg-white/5 text-teal-200/60 hover:bg-white/10',
+                  centrarItem,
+                )}
+              >
+                <span
+                  className={cn('h-2.5 w-2.5 rounded-full shrink-0', turno.abierta ? 'bg-emerald-400' : 'bg-slate-400')}
+                  aria-hidden="true"
+                />
+                <span className={cn('truncate', ocultarTexto)}>
+                  {turno.abierta ? 'Caja abierta' : 'Turno cerrado'}
+                </span>
+              </NavLink>
+            )}
+          </div>
+        )}
+
         {/* Pie: Mi cuenta + tema */}
         <div className="p-2 border-t border-white/10 space-y-1">
           {/* Mi cuenta */}
@@ -295,6 +345,8 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      {modalAbrirCaja && <AbrirCajaModal onClose={() => setModalAbrirCaja(false)} />}
     </div>
   )
 }

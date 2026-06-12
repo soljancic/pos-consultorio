@@ -26,6 +26,7 @@ export function AbrirCajaModal({ onClose }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['caja-hoy'] })
       qc.invalidateQueries({ queryKey: ['caja-historial'] })
+      qc.invalidateQueries({ queryKey: ['caja-estado'] }) // chip global del shell
       onClose()
     },
     onError: (err: any) => {

@@ -34,6 +34,7 @@ export function CerrarCajaModal({ onClose }: Props) {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['caja-hoy'] })
       qc.invalidateQueries({ queryKey: ['caja-historial'] })
+      qc.invalidateQueries({ queryKey: ['caja-estado'] }) // chip global del shell
       setResultado(res.data)
     },
     onError: (err: any) => {

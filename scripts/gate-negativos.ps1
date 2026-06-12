@@ -7,7 +7,10 @@ function New-Consultorio($nombre) {
   Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "$nombre $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
   $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
   $token = $login.accessToken; if (-not $token) { $token = $login.access_token }
-  return @{ Authorization = "Bearer $token" }
+  $h = @{ Authorization = "Bearer $token" }
+  # E2-M9: sin turno abierto no se cobra
+  Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null
+  return $h
 }
 
 $hA = New-Consultorio "TenantA"

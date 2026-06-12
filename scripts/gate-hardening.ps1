@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Continue'
+﻿$ErrorActionPreference = 'Continue'
 $base = "http://localhost:3000/api/v1"
 
 # 1. Health (publico, verifica DB)
@@ -27,7 +27,7 @@ for ($i = 1; $i -le 11; $i++) {
   }
 }
 if (-not $status429) {
-  Write-Output "THROTTLE LOGIN: sin 429 en 11 intentos — esperado si LOGIN_RATE_LIMIT esta alto (dev/E2E)."
+  Write-Output "THROTTLE LOGIN: sin 429 en 11 intentos - esperado si LOGIN_RATE_LIMIT esta alto (dev/E2E)."
   Write-Output "                En produccion (defaults: 10/min) este check DEBE dar 429."
 }
 

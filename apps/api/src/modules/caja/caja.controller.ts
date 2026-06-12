@@ -14,6 +14,10 @@ export class CajaController {
   @Get('hoy')
   getHoy(@CurrentUser() user: JwtPayload) { return this.service.getHoy(user.consultorioId, user.rol) }
 
+  @Get('estado')
+  @ApiOperation({ summary: 'Estado liviano del turno de hoy (chip global del shell)' })
+  getEstado(@CurrentUser() user: JwtPayload) { return this.service.getEstado(user.consultorioId) }
+
   @Post('abrir')
   @ApiOperation({ summary: 'Abrir el turno del dia declarando la caja chica inicial' })
   abrir(@CurrentUser() user: JwtPayload, @Body() dto: AbrirCajaDto) {
