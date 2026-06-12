@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
 import { api } from '../../lib/api-client'
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
-import { Stethoscope, CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
+import { CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
 import { RecuperarPasswordModal } from './RecuperarPasswordModal'
 
 const BENEFICIOS = [
@@ -67,10 +67,10 @@ export function LoginPage() {
       {/* Panel de marca (desktop) */}
       <div className="hidden lg:flex lg:w-[45%] bg-primary text-primary-foreground flex-col justify-between p-12">
         <div className="flex items-center gap-2.5">
-          <div className="bg-white/15 rounded-lg p-2">
-            <Stethoscope className="h-6 w-6" aria-hidden="true" />
+          <div className="bg-white rounded-lg p-1.5">
+            <img src="/brand/isotipo.png" alt="" className="h-7 w-auto" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Consultech</span>
+          <span className="text-lg font-semibold tracking-tight">ConsulTech</span>
         </div>
 
         <div className="space-y-8 max-w-md">
@@ -97,9 +97,8 @@ export function LoginPage() {
       {/* Formulario */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <div className="flex items-center gap-2 mb-2 lg:hidden justify-center">
-            <Stethoscope className="h-7 w-7 text-primary" aria-hidden="true" />
-            <span className="text-lg font-semibold text-foreground">Consultech</span>
+          <div className="flex justify-center mb-3 lg:hidden">
+            <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-14 w-auto" />
           </div>
 
           <div className="bg-card rounded-xl border shadow-sm p-8">
@@ -186,6 +185,11 @@ export function LoginPage() {
               )}
             </form>
           </div>
+
+          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            by
+            <img src="/brand/toptech.png" alt="Toptech" className="h-5 w-auto" />
+          </p>
         </div>
       </div>
 

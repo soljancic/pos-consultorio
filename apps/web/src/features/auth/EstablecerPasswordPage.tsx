@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Stethoscope, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, errorUI } from '../../lib/ui'
@@ -41,9 +41,8 @@ export function EstablecerPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-4 justify-center">
-          <Stethoscope className="h-7 w-7 text-primary" aria-hidden="true" />
-          <span className="text-lg font-semibold text-foreground">Consultech</span>
+        <div className="flex justify-center mb-4">
+          <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-14 w-auto" />
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm p-8">

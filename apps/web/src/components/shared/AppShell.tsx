@@ -8,7 +8,6 @@ import {
   DollarSign,
   Settings,
   LogOut,
-  Stethoscope,
   AlertCircle,
   LayoutDashboard,
   Cog,
@@ -156,9 +155,11 @@ export function AppShell() {
             )}
           </button>
           <span className={cn('flex items-center gap-2 min-w-0', ocultarTexto)}>
-            <Stethoscope className="h-5 w-5 text-cyan-400 shrink-0" aria-hidden="true" />
+            <span className="bg-white rounded-md p-1 shrink-0 flex items-center">
+              <img src="/brand/isotipo.png" alt="" className="h-4 w-auto" />
+            </span>
             <span className="text-sm font-semibold text-white truncate">
-              {user?.consultorioNombre || 'Consultech'}
+              {user?.consultorioNombre || 'ConsulTech'}
             </span>
           </span>
         </div>
@@ -335,9 +336,11 @@ export function AppShell() {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <Stethoscope className="h-5 w-5 text-cyan-400 shrink-0" aria-hidden="true" />
+          <span className="bg-white rounded-md p-1 shrink-0 flex items-center">
+            <img src="/brand/isotipo.png" alt="" className="h-4 w-auto" />
+          </span>
           <span className="text-sm font-semibold truncate">
-            {user?.consultorioNombre || 'Consultech'}
+            {user?.consultorioNombre || 'ConsulTech'}
           </span>
         </header>
 
