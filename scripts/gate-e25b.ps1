@@ -39,12 +39,13 @@ $slots = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&se
 Write-Output "3 SLOTS: count=$(@($slots.slots).Count) (esp 6) primero=$($slots.slots[0]) (esp 09:00)"
 
 # 4) Reservar 09:30 -> paciente nuevo (con pais) + cita SOLICITADA origen PORTAL
-$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR"; email = "pia@inicial.bo" } | ConvertTo-Json)
+$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR"; email = "pia@inicial.bo"; notas = "Vengo por dolor de muela" } | ConvertTo-Json)
 Write-Output "4 RESERVA: reservada=$($res.reservada) hora=$($res.hora) (esp 09:30) doctor=$($res.doctor)"
 $citas = Invoke-RestMethod -Uri "$base/citas?fecha=$hoy" -Headers $h
 $citaPortal = @($citas) | Where-Object { $_.origen -eq 'PORTAL' }
 $pacs = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
 Write-Output "   cita origen PORTAL=$(@($citaPortal).Count) (esp 1) estado=$($citaPortal[0].estado) (esp SOLICITADA) paciente creado=$(@($pacs).Count) (esp 1) pais=$($pacs[0].pais) (esp AR)"
+Write-Output "   notas=$($citaPortal[0].notasSecretaria) (esp Reserva del portal: Vengo por dolor de muela)"
 
 # 4b) La solicitud NO se confirma directo; la secretaria la acepta -> PENDIENTE
 Esperar-Error { Invoke-RestMethod -Uri "$base/citas/$($citaPortal[0].id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = "CONFIRMADA" } | ConvertTo-Json) } 400 "4b SOLICITADA NO CONFIRMA DIRECTO"

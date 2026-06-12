@@ -36,6 +36,7 @@ export function ReservarPage() {
   const [telefono, setTelefono] = useState('')
   const [pais, setPais] = useState(PAIS_DEFAULT)
   const [email, setEmail] = useState('')
+  const [notas, setNotas] = useState('')
   const [actualizarDatos, setActualizarDatos] = useState(true)
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
@@ -97,6 +98,7 @@ export function ReservarPage() {
         telefono,
         pais,
         email,
+        notas: notas || undefined,
         // con token la reserva se asocia al paciente exacto del link
         token: tokenPaciente || undefined,
         // el kardex solo se toca si el cliente cambio algo y marco el check
@@ -260,6 +262,15 @@ export function ReservarPage() {
                   <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
                   <input id="res-email" type="email" required value={email} autoComplete="email"
                     onChange={(e) => setEmail(e.target.value)} className={inputUI} />
+                </div>
+                <div>
+                  <label htmlFor="res-notas" className="block text-sm font-medium text-foreground mb-1.5">
+                    Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
+                  </label>
+                  <textarea id="res-notas" rows={2} maxLength={300} value={notas}
+                    placeholder="Algo que el consultorio deba saber..."
+                    onChange={(e) => setNotas(e.target.value)}
+                    className="w-full border border-input bg-card rounded-md px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150 resize-none" />
                 </div>
 
                 {tokenPaciente && datosModificados && (

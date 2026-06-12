@@ -36,6 +36,10 @@ export class ReservaPortalDto {
   @IsEmail()
   email: string
 
+  // Nota libre del cliente: queda en notasSecretaria de la cita
+  @IsString() @IsOptional() @MaxLength(300)
+  notas?: string
+
   // Token del link precargado: si viene, la reserva se asocia a ESE paciente
   // (mas confiable que el match por telefono)
   @IsString() @IsOptional() @MaxLength(40)
@@ -227,7 +231,7 @@ export class PortalService {
         doctorId: dto.doctorId,
         servicioId: dto.servicioId,
         fechaHora,
-        notasSecretaria: 'Reserva del portal',
+        notasSecretaria: dto.notas ? `Reserva del portal: ${dto.notas}` : 'Reserva del portal',
       },
       OrigenCita.PORTAL,
     )
