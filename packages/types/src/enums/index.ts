@@ -69,6 +69,19 @@ export enum CuentaGasto {
   OTRO = 'OTRO',
 }
 
+// Cola de mensajes pendientes (E3 item 41a, canal manual asistido):
+// el sistema encola, el staff envia con wa.me y marca el resultado
+export enum TipoMensaje {
+  RECORDATORIO = 'RECORDATORIO',
+  DEUDA = 'DEUDA',
+}
+
+export enum EstadoMensaje {
+  PENDIENTE = 'PENDIENTE',
+  ENVIADO = 'ENVIADO',
+  OMITIDO = 'OMITIDO',
+}
+
 export enum AccionLog {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',

@@ -115,6 +115,7 @@ model Consultorio {
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
+  mensajesPendientes MensajePendiente[]
   logs       Log[]
 
   @@map("consultorios")
@@ -142,6 +143,7 @@ model Usuario {
   logs             Log[]
   doctor           Doctor?
   passwordTokens   PasswordToken[]
+  mensajesResueltos MensajePendiente[] @relation("MensajeResueltoPor")
 
   @@unique([email, consultorioId])
   @@index([consultorioId])
@@ -247,6 +249,7 @@ model Paciente {
   deletedAt       DateTime?
 
   citas Cita[]
+  mensajesPendientes MensajePendiente[]
 
   @@index([consultorioId, apellido, nombre])
   @@index([consultorioId, dni])
@@ -278,6 +281,7 @@ model Cita {
   deletedAt       DateTime?
 
   atencion Atencion?
+  mensajesPendientes MensajePendiente[]
   cobro    Cobro?
 
   @@index([consultorioId, fechaHora])
@@ -464,6 +468,41 @@ model PlantillaHorario {
 
   @@index([consultorioId])
   @@map("plantillas_horario")
+}
+
+// E3 item 41a: cola de mensajes pendientes (canal manual asistido).
+// El sistema encola recordatorios/deudas; el staff abre wa.me y marca el
+// resultado. La Business API queda para cuando el owner lo decida.
+enum TipoMensaje {
+  RECORDATORIO
+  DEUDA
+}
+
+enum EstadoMensaje {
+  PENDIENTE
+  ENVIADO
+  OMITIDO
+}
+
+model MensajePendiente {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  pacienteId    Int
+  paciente      Paciente    @relation(fields: [pacienteId], references: [id])
+  citaId        Int?
+  cita          Cita?       @relation(fields: [citaId], references: [id])
+  tipo          TipoMensaje
+  estado        EstadoMensaje @default(PENDIENTE)
+  detalle       String?   // texto de apoyo: hora de la cita o monto adeudado
+  creadoAt      DateTime  @default(now())
+  resueltoAt    DateTime?
+  resueltoPorId Int?
+  resueltoPor   Usuario?  @relation("MensajeResueltoPor", fields: [resueltoPorId], references: [id])
+
+  @@unique([citaId, tipo])
+  @@index([consultorioId, estado])
+  @@map("mensajes_pendientes")
 }
 
 // Gastos administrativos (E2-M8): egresos con categoria y cuenta de origen.

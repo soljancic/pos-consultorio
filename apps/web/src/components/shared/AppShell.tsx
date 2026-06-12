@@ -20,6 +20,7 @@ import {
   CalendarClock,
   History,
   BarChart3,
+  MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
+  { to: '/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { to: '/caja', icon: DollarSign, label: 'Caja' },
   { to: '/gastos', icon: Receipt, label: 'Gastos' },
   { to: '/catalogo', icon: Settings, label: 'Catálogo' },

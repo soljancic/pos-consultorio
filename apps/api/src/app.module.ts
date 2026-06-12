@@ -22,6 +22,7 @@ import { PortalModule } from './modules/portal/portal.module'
 import { MailModule } from './modules/mail/mail.module'
 import { ReportesModule } from './modules/reportes/reportes.module'
 import { PlantillasModule } from './modules/plantillas/plantillas.module'
+import { MensajesModule } from './modules/mensajes/mensajes.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { PlantillasModule } from './modules/plantillas/plantillas.module'
     PortalModule,
     ReportesModule,
     PlantillasModule,
+    MensajesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
