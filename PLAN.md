@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** **fase 2 del calendario** (plantillas de horarios, servicios-por-doctor) o pulidos menores. **ETAPA 2 COMPLETA** salvo E2-M6 (decision Visitas: espera piloto). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, M4, M5, M10 emails Resend (dominio toptech.com.bo verificado), E2.5a+b, reportes item 29, kardex CI, usuario-doctor, cero dialogos nativos, acentos (06-11). Deploy diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** pulidos menores (plantillas de horarios nombradas, refinamiento continuo de copy) o arrancar Etapa 3 (templates WhatsApp, cron no-show, contador no-shows). **ETAPA 2 COMPLETA** salvo E2-M6 (decision Visitas: espera piloto). Hechos: E2-M7, M1, M2 (06-10); M8, M9, M3, M4, M5, M10 emails Resend (dominio toptech.com.bo verificado), E2.5a+b con servicios-por-doctor, reportes item 29, kardex CI, usuario-doctor, cero dialogos nativos, acentos (06-11). Deploy diferido a decision del owner.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -34,7 +34,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
 4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
 5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
-6. ✅ Calendario de Atencion nucleo (E2.5a, 2026-06-11): horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. Pendiente fase 2: plantillas y servicios-por-doctor
+6. ✅ Calendario de Atencion (E2.5a, 2026-06-11): horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. F2a servicios-por-doctor HECHO (M2M; lista vacia = atiende todos; el portal filtra profesionales y rechaza reservas de servicios no atendidos; checkboxes en DoctorModal; gate `gate-doctor-servicios.ps1`). Pendiente menor: plantillas de horarios nombradas (los presets fijos 9-17/9-20/8-18 ya cubren la creacion rapida)
 7. ✅ Portal publico de agendamiento tipo Calendly (E2.5b, 2026-06-11): /reservar/:slug con slots reales, reserva crea paciente + cita PENDIENTE origen PORTAL; slug + toggle en Configuracion. Gate: `gate-e25b.ps1`
 
 ### Pacientes
