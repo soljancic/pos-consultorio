@@ -22,7 +22,7 @@ $h = @{ Authorization = "Bearer $($login.accessToken)" }
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null
 
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 1000 } | ConvertTo-Json)
-$docA = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. Alfa" } | ConvertTo-Json)
+$docA = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. Alfa"; comisionPct = 20 } | ConvertTo-Json)
 $docB = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. Beta" } | ConvertTo-Json)
 $pac = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Renata"; apellido = "Reporte" } | ConvertTo-Json)
 
@@ -58,6 +58,9 @@ $alfa = @($r.porDoctor) | Where-Object { $_.doctorId -eq $docA.id }
 $beta = @($r.porDoctor) | Where-Object { $_.doctorId -eq $docB.id }
 Write-Output "4 ALFA: atendidas=$($alfa.citasAtendidas) pacientes=$($alfa.pacientesAtendidos) ingresos=$($alfa.ingresos) (esp 1 1 1000)"
 Write-Output "5 BETA: canceladas=$($beta.canceladas) ingresos=$($beta.ingresos) (esp 1 0)"
+
+# 5b) Comision (item 21): Alfa 20% de 1000 = 200; Beta sin comision -> null
+Write-Output "5b COMISION: alfa=$($alfa.comision) (esp 200) beta=$($null -eq $beta.comision) (esp True) total=$($r.totalComisiones) (esp 200)"
 
 # 6) SECRETARIA -> 403 (solo ADMIN)
 $secEmail = "sec$ts@test.com"

@@ -48,9 +48,9 @@ export class ReportesService {
 
     const doctores = await this.prisma.doctor.findMany({
       where: { consultorioId },
-      select: { id: true, nombre: true },
+      select: { id: true, nombre: true, comisionPct: true },
     })
-    const nombreDoctor = new Map(doctores.map((d) => [d.id, d.nombre]))
+    const infoDoctor = new Map(doctores.map((d) => [d.id, d]))
 
     // Ingresos totales y por forma de pago
     let ingresosTotal = 0
@@ -89,17 +89,25 @@ export class ReportesService {
     const porDoctor = [...doctorIds]
       .map((id) => {
         const st = statsDoctor.get(id)
+        const info = infoDoctor.get(id)
+        const ingresos = ingresosPorDoctor.get(id) ?? 0
+        // E4 item 21: liquidacion = % del doctor sobre sus pagos netos del mes
+        const comisionPct = info?.comisionPct ? Number(info.comisionPct) : null
         return {
           doctorId: id,
-          nombre: nombreDoctor.get(id) ?? `Doctor ${id}`,
+          nombre: info?.nombre ?? `Doctor ${id}`,
           citasAtendidas: st?.atendidas ?? 0,
           canceladas: st?.canceladas ?? 0,
           noShows: st?.noShows ?? 0,
           pacientesAtendidos: st?.pacientes.size ?? 0,
-          ingresos: ingresosPorDoctor.get(id) ?? 0,
+          ingresos,
+          comisionPct,
+          comision: comisionPct !== null ? Math.round(ingresos * comisionPct) / 100 : null,
         }
       })
       .sort((a, b) => b.ingresos - a.ingresos)
+
+    const totalComisiones = porDoctor.reduce((acc, d) => acc + (d.comision ?? 0), 0)
 
     return {
       mes: mesNorm,
@@ -111,6 +119,7 @@ export class ReportesService {
       resultadoNeto: ingresosTotal - gastosTotal,
       citas: { total: citas.length, porEstado },
       porDoctor,
+      totalComisiones,
     }
   }
 }

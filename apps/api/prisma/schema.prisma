@@ -194,6 +194,9 @@ model Doctor {
   usuario       Usuario?    @relation(fields: [usuarioId], references: [id])
   nombre        String
   especialidad  String?
+  // E4 item 21: % de comision sobre los pagos netos de sus citas
+  // (null = sin comision configurada; la liquidacion vive en /reportes)
+  comisionPct   Decimal?    @db.Decimal(5, 2)
   colorAgenda   String      @default("#3B82F6")
   activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())

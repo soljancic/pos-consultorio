@@ -36,7 +36,10 @@ type Reporte = {
     noShows: number
     pacientesAtendidos: number
     ingresos: number
+    comisionPct: number | null
+    comision: number | null
   }>
+  totalComisiones: number
 }
 
 // Item 29: reporte mensual con desglose por doctor (solo ADMIN)
@@ -176,6 +179,7 @@ export function ReportesPage() {
                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">Canceladas</th>
                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">No asistió</th>
                         <th className="text-right px-4 py-3 font-medium text-muted-foreground">Ingresos</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Comisión</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -187,9 +191,30 @@ export function ReportesPage() {
                           <td className="px-4 py-3 text-right tabular-nums">{d.canceladas}</td>
                           <td className="px-4 py-3 text-right tabular-nums">{d.noShows}</td>
                           <td className="px-4 py-3 text-right tabular-nums font-medium">{formatMoneda(d.ingresos)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {d.comision !== null ? (
+                              <span title={`${d.comisionPct}% de ${formatMoneda(d.ingresos)}`}>
+                                {formatMoneda(d.comision)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/60">-</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
+                    {reporte.totalComisiones > 0 && (
+                      <tfoot className="border-t bg-muted/30">
+                        <tr>
+                          <td colSpan={6} className="px-4 py-3 text-right font-medium text-muted-foreground">
+                            Total comisiones a liquidar
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                            {formatMoneda(reporte.totalComisiones)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               )}

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsBoolean, Matches, IsArray } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, Matches, IsArray } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita, TipoDisponibilidad } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -10,6 +10,10 @@ export class CreateDoctorDto {
 
   @IsString() @IsOptional()
   especialidad?: string
+
+  // E4 item 21: % de comision sobre pagos netos (0-100)
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) @IsOptional()
+  comisionPct?: number
 
   @IsString() @IsOptional()
   colorAgenda?: string

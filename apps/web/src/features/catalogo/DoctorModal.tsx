@@ -12,6 +12,7 @@ interface Doctor {
   id?: number
   nombre: string
   especialidad?: string
+  comisionPct?: number | string | null
   colorAgenda: string
   activo: boolean
   servicios?: Array<{ id: number }>
@@ -25,6 +26,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
   const [form, setForm] = useState({
     nombre: doctor?.nombre ?? '',
     especialidad: doctor?.especialidad ?? '',
+    comisionPct: doctor?.comisionPct != null ? String(doctor.comisionPct) : '',
     colorAgenda: doctor?.colorAgenda ?? '#3B82F6',
     activo: doctor?.activo ?? true,
   })
@@ -47,6 +49,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
       const payload = {
         nombre: data.nombre,
         especialidad: data.especialidad || undefined,
+        ...(data.comisionPct !== '' && { comisionPct: Number(data.comisionPct) }),
         colorAgenda: data.colorAgenda,
         ...(editando ? { activo: data.activo } : {}),
       }
@@ -88,11 +91,23 @@ export function DoctorModal({ doctor, onClose }: Props) {
               onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
               className={inputUI} />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Especialidad</label>
-            <input value={form.especialidad}
-              onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
-              className={inputUI} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Especialidad</label>
+              <input value={form.especialidad}
+                onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
+                className={inputUI} />
+            </div>
+            <div>
+              <label htmlFor="doctor-comision" className="block text-sm font-medium text-foreground mb-1.5">
+                Comisión (%)
+              </label>
+              <input id="doctor-comision" type="number" min={0} max={100} step="0.5"
+                value={form.comisionPct}
+                placeholder="Sin comisión"
+                onChange={(e) => setForm((f) => ({ ...f, comisionPct: e.target.value }))}
+                className={inputUI} />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Color en agenda</label>
