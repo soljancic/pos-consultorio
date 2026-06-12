@@ -5,6 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { MailService } from '../mail/mail.service'
 import { transicionValida } from '@pos/types'
 import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
@@ -61,7 +62,10 @@ const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
 
 @Injectable()
 export class CitasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mail: MailService,
+  ) {}
 
   async findByFecha(
     consultorioId: number,
@@ -156,6 +160,34 @@ export class CitasService {
     })
 
     return cita
+  }
+
+  // Email de "reserva aceptada" para el paciente del portal. Privado y
+  // tolerante: sin email cargado no hace nada.
+  private async notificarReservaAceptada(citaId: number) {
+    const cita = await this.prisma.cita.findUnique({
+      where: { id: citaId },
+      include: {
+        paciente: { select: { nombre: true, email: true } },
+        doctor: { select: { nombre: true } },
+        servicio: { select: { nombre: true } },
+        consultorio: { select: { nombre: true } },
+      },
+    })
+    if (!cita?.paciente.email) return
+
+    await this.mail.enviar(
+      cita.paciente.email,
+      `Tu reserva en ${cita.consultorio.nombre} fue aceptada`,
+      this.mail.htmlReservaAceptada({
+        nombre: cita.paciente.nombre,
+        consultorio: cita.consultorio.nombre,
+        fecha: cita.fechaHora.toLocaleDateString('es-BO'),
+        hora: cita.fechaHora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        servicio: cita.servicio.nombre,
+        doctor: cita.doctor.nombre,
+      }),
+    )
   }
 
   async cambiarEstado(
@@ -284,6 +316,13 @@ export class CitasService {
 
       return actualizada
     })
+
+    // Reserva del portal aceptada (SOLICITADA -> PENDIENTE): se avisa al
+    // paciente por email. Fire-and-forget: el envio nunca bloquea ni rompe
+    // el cambio de estado (MailService loguea sus propios errores).
+    if (cita.estado === EstadoCita.SOLICITADA && dto.estado === EstadoCita.PENDIENTE) {
+      void this.notificarReservaAceptada(citaId)
+    }
 
     return citaActualizada
   }

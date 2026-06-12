@@ -60,6 +60,34 @@ export class MailService {
     )
   }
 
+  // E2.5b: aviso al paciente cuando la secretaria acepta su reserva del
+  // portal (SOLICITADA -> PENDIENTE). Sin CTA: es puramente informativo.
+  htmlReservaAceptada(datos: {
+    nombre: string
+    consultorio: string
+    fecha: string
+    hora: string
+    servicio: string
+    doctor: string
+  }) {
+    return `
+<div style="font-family:Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b">
+  <h2 style="color:#0e7490;margin-bottom:4px">¡Tu reserva fue aceptada!</h2>
+  <p style="font-size:14px;line-height:1.6">
+    Hola ${datos.nombre}: ${datos.consultorio} aceptó tu reserva.
+  </p>
+  <table style="font-size:14px;line-height:1.8;border-collapse:collapse">
+    <tr><td style="color:#64748b;padding-right:12px">Fecha</td><td style="font-weight:bold">${datos.fecha}</td></tr>
+    <tr><td style="color:#64748b;padding-right:12px">Hora</td><td style="font-weight:bold">${datos.hora}</td></tr>
+    <tr><td style="color:#64748b;padding-right:12px">Servicio</td><td>${datos.servicio}</td></tr>
+    <tr><td style="color:#64748b;padding-right:12px">Profesional</td><td>${datos.doctor}</td></tr>
+  </table>
+  <p style="font-size:12px;color:#64748b;line-height:1.5;margin-top:24px">
+    Si no podés asistir, avisá al consultorio para reprogramar.
+  </p>
+</div>`
+  }
+
   htmlReset(nombre: string, link: string) {
     return this.layout(
       'Restablecer contraseña',
