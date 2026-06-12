@@ -1,5 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common'
-import { IsString, IsOptional, IsBoolean, Matches } from 'class-validator'
+import { IsString, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class UpdateConsultorioDto {
@@ -28,6 +28,16 @@ export class UpdateConsultorioDto {
 
   @IsBoolean() @IsOptional()
   portalActivo?: boolean
+
+  // E3 item 26: plantillas de WhatsApp ({nombre} {hora} {fecha} {monto} {consultorio})
+  @IsString() @IsOptional() @MaxLength(400)
+  msjRecordatorio?: string
+
+  @IsString() @IsOptional() @MaxLength(400)
+  msjDeuda?: string
+
+  @IsString() @IsOptional() @MaxLength(400)
+  msjContacto?: string
 }
 
 const CONSULTORIO_SELECT = {
@@ -41,6 +51,9 @@ const CONSULTORIO_SELECT = {
   plan: true,
   slug: true,
   portalActivo: true,
+  msjRecordatorio: true,
+  msjDeuda: true,
+  msjContacto: true,
 } as const
 
 @Injectable()

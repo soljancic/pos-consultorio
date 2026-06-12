@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle, DollarSign, ChevronDown, ChevronRight, CircleDollarSign } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
 import { inputUI, cardUI, chipIconUI } from '../../lib/ui'
 import { CobroModal } from '../agenda/CobroModal'
 import type { Cita } from '@pos/types'
@@ -29,6 +30,7 @@ type Deudor = {
 export function DeudoresPage() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
+  const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
   const [expandido, setExpandido] = useState<number | null>(null)
 
@@ -151,7 +153,11 @@ export function DeudoresPage() {
                               <a
                                 href={buildWhatsAppUrl(
                                   d.whatsapp,
-                                  `Hola ${d.nombre}, le recordamos que tiene un saldo pendiente de ${formatMoneda(d.deudaTotal)}. Muchas gracias.`
+                                  renderPlantilla(plantillas.deuda, {
+                                    nombre: d.nombre,
+                                    monto: formatMoneda(d.deudaTotal),
+                                    consultorio: consultorioNombre,
+                                  })
                                 )}
                                 target="_blank"
                                 rel="noreferrer"

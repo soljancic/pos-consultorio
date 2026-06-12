@@ -6,6 +6,7 @@ import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
 import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
@@ -48,6 +49,7 @@ export function PacienteDetallePage() {
   const [citaExpandida, setCitaExpandida] = useState<number | null>(null)
   const [fechaControl, setFechaControl] = useState<string | null>(null)
   const [tab, setTab] = useState<'citas' | 'historia'>('citas')
+  const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
 
   const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
@@ -104,7 +106,10 @@ export function PacienteDetallePage() {
         <div className="flex gap-2">
           {(paciente.whatsapp || paciente.telefono) && (
             <a
-              href={buildWhatsAppUrl(paciente.whatsapp || paciente.telefono!, `Hola ${paciente.nombre}, le contactamos desde el consultorio.`)}
+              href={buildWhatsAppUrl(
+                paciente.whatsapp || paciente.telefono!,
+                renderPlantilla(plantillas.contacto, { nombre: paciente.nombre, consultorio: consultorioNombre }),
+              )}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-accent text-accent-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"

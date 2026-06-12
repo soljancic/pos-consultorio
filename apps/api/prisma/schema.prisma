@@ -96,6 +96,11 @@ model Consultorio {
   // Portal publico de reservas (E2.5b): /reservar/:slug
   slug         String?  @unique
   portalActivo Boolean  @default(false)
+  // E3 item 26: plantillas de WhatsApp editables; null = default del sistema.
+  // Variables: {nombre} {hora} {fecha} {monto} {consultorio}
+  msjRecordatorio String?
+  msjDeuda        String?
+  msjContacto     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

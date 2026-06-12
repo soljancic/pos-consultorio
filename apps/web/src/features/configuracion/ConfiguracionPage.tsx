@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { inputUI, textareaUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { UsuarioModal } from './UsuarioModal'
 
 const MONEDAS = ['ARS', 'USD', 'UYU', 'CLP', 'PEN', 'COP', 'MXN', 'BOB', 'BRL']
@@ -27,6 +27,7 @@ type Consultorio = {
   telefono: string | null; direccion: string | null
   moneda: string; timezone: string
   slug: string | null; portalActivo: boolean
+  msjRecordatorio: string | null; msjDeuda: string | null; msjContacto: string | null
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
@@ -40,6 +41,7 @@ export function ConfiguracionPage() {
     nombre: '', logoUrl: '', telefono: '', direccion: '',
     moneda: 'ARS', timezone: 'America/Argentina/Buenos_Aires',
     slug: '', portalActivo: false,
+    msjRecordatorio: '', msjDeuda: '', msjContacto: '',
   })
   const [linkCopiado, setLinkCopiado] = useState(false)
 
@@ -64,6 +66,9 @@ export function ConfiguracionPage() {
         timezone: consultorio.timezone,
         slug: consultorio.slug ?? '',
         portalActivo: consultorio.portalActivo ?? false,
+        msjRecordatorio: consultorio.msjRecordatorio ?? '',
+        msjDeuda: consultorio.msjDeuda ?? '',
+        msjContacto: consultorio.msjContacto ?? '',
       })
     }
   }, [consultorio])
@@ -76,6 +81,10 @@ export function ConfiguracionPage() {
         telefono: data.telefono || undefined,
         direccion: data.direccion || undefined,
         slug: data.slug || undefined,
+        // El string vacio viaja tal cual: significa "volver al default"
+        msjRecordatorio: data.msjRecordatorio,
+        msjDeuda: data.msjDeuda,
+        msjContacto: data.msjContacto,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
@@ -242,6 +251,35 @@ export function ConfiguracionPage() {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Mensajes de WhatsApp (E3 item 26) */}
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">Mensajes de WhatsApp</h3>
+              <p className="text-xs text-muted-foreground">
+                Variables disponibles: {'{nombre} {hora} {fecha} {monto} {consultorio}'}. Si dejás un
+                mensaje vacío se usa el texto por defecto del sistema.
+              </p>
+              {([
+                ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora}.'],
+                ['msjDeuda', 'Recordatorio de deuda', 'Hola {nombre}, le recordamos que tiene un saldo pendiente de {monto} en {consultorio}. ¡Gracias!'],
+                ['msjContacto', 'Contacto general', 'Hola {nombre}, le contactamos desde {consultorio}.'],
+              ] as const).map(([campo, label, placeholder]) => (
+                <div key={campo}>
+                  <label htmlFor={`cons-${campo}`} className="block text-sm font-medium text-foreground mb-1.5">
+                    {label}
+                  </label>
+                  <textarea
+                    id={`cons-${campo}`}
+                    rows={2}
+                    maxLength={400}
+                    value={consForm[campo]}
+                    placeholder={placeholder}
+                    onChange={(e) => setConsForm((f) => ({ ...f, [campo]: e.target.value }))}
+                    className={textareaUI}
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="flex items-center gap-3 pt-2">
