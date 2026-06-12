@@ -1,7 +1,12 @@
-# CLAUDE.md - POS del Consultorio
+# CLAUDE.md - POS del Consultorio (ConsulTech)
 
 > Biblia del proyecto: `PLAN.md` (roadmap, modelo de datos, endpoints, issues conocidos).
 > Specs y planes de implementacion: `docs/superpowers/specs/` y `docs/superpowers/plans/`.
+
+## Estilo de respuesta
+
+- Respuestas al owner: breves pero que se entiendan. Ir al grano, sin
+  sacrificar claridad; detalle tecnico solo cuando cambia una decision.
 
 ---
 
