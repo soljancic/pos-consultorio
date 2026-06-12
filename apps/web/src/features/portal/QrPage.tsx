@@ -15,6 +15,10 @@ export function QrPage() {
   const cliente = params.get('cliente')
   const [descargando, setDescargando] = useState(false)
 
+  // En iOS Safari la descarga programatica no funciona bien: se indica
+  // mantener pulsada la imagen (mismo criterio que el qr2.php original)
+  const esIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+
   const { data, isLoading, isError } = useQuery<{
     consultorio: string
     logoUrl: string | null
@@ -83,12 +87,35 @@ export function QrPage() {
             alt={`QR de pagos de ${data.consultorio}`}
             className="mx-auto max-h-80 w-auto rounded-lg border bg-white p-2"
           />
-          <button onClick={descargar} disabled={descargando} className={cn(btnPrimaryUI, 'w-full h-11')}>
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {descargando ? 'Descargando...' : 'Descargar QR'}
-          </button>
+          {esIOS ? (
+            <p className="text-sm font-medium text-foreground">
+              Mantené pulsada la imagen y elegí "Guardar imagen".
+            </p>
+          ) : (
+            <button onClick={descargar} disabled={descargando} className={cn(btnPrimaryUI, 'w-full h-11')}>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {descargando ? 'Descargando...' : 'Descargar QR'}
+            </button>
+          )}
+
+          <div className="text-left text-sm text-foreground bg-muted/50 rounded-md p-4">
+            <p className="font-semibold mb-2">Descargá el QR y seguí estos pasos:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Abrí la aplicación de tu banco.</li>
+              <li>Andá a la opción Pago Simple o QR.</li>
+              <li>Elegí la opción Pagar.</li>
+              <li>Seleccioná el código QR de tu galería.</li>
+              <li>Confirmá el pago y ¡terminaste!</li>
+            </ol>
+          </div>
+
           <p className="text-xs text-muted-foreground">
             Cuando hagas el pago, avisá al consultorio por WhatsApp con el comprobante.
+          </p>
+
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            Powered by
+            <img src="/brand/toptech.png" alt="Toptech" className="h-5 w-auto" />
           </p>
         </div>
       </main>
