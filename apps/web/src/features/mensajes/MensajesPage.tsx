@@ -19,6 +19,7 @@ type Mensaje = {
     nombre: string
     apellido: string
     telefono: string | null
+    pais: string
     deudaTotal: number
   }
   cita: { id: number; fechaHora: string; estado: string; doctor: { nombre: string } } | null
@@ -161,7 +162,7 @@ export function MensajesPage() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     {telefono && (
                       <a
-                        href={buildWhatsAppUrl(telefono, mensajeDe(m))}
+                        href={buildWhatsAppUrl(telefono, mensajeDe(m), m.paciente.pais)}
                         target="_blank"
                         rel="noreferrer"
                         title="Abrir WhatsApp"

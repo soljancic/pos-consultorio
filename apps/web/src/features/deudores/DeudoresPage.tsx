@@ -20,6 +20,7 @@ type Deudor = {
   nombre: string
   apellido: string
   telefono: string | null
+  pais: string
   deudaTotal: number
   ultimaCitaFecha: string
   ultimoServicio: string
@@ -157,7 +158,8 @@ export function DeudoresPage() {
                                     nombre: d.nombre,
                                     monto: formatMoneda(d.deudaTotal),
                                     consultorio: consultorioNombre,
-                                  })
+                                  }),
+                                  d.pais,
                                 )}
                                 target="_blank"
                                 rel="noreferrer"

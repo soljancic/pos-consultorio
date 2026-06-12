@@ -27,6 +27,11 @@ export class ReservaPortalDto {
   @IsString() @IsNotEmpty() @MaxLength(30)
   telefono: string
 
+  // ISO 3166-1 alfa-2; si no viene, queda el default del schema (BO)
+  @Matches(/^[A-Z]{2}$/, { message: 'pais debe ser codigo ISO de 2 letras' })
+  @IsOptional()
+  pais?: string
+
   @IsEmail() @IsOptional()
   email?: string
 }
@@ -139,6 +144,7 @@ export class PortalService {
           nombre: dto.nombre,
           apellido: dto.apellido,
           telefono: dto.telefono,
+          pais: dto.pais,
           email: dto.email,
         },
         select: { id: true },

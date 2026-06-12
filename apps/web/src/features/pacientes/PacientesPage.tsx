@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Users } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
+import { telefonoIntl } from '../../lib/paises'
 import { inputUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { PacienteModal } from './PacienteModal'
 import type { Paciente } from '@pos/types'
@@ -80,7 +81,7 @@ export function PacientesPage() {
                       {p.apellido}, {p.nombre}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono || '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono ? telefonoIntl(p.telefono, p.pais) : '-'}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {Number(p.deudaTotal) > 0 ? (
                         <span className="text-destructive font-medium">

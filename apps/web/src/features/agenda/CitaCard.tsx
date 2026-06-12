@@ -95,7 +95,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       fecha: new Date(cita.fechaHora).toLocaleDateString('es-BO'),
       consultorio: consultorioNombre,
     })
-    window.open(buildWhatsAppUrl(telefonoWhatsApp, msg), '_blank')
+    window.open(buildWhatsAppUrl(telefonoWhatsApp, msg, cita.paciente?.pais), '_blank')
   }
 
   return (

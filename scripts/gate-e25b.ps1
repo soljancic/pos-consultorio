@@ -38,13 +38,13 @@ Write-Output "2 INFO PUBLICA: consultorio=$($info.consultorio.nombre -ne $null) 
 $slots = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&servicioId=$($srv.id)&fecha=$hoy"
 Write-Output "3 SLOTS: count=$(@($slots.slots).Count) (esp 6) primero=$($slots.slots[0]) (esp 09:00)"
 
-# 4) Reservar 09:30 -> paciente nuevo + cita PENDIENTE origen PORTAL
-$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001" } | ConvertTo-Json)
+# 4) Reservar 09:30 -> paciente nuevo (con pais) + cita PENDIENTE origen PORTAL
+$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR" } | ConvertTo-Json)
 Write-Output "4 RESERVA: reservada=$($res.reservada) hora=$($res.hora) (esp 09:30) doctor=$($res.doctor)"
 $citas = Invoke-RestMethod -Uri "$base/citas?fecha=$hoy" -Headers $h
 $citaPortal = @($citas) | Where-Object { $_.origen -eq 'PORTAL' }
 $pacs = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
-Write-Output "   cita origen PORTAL=$(@($citaPortal).Count) (esp 1) estado=$($citaPortal[0].estado) (esp PENDIENTE) paciente creado=$(@($pacs).Count) (esp 1)"
+Write-Output "   cita origen PORTAL=$(@($citaPortal).Count) (esp 1) estado=$($citaPortal[0].estado) (esp PENDIENTE) paciente creado=$(@($pacs).Count) (esp 1) pais=$($pacs[0].pais) (esp AR)"
 
 # 5) Mismo telefono reserva de nuevo -> NO duplica paciente
 Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "10:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001" } | ConvertTo-Json) | Out-Null

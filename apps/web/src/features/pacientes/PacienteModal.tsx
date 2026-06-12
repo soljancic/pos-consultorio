@@ -5,6 +5,8 @@ import { X, AlertCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { PAIS_DEFAULT } from '../../lib/paises'
+import { SelectorPais } from '../../components/shared/SelectorPais'
 import type { Paciente } from '@pos/types'
 
 interface Props {
@@ -23,6 +25,7 @@ export function PacienteModal({ paciente, onClose }: Props) {
     apellido: paciente?.apellido ?? '',
     dni: paciente?.dni ?? '',
     telefono: paciente?.telefono ?? '',
+    pais: paciente?.pais ?? PAIS_DEFAULT,
     email: paciente?.email ?? '',
     fechaNacimiento: paciente?.fechaNacimiento
       ? new Date(paciente.fechaNacimiento).toISOString().split('T')[0]
@@ -107,14 +110,6 @@ export function PacienteModal({ paciente, onClose }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
-            <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Se usa también para los mensajes de WhatsApp.
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
@@ -129,6 +124,17 @@ export function PacienteModal({ paciente, onClose }: Props) {
                 <option value="X">Otro</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
+            <div className="flex gap-2">
+              <SelectorPais value={form.pais} onChange={(codigo) => set('pais', codigo)} />
+              <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Se usa también para los mensajes de WhatsApp; el país define el prefijo internacional.
+            </p>
           </div>
 
           <div>

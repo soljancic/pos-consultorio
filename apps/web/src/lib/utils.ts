@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { telefonoIntl } from './paises'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -32,7 +33,9 @@ export function tiempoRelativo(date: Date | string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
 
-export function buildWhatsAppUrl(telefono: string, mensaje: string) {
-  const numero = telefono.replace(/\D/g, '')
+// El pais del paciente (ISO alfa-2) aporta el prefijo internacional que
+// wa.me exige; si el numero ya viene con "+", se respeta tal cual.
+export function buildWhatsAppUrl(telefono: string, mensaje: string, pais?: string | null) {
+  const numero = telefonoIntl(telefono, pais).replace(/\D/g, '')
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
 }

@@ -397,7 +397,7 @@ export class CobrosService {
         pagos: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
         cita: {
           include: {
-            paciente: { select: { id: true, nombre: true, apellido: true, telefono: true } },
+            paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true } },
             servicio: { select: { nombre: true } },
           },
         },
@@ -409,6 +409,7 @@ export class CobrosService {
       nombre: string
       apellido: string
       telefono: string | null
+      pais: string
       deudaTotal: number
       ultimaCitaFecha: Date
       ultimoServicio: string
@@ -439,6 +440,7 @@ export class CobrosService {
           nombre: pac.nombre,
           apellido: pac.apellido,
           telefono: pac.telefono,
+          pais: pac.pais,
           deudaTotal: Number(cobro.saldoPendiente),
           ultimaCitaFecha: fechaCita,
           ultimoServicio: cobro.cita.servicio.nombre,

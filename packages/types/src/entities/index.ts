@@ -58,6 +58,8 @@ export interface Paciente {
   apellido: string
   dni?: string
   telefono?: string
+  // ISO 3166-1 alfa-2; prefijo internacional para WhatsApp (default BO)
+  pais?: string
   email?: string
   fechaNacimiento?: Date
   sexo?: string | null
@@ -83,7 +85,7 @@ export interface Cita {
   createdById: number
   createdAt: Date
   // Relations (populated when requested)
-  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'deudaTotal'>
+  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'pais' | 'deudaTotal'>
   doctor?: Pick<Doctor, 'id' | 'nombre' | 'colorAgenda'>
   servicio?: Pick<Servicio, 'id' | 'nombre' | 'precioBase' | 'duracionMin'>
   cobro?: Pick<Cobro, 'id' | 'total' | 'saldoPendiente' | 'estado'>

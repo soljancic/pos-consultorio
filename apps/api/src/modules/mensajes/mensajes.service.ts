@@ -20,7 +20,7 @@ export class MensajesService {
     return this.prisma.mensajePendiente.findMany({
       where: { consultorioId, ...(estado && { estado }) },
       include: {
-        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, deudaTotal: true } },
+        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true, deudaTotal: true } },
         cita: { select: { id: true, fechaHora: true, estado: true, doctor: { select: { nombre: true } } } },
         resueltoPor: { select: { nombre: true } },
       },

@@ -6,6 +6,8 @@ import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2 } from 'lucide-re
 import { api } from '../../lib/api-client'
 import { formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
+import { PAIS_DEFAULT } from '../../lib/paises'
+import { SelectorPais } from '../../components/shared/SelectorPais'
 
 // Portal publico de reservas (E2.5b): pagina SIN auth ni AppShell, mobile-first.
 // Todo se deriva del slug en el backend; aca solo se eligen opciones visibles.
@@ -28,6 +30,7 @@ export function ReservarPage() {
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [pais, setPais] = useState(PAIS_DEFAULT)
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
 
@@ -57,6 +60,7 @@ export function ReservarPage() {
         nombre,
         apellido,
         telefono,
+        pais,
       }),
     onSuccess: (res) => setConfirmacion(res.data),
     onError: (err: any) => {
@@ -206,8 +210,11 @@ export function ReservarPage() {
                 </div>
                 <div>
                   <label htmlFor="res-telefono" className="block text-sm font-medium text-foreground mb-1.5">Teléfono (WhatsApp) *</label>
-                  <input id="res-telefono" type="tel" required value={telefono} autoComplete="tel"
-                    placeholder="+591 ..." onChange={(e) => setTelefono(e.target.value)} className={inputUI} />
+                  <div className="flex gap-2">
+                    <SelectorPais value={pais} onChange={setPais} />
+                    <input id="res-telefono" type="tel" required value={telefono} autoComplete="tel"
+                      placeholder="71234567" onChange={(e) => setTelefono(e.target.value)} className={inputUI} />
+                  </div>
                 </div>
               </div>
             )}

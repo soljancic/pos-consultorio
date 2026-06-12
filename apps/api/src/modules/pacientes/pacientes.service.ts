@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, Matches } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -17,6 +17,11 @@ export class CreatePacienteDto {
   // unico numero de contacto: sirve para llamadas y WhatsApp
   @IsString() @IsOptional()
   telefono?: string
+
+  // ISO 3166-1 alfa-2 (prefijo internacional para wa.me)
+  @Matches(/^[A-Z]{2}$/, { message: 'pais debe ser codigo ISO de 2 letras' })
+  @IsOptional()
+  pais?: string
 
   @IsEmail() @IsOptional()
   email?: string
@@ -66,6 +71,7 @@ export class PacientesService {
         apellido: true,
         dni: true,
         telefono: true,
+        pais: true,
         email: true,
         deudaTotal: true,
         requierePrepago: true,

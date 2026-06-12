@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
+import { telefonoIntl } from '../../lib/paises'
 import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
@@ -109,6 +110,7 @@ export function PacienteDetallePage() {
               href={buildWhatsAppUrl(
                 paciente.telefono,
                 renderPlantilla(plantillas.contacto, { nombre: paciente.nombre, consultorio: consultorioNombre }),
+                paciente.pais,
               )}
               target="_blank"
               rel="noreferrer"
@@ -130,7 +132,7 @@ export function PacienteDetallePage() {
         <div className={cn(cardUI, 'p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm')}>
           {paciente.dni && <div><span className="text-muted-foreground">CI:</span> <span className="font-medium tabular-nums">{paciente.dni}</span></div>}
           {paciente.telefono && (
-            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium tabular-nums">{paciente.telefono}</span></div>
+            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium tabular-nums">{telefonoIntl(paciente.telefono, paciente.pais)}</span></div>
           )}
           {paciente.email && <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium">{paciente.email}</span></div>}
           {paciente.fechaNacimiento && (

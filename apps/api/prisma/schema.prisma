@@ -237,6 +237,8 @@ model Paciente {
   apellido        String
   dni             String?
   telefono        String?
+  // ISO 3166-1 alfa-2; define el prefijo internacional para wa.me
+  pais            String      @default("BO")
   email           String?
   fechaNacimiento DateTime?   @db.Date
   sexo            String?     // "M" | "F" | "X"
