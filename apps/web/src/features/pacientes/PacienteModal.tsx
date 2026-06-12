@@ -112,8 +112,12 @@ export function PacienteModal({ paciente, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputUI} />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
+              {/* El pais define el prefijo internacional de los WhatsApp */}
+              <div className="flex gap-2">
+                <SelectorPais value={form.pais} onChange={(codigo) => set('pais', codigo)} />
+                <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Sexo</label>
@@ -127,14 +131,8 @@ export function PacienteModal({ paciente, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
-            <div className="flex gap-2">
-              <SelectorPais value={form.pais} onChange={(codigo) => set('pais', codigo)} />
-              <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Se usa también para los mensajes de WhatsApp; el país define el prefijo internacional.
-            </p>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputUI} />
           </div>
 
           <div>
