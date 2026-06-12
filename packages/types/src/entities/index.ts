@@ -65,6 +65,8 @@ export interface Paciente {
   direccion?: string | null
   notas?: string
   deudaTotal: number
+  // E3 item 11: alerta de prepago por inasistencias (no bloquea)
+  requierePrepago?: boolean
   createdAt: Date
 }
 

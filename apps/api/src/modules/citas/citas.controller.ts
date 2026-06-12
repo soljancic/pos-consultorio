@@ -1,5 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
+import { Rol } from '@pos/types'
+import { Roles } from '../../common/decorators/roles.decorator'
 import { CitasService, CreateCitaDto, CambiarEstadoDto, ReprogramarCitaDto } from './citas.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
@@ -31,6 +33,13 @@ export class CitasController {
   @ApiOperation({ summary: 'Crear cita' })
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateCitaDto) {
     return this.service.create(user.consultorioId, user.sub, dto)
+  }
+
+  @Post('no-shows/procesar')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Barrer citas vencidas a NO_ASISTIO ahora (el cron lo hace cada 30 min)' })
+  procesarNoShows(@CurrentUser() user: JwtPayload) {
+    return this.service.procesarNoShows(user.consultorioId)
   }
 
   @Put(':id/estado')

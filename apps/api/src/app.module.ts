@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
+import { ScheduleModule } from '@nestjs/schedule'
 import { PrismaModule } from './prisma/prisma.module'
 import { HealthController } from './health.controller'
 import { AuthModule } from './auth/auth.module'
@@ -27,6 +28,7 @@ import { PlantillasModule } from './modules/plantillas/plantillas.module'
     ConfigModule.forRoot({ isGlobal: true }),
     // Limite global generoso; /auth/login y /register tienen limites estrictos propios
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 200 }]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     MailModule,
     AuthModule,

@@ -31,6 +31,8 @@ export function PacienteModal({ paciente, onClose }: Props) {
     sexo: paciente?.sexo ?? '',
     direccion: paciente?.direccion ?? '',
     notas: paciente?.notas ?? '',
+    // E3 item 11: alerta de prepago (auto al 3er no-show, editable a mano)
+    requierePrepago: paciente?.requierePrepago ?? false,
   })
 
   const mutation = useMutation({
@@ -40,6 +42,8 @@ export function PacienteModal({ paciente, onClose }: Props) {
       const payload = Object.fromEntries(
         Object.entries(data).map(([k, v]) => [k, v === '' ? undefined : v])
       )
+      // El DTO de alta no acepta requierePrepago (solo se edita)
+      if (!editando) delete payload.requierePrepago
       return editando
         ? api.put(`/pacientes/${paciente!.id}`, payload)
         : api.post('/pacientes', payload)
@@ -138,6 +142,19 @@ export function PacienteModal({ paciente, onClose }: Props) {
             <textarea value={form.notas} onChange={(e) => set('notas', e.target.value)} rows={2}
               className={textareaUI} />
           </div>
+
+          {editando && (
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.requierePrepago}
+                onChange={(e) => setForm((f) => ({ ...f, requierePrepago: e.target.checked }))}
+                className="rounded"
+              />
+              Requiere prepago al agendar
+              <span className="text-xs text-muted-foreground">(se marca solo al tercer no-show)</span>
+            </label>
+          )}
 
           {error && (
             <p role="alert" className={errorUI}>

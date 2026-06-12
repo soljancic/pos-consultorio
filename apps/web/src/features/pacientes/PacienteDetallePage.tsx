@@ -30,6 +30,7 @@ type Atención = {
 }
 
 type PacienteDetalle = Paciente & {
+  noShows: number
   citas: Array<Cita & {
     doctor: { nombre: string }
     servicio: { nombre: string; precioBase: number }
@@ -81,11 +82,23 @@ export function PacienteDetallePage() {
             <h1 className="text-lg font-semibold text-foreground">
               {paciente.apellido}, {paciente.nombre}
             </h1>
-            {Number(paciente.deudaTotal) > 0 && (
-              <span className="text-xs text-destructive font-medium tabular-nums">
-                {formatMoneda(Number(paciente.deudaTotal))} en deuda
-              </span>
-            )}
+            <span className="flex flex-wrap items-center gap-2">
+              {Number(paciente.deudaTotal) > 0 && (
+                <span className="text-xs text-destructive font-medium tabular-nums">
+                  {formatMoneda(Number(paciente.deudaTotal))} en deuda
+                </span>
+              )}
+              {paciente.requierePrepago && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                  Requiere prepago
+                </span>
+              )}
+              {paciente.noShows > 0 && (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {paciente.noShows} {paciente.noShows === 1 ? 'inasistencia' : 'inasistencias'}
+                </span>
+              )}
+            </span>
           </div>
         </div>
         <div className="flex gap-2">

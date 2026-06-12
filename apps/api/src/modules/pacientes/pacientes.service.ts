@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
+import { EstadoCita } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreatePacienteDto {
@@ -35,7 +36,12 @@ export class CreatePacienteDto {
   notas?: string
 }
 
-export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {}
+export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {
+  // E3 item 11: el staff puede marcar/desmarcar el prepago manualmente
+  // (ademas del auto-flag al tercer no-show)
+  @IsBoolean() @IsOptional()
+  requierePrepago?: boolean
+}
 
 @Injectable()
 export class PacientesService {
@@ -66,6 +72,7 @@ export class PacientesService {
         whatsapp: true,
         email: true,
         deudaTotal: true,
+        requierePrepago: true,
         createdAt: true,
       },
     })
@@ -91,7 +98,12 @@ export class PacientesService {
       },
     })
     if (!paciente) throw new NotFoundException('Paciente no encontrado')
-    return paciente
+
+    // E3 item 11: contador de inasistencias historicas del paciente
+    const noShows = await this.prisma.cita.count({
+      where: { pacienteId: id, consultorioId, deletedAt: null, estado: EstadoCita.NO_ASISTIO },
+    })
+    return { ...paciente, noShows }
   }
 
   async create(consultorioId: number, dto: CreatePacienteDto) {

@@ -48,6 +48,10 @@ export class ReprogramarCitaDto {
 // Estados que dejan el cobro sin efecto: el servicio no se presto
 const ESTADOS_ANULAN_COBRO: EstadoCita[] = [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO]
 
+// E3 item 11: con esta cantidad de no-shows el paciente queda marcado
+// requierePrepago automaticamente (override por env)
+const NO_SHOWS_PARA_PREPAGO = Number(process.env.NO_SHOWS_PREPAGO ?? 3)
+
 // Una cita ya en curso o cerrada no se mueve de horario
 const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
   EstadoCita.PENDIENTE,
@@ -240,10 +244,82 @@ export class CitasService {
         },
       })
 
+      // E3 item 11: al tercer no-show el paciente queda marcado con
+      // requierePrepago (alerta al agendar; NO bloquea, regla del proyecto)
+      if (dto.estado === EstadoCita.NO_ASISTIO) {
+        const noShows = await tx.cita.count({
+          where: {
+            pacienteId: cita.pacienteId,
+            consultorioId,
+            deletedAt: null,
+            estado: EstadoCita.NO_ASISTIO,
+          },
+        })
+        if (noShows >= NO_SHOWS_PARA_PREPAGO) {
+          const paciente = await tx.paciente.findUnique({
+            where: { id: cita.pacienteId },
+            select: { requierePrepago: true },
+          })
+          if (paciente && !paciente.requierePrepago) {
+            await tx.paciente.update({
+              where: { id: cita.pacienteId },
+              data: { requierePrepago: true },
+            })
+            await tx.log.create({
+              data: {
+                consultorioId,
+                usuarioId,
+                entidad: 'Paciente',
+                entidadId: cita.pacienteId,
+                accion: 'UPDATE',
+                payloadDespues: { requierePrepago: true, motivo: `${noShows} inasistencias` },
+              },
+            })
+          }
+        }
+      }
+
       return actualizada
     })
 
     return citaActualizada
+  }
+
+  // E3: barrido de citas vencidas — PENDIENTE/CONFIRMADA cuya hora paso hace
+  // mas de NO_SHOW_GRACIA_HORAS se marcan NO_ASISTIO (mismo camino que el
+  // boton manual: anula cobros sin pagos, loggea y alimenta el contador).
+  // Lo dispara el cron y tambien POST /citas/no-shows/procesar (ADMIN).
+  async procesarNoShows(consultorioId?: number) {
+    const gracia = Number(process.env.NO_SHOW_GRACIA_HORAS ?? 2)
+    const limite = new Date(Date.now() - gracia * 3600 * 1000)
+    const vencidas = await this.prisma.cita.findMany({
+      where: {
+        ...(consultorioId && { consultorioId }),
+        deletedAt: null,
+        estado: { in: [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA] },
+        fechaHora: { lt: limite },
+      },
+      select: { id: true, consultorioId: true, createdById: true },
+      take: 200,
+    })
+
+    let procesadas = 0
+    for (const cita of vencidas) {
+      try {
+        // El log queda a nombre de quien agendo (no hay usuario "sistema")
+        await this.cambiarEstado(
+          cita.consultorioId,
+          cita.id,
+          { estado: EstadoCita.NO_ASISTIO, motivo: 'Auto: no se presento' },
+          cita.createdById,
+        )
+        procesadas += 1
+      } catch {
+        // Con pagos registrados u otra condicion el barrido no fuerza nada:
+        // queda para revision manual
+      }
+    }
+    return { procesadas, revisadas: vencidas.length }
   }
 
   // Reprogramar = editar fecha/hora/doctor en el lugar (decision owner
