@@ -43,7 +43,7 @@ export function EstablecerPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-4 justify-center">
           <Stethoscope className="h-7 w-7 text-primary" aria-hidden="true" />
-          <span className="text-lg font-semibold text-foreground">POS del Consultorio</span>
+          <span className="text-lg font-semibold text-foreground">Consultech</span>
         </div>
 
         <div className="bg-card rounded-xl border shadow-sm p-8">

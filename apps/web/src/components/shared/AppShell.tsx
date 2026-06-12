@@ -158,7 +158,7 @@ export function AppShell() {
           <span className={cn('flex items-center gap-2 min-w-0', ocultarTexto)}>
             <Stethoscope className="h-5 w-5 text-cyan-400 shrink-0" aria-hidden="true" />
             <span className="text-sm font-semibold text-white truncate">
-              {user?.consultorioNombre || 'POS Consultorio'}
+              {user?.consultorioNombre || 'Consultech'}
             </span>
           </span>
         </div>
@@ -337,7 +337,7 @@ export function AppShell() {
           </button>
           <Stethoscope className="h-5 w-5 text-cyan-400 shrink-0" aria-hidden="true" />
           <span className="text-sm font-semibold truncate">
-            {user?.consultorioNombre || 'POS Consultorio'}
+            {user?.consultorioNombre || 'Consultech'}
           </span>
         </header>
 
