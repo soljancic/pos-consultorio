@@ -26,7 +26,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 > Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
 > El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** lo que queda de Etapa 3 es la **cola de mensajes pendientes / automatizacion WhatsApp** (item 41, requiere decidir canal: manual asistido vs Business API) — o pulidos/E4 (comisiones por doctor, item 21). **ETAPA 2 COMPLETA** (salvo E2-M6, espera piloto) **y de ETAPA 3 ya estan hechos** el cron no-show + contador + requierePrepago (item 11) y los templates WhatsApp (item 26). Calendario E2.5 COMPLETO (f2a servicios-por-doctor + f2b plantillas). Deploy diferido a decision del owner.
+**➡️ SIGUIENTE PASO:** quedan solo items que dependen de decisiones del owner — **41b WhatsApp Business API (PAUSADO)**, **22 facturacion electronica (PAUSADO)**, E2-M6 Visitas (espera piloto), deploy (lo activa el owner). Candidatos sin bloqueo: reportes con export CSV, arqueo ciego estricto (ocultar efectivo a SECRETARIA hasta cerrar), badge de pendientes en el nav de Mensajes, adjuntos en recetas/portal. **ETAPA 2 COMPLETA · ETAPA 2.5 COMPLETA · ETAPA 3 COMPLETA en su canal manual** (items 11, 26, 41a) **· E4 item 21 comisiones HECHO**.
 
 ### Agenda y citas
 1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
@@ -55,7 +55,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 18. ✅ Desglose: pagos de deuda anterior vs nuevas deudas del dia
 19. ✅ Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10)
 20. ✅ Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
-21. ⬜ Comisiones por doctor y liquidacion mensual (E4)
+21. ✅ Comisiones por doctor y liquidacion mensual (E4, 2026-06-11): Doctor.comisionPct (0-100, opcional); /reportes/mensual calcula comision por doctor sobre pagos netos + total a liquidar; campo % en DoctorModal y columna en /reportes. Gate: caso 5b de `gate-reportes.ps1`
 22. ⬜ Facturacion electronica (E4)
 43. ✅ Apertura de caja con monto inicial (caja chica) + bloqueo de cobros/gastos sin turno abierto (E2-M9, 2026-06-11)
 44. ✅ Cero dialogos nativos EN TODO EL PROYECTO (verificado 2026-06-11: grep sin window.confirm/alert en apps/web/src; GastosPage y DisponibilidadModal usan ConfirmarModal, AnularPagoModal muestra la advertencia inline en el modal) — convencion en CLAUDE.md Don'ts
@@ -85,11 +85,11 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 ### Plataforma
 35. ✅ Multi-tenant estricto (consultorioId del JWT en toda query)
 36. ✅ Auth JWT + roles + hardening (helmet, throttler, /health)
-37. 🔄 Login con Google (en working tree, falta fix de tipos y commit)
+37. ✅ Login con Google (commit f4fe21d "Google Autentificacion"; verificado 2026-06-11: tsc limpio, boton en LoginPage con VITE_GOOGLE_CLIENT_ID, POST /auth/google valida idToken y exige cuenta existente)
 38. ✅ Design system ui-ux-pro-max en todas las pantallas + dark mode + responsive
 39. ✅ Suite de pruebas: gates de API + Playwright E2E (11/11)
 40. ⬜ Deploy en Railway + consultorio piloto (diferido: lo activa el owner cuando decida)
-41. ⬜ Automatizacion WhatsApp: cola manual → Business API (E3)
+41. 🔄 Automatizacion WhatsApp (E3): **41a cola manual asistida HECHA 2026-06-11** — tabla `mensajes_pendientes`, cron diario 07:30 (recordatorios de citas hoy/manana + avisos de deuda max 1/semana), pagina /mensajes con wa.me + plantillas y marcar enviado/omitido (gate `gate-mensajes.ps1`, spec `mensajes-reportes.spec.ts`). **41b Business API: PAUSADO por decision del owner (2026-06-11) hasta que lo active**
 42. ⬜ Multi-sucursal (E5) · Portal del paciente con pagos online (E6)
 
 ---
