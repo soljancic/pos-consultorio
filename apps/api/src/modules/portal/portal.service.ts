@@ -129,11 +129,7 @@ export class PortalService {
 
     // Match de paciente por telefono (no se confirma ni revela si existia)
     let paciente = await this.prisma.paciente.findFirst({
-      where: {
-        consultorioId: c.id,
-        deletedAt: null,
-        OR: [{ telefono: dto.telefono }, { whatsapp: dto.telefono }],
-      },
+      where: { consultorioId: c.id, deletedAt: null, telefono: dto.telefono },
       select: { id: true },
     })
     if (!paciente) {

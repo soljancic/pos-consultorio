@@ -237,7 +237,6 @@ model Paciente {
   apellido        String
   dni             String?
   telefono        String?
-  whatsapp        String?
   email           String?
   fechaNacimiento DateTime?   @db.Date
   sexo            String?     // "M" | "F" | "X"
@@ -256,7 +255,8 @@ model Paciente {
 
   @@index([consultorioId, apellido, nombre])
   @@index([consultorioId, dni])
-  @@index([consultorioId, whatsapp])
+  // el portal publico matchea pacientes por telefono
+  @@index([consultorioId, telefono])
   @@map("pacientes")
 }
 

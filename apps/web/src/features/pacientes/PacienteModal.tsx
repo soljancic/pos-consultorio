@@ -23,7 +23,6 @@ export function PacienteModal({ paciente, onClose }: Props) {
     apellido: paciente?.apellido ?? '',
     dni: paciente?.dni ?? '',
     telefono: paciente?.telefono ?? '',
-    whatsapp: paciente?.whatsapp ?? '',
     email: paciente?.email ?? '',
     fechaNacimiento: paciente?.fechaNacimiento
       ? new Date(paciente.fechaNacimiento).toISOString().split('T')[0]
@@ -112,7 +111,7 @@ export function PacienteModal({ paciente, onClose }: Props) {
             <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
             <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
             <p className="text-xs text-muted-foreground mt-1.5">
-              Se usa tambien para los mensajes de WhatsApp.
+              Se usa también para los mensajes de WhatsApp.
             </p>
           </div>
 

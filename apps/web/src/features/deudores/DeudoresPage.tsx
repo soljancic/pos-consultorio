@@ -19,7 +19,7 @@ type Deudor = {
   pacienteId: number
   nombre: string
   apellido: string
-  whatsapp: string | null
+  telefono: string | null
   deudaTotal: number
   ultimaCitaFecha: string
   ultimoServicio: string
@@ -149,10 +149,10 @@ export function DeudoresPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
-                            {d.whatsapp && (
+                            {d.telefono && (
                               <a
                                 href={buildWhatsAppUrl(
-                                  d.whatsapp,
+                                  d.telefono,
                                   renderPlantilla(plantillas.deuda, {
                                     nombre: d.nombre,
                                     monto: formatMoneda(d.deudaTotal),

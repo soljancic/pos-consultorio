@@ -11,7 +11,7 @@ $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -Conten
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. G" } | ConvertTo-Json)
 
 # Paciente A: cita hoy, atendida, pago parcial -> ES deudor
-$pacA = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Ana"; apellido = "Deudora"; whatsapp = "+549115555" } | ConvertTo-Json)
+$pacA = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Ana"; apellido = "Deudora"; telefono = "+549115555" } | ConvertTo-Json)
 $fhA = (Get-Date -Hour 9 -Minute 0 -Second 0).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $citaA = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ pacienteId = $pacA.id; doctorId = $doc.id; servicioId = $srv.id; fechaHora = $fhA } | ConvertTo-Json)
 foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {

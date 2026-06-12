@@ -62,7 +62,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 45. ✅ Pase de acentos (2026-06-11): labels, titulos, badges y mensajes principales con tildes (script reusable `scripts/pase-acentos.ps1`, specs actualizados en el mismo commit). El copy NUEVO se escribe con acentos (CLAUDE.md); refinamiento de frases menores: continuo
 46. ✅ Usuario DOCTOR asociado a su Doctor (2026-06-11): selector en UsuarioModal (1:1 sobre Doctor.usuarioId, 409 si esta tomado, cambiar de rol suelta el vinculo); el doctor logueado edita SOLO su fila del Calendario de Atencion (403 para ajenos; guard en backend) y desde E2-M4 f1 su agenda y sus atenciones tambien estan acotadas en backend. Gates: `gate-usuario-doctor.ps1`, `gate-e2m4.ps1`
 47. ✅ Emails de cuenta (E2-M10, 2026-06-11, Resend): alta de usuario sin contraseña envia invitacion con link de un solo uso (tabla `password_tokens`, hash SHA-256, 48h); "¿Olvidaste tu contraseña?" en el login usa el mismo flujo; cero enumeracion de cuentas; convive con Google Sign-In. Gate: `gate-e2m10.ps1`. PENDIENTE OPERATIVO: verificar dominio en resend.com/domains y cambiar MAIL_FROM (el sandbox solo entrega al correo del owner)
-48. ✅ Kardex de paciente: CI en vez de DNI, telefono unico (sirve para WhatsApp) y correo en la ficha en lugar del sexo (2026-06-11)
+48. ✅ Kardex de paciente: CI en vez de DNI, telefono unico (sirve para WhatsApp) y correo en la ficha en lugar del sexo (2026-06-11). La columna `whatsapp` se elimino de la BD (2026-06-12): `telefono` es el unico numero de contacto en schema, API, portal y UI (migracion preserva numeros copiando whatsapp→telefono donde faltaba)
 
 ### Catalogo y configuracion
 23. ✅ CRUD de servicios y doctores (con color de agenda)
@@ -170,7 +170,7 @@ pos-consultorio/
 | usuarios | id, consultorioId, nombre, email, passwordHash, rol, activo |
 | doctores | id, consultorioId, usuarioId, nombre, especialidad, colorAgenda, activo |
 | horarios_atencion | id, doctorId, diaSemana, horaInicio, horaFin |
-| pacientes | id, consultorioId, nombre, apellido, dni, telefono, whatsapp, fechaNacimiento, deudaTotal |
+| pacientes | id, consultorioId, nombre, apellido, dni, telefono, fechaNacimiento, deudaTotal |
 | servicios | id, consultorioId, nombre, duracionMin, precioBase, activo |
 | citas | id, consultorioId, pacienteId, doctorId, servicioId, fechaHora, duracionMin, estado, notasSecretaria |
 | atenciones | id, citaId, motivo, diagnostico, tratamiento, proximoControl, adjuntos |
@@ -250,13 +250,13 @@ Mapeo verificado el 2026-06-09 contra el diagrama del usuario:
 - Boton nueva cita (modal)
 
 **/ pacientes — Lista de pacientes**
-- Busqueda por nombre, apellido, DNI, telefono, whatsapp
-- Tabla: nombre, DNI, whatsapp, deuda total
+- Busqueda por nombre, apellido, DNI, telefono
+- Tabla: nombre, DNI, telefono, deuda total
 - Boton nuevo paciente (modal)
 - Click en fila abre ficha del paciente
 
 **/ pacientes/:id — Ficha del paciente**
-- Datos personales: nombre, DNI, fecha de nacimiento, telefono, whatsapp
+- Datos personales: nombre, DNI, fecha de nacimiento, telefono
 - Deuda total actual
 - Historial de citas (fecha, doctor, servicio, estado, monto, saldo)
 - Boton cobrar deuda pendiente

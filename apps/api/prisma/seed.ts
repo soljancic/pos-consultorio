@@ -111,11 +111,11 @@ async function main() {
 
   // Pacientes demo
   const pacientes = [
-    { nombre: 'Maria', apellido: 'Gonzalez', dni: '30123456', whatsapp: '5491155551234', telefono: '155551234' },
-    { nombre: 'Juan', apellido: 'Rodriguez', dni: '28456789', whatsapp: '5491155555678', telefono: '155555678' },
-    { nombre: 'Laura', apellido: 'Martinez', dni: '35789012', whatsapp: '5491155559012', telefono: '155559012' },
-    { nombre: 'Pedro', apellido: 'Sanchez', dni: '25012345', whatsapp: '5491155552345', telefono: '155552345' },
-    { nombre: 'Sofia', apellido: 'Lopez', dni: '38345678', whatsapp: '5491155556789', telefono: '155556789' },
+    { nombre: 'Maria', apellido: 'Gonzalez', dni: '30123456', telefono: '155551234' },
+    { nombre: 'Juan', apellido: 'Rodriguez', dni: '28456789', telefono: '155555678' },
+    { nombre: 'Laura', apellido: 'Martinez', dni: '35789012', telefono: '155559012' },
+    { nombre: 'Pedro', apellido: 'Sanchez', dni: '25012345', telefono: '155552345' },
+    { nombre: 'Sofia', apellido: 'Lopez', dni: '38345678', telefono: '155556789' },
   ]
 
   const pacientesCreados = []

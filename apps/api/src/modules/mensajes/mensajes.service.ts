@@ -20,7 +20,7 @@ export class MensajesService {
     return this.prisma.mensajePendiente.findMany({
       where: { consultorioId, ...(estado && { estado }) },
       include: {
-        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, whatsapp: true, deudaTotal: true } },
+        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, deudaTotal: true } },
         cita: { select: { id: true, fechaHora: true, estado: true, doctor: { select: { nombre: true } } } },
         resueltoPor: { select: { nombre: true } },
       },
@@ -43,7 +43,7 @@ export class MensajesService {
         deletedAt: null,
         estado: { in: [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA] },
         fechaHora: { gte: inicioHoy, lt: finManana },
-        paciente: { deletedAt: null, OR: [{ telefono: { not: null } }, { whatsapp: { not: null } }] },
+        paciente: { deletedAt: null, telefono: { not: null } },
       },
       select: { id: true, pacienteId: true, fechaHora: true },
     })
@@ -65,7 +65,7 @@ export class MensajesService {
         consultorioId,
         deletedAt: null,
         deudaTotal: { gt: 0 },
-        OR: [{ telefono: { not: null } }, { whatsapp: { not: null } }],
+        telefono: { not: null },
         // sin aviso de deuda reciente (cualquiera sea su estado)
         mensajesPendientes: { none: { tipo: TipoMensaje.DEUDA, creadoAt: { gte: hace7dias } } },
       },

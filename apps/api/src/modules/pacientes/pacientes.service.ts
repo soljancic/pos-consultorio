@@ -14,11 +14,9 @@ export class CreatePacienteDto {
   @IsString() @IsOptional()
   dni?: string
 
+  // unico numero de contacto: sirve para llamadas y WhatsApp
   @IsString() @IsOptional()
   telefono?: string
-
-  @IsString() @IsOptional()
-  whatsapp?: string
 
   @IsEmail() @IsOptional()
   email?: string
@@ -57,7 +55,6 @@ export class PacientesService {
             { nombre: { contains: search, mode: 'insensitive' } },
             { apellido: { contains: search, mode: 'insensitive' } },
             { dni: { contains: search } },
-            { whatsapp: { contains: search } },
             { telefono: { contains: search } },
           ],
         }),
@@ -69,7 +66,6 @@ export class PacientesService {
         apellido: true,
         dni: true,
         telefono: true,
-        whatsapp: true,
         email: true,
         deudaTotal: true,
         requierePrepago: true,

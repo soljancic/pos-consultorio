@@ -19,7 +19,6 @@ type Mensaje = {
     nombre: string
     apellido: string
     telefono: string | null
-    whatsapp: string | null
     deudaTotal: number
   }
   cita: { id: number; fechaHora: string; estado: string; doctor: { nombre: string } } | null
@@ -128,7 +127,7 @@ export function MensajesPage() {
           </div>
         ) : (
           visibles.map((m) => {
-            const telefono = m.paciente.whatsapp || m.paciente.telefono
+            const telefono = m.paciente.telefono
             return (
               <div key={m.id} className={cn(cardUI, 'p-4 flex items-start gap-3')}>
                 <span

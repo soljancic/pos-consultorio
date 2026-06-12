@@ -80,7 +80,7 @@ export function PacientesPage() {
                       {p.apellido}, {p.nombre}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono || p.whatsapp || '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono || '-'}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {Number(p.deudaTotal) > 0 ? (
                         <span className="text-destructive font-medium">

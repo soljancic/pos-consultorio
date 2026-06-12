@@ -83,7 +83,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   )
 
   // El telefono del paciente sirve tambien para WhatsApp (decision owner)
-  const telefonoWhatsApp = cita.paciente?.whatsapp || cita.paciente?.telefono
+  const telefonoWhatsApp = cita.paciente?.telefono
 
   const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
 

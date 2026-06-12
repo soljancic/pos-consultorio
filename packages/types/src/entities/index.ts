@@ -58,7 +58,6 @@ export interface Paciente {
   apellido: string
   dni?: string
   telefono?: string
-  whatsapp?: string
   email?: string
   fechaNacimiento?: Date
   sexo?: string | null
@@ -84,7 +83,7 @@ export interface Cita {
   createdById: number
   createdAt: Date
   // Relations (populated when requested)
-  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'whatsapp' | 'deudaTotal'>
+  paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'deudaTotal'>
   doctor?: Pick<Doctor, 'id' | 'nombre' | 'colorAgenda'>
   servicio?: Pick<Servicio, 'id' | 'nombre' | 'precioBase' | 'duracionMin'>
   cobro?: Pick<Cobro, 'id' | 'total' | 'saldoPendiente' | 'estado'>

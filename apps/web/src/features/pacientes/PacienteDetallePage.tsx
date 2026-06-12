@@ -104,10 +104,10 @@ export function PacienteDetallePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {(paciente.whatsapp || paciente.telefono) && (
+          {paciente.telefono && (
             <a
               href={buildWhatsAppUrl(
-                paciente.whatsapp || paciente.telefono!,
+                paciente.telefono,
                 renderPlantilla(plantillas.contacto, { nombre: paciente.nombre, consultorio: consultorioNombre }),
               )}
               target="_blank"
@@ -129,8 +129,8 @@ export function PacienteDetallePage() {
         {/* Datos personales */}
         <div className={cn(cardUI, 'p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm')}>
           {paciente.dni && <div><span className="text-muted-foreground">CI:</span> <span className="font-medium tabular-nums">{paciente.dni}</span></div>}
-          {(paciente.telefono || paciente.whatsapp) && (
-            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium tabular-nums">{paciente.telefono || paciente.whatsapp}</span></div>
+          {paciente.telefono && (
+            <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-medium tabular-nums">{paciente.telefono}</span></div>
           )}
           {paciente.email && <div><span className="text-muted-foreground">Correo:</span> <span className="font-medium">{paciente.email}</span></div>}
           {paciente.fechaNacimiento && (
