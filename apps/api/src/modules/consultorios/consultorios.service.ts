@@ -122,7 +122,7 @@ export class ConsultoriosService {
     // public_id estable y sin caracteres raros: "nombre-id"
     const slugNombre = (consultorio?.nombre ?? 'consultorio')
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .toLowerCase()
