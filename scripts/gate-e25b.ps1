@@ -62,10 +62,12 @@ $pre = Invoke-RestMethod -Uri "$base/public/$slug/prefill/$tok"
 Write-Output "5b PREFILL TOKEN: nombre=$($pre.nombre) (esp Pia) telefono=$($pre.telefono) (esp +59170000001) pais=$($pre.pais) (esp AR)"
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/prefill/token-falso" } 404 "5c TOKEN FALSO"
 
-# 5d) Reserva con token y OTRO telefono -> matchea por token, no duplica
-Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59179999999"; token = $tok } | ConvertTo-Json) | Out-Null
+# 5d) Reserva con token, OTRO telefono y email nuevo -> matchea por token,
+# no duplica, y el kardex se sincroniza con los datos corregidos
+Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59179999999"; email = "pia@portal.bo"; token = $tok } | ConvertTo-Json) | Out-Null
 $pacs3 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
 Write-Output "5d RESERVA CON TOKEN: pacientes=$(@($pacs3).Count) (esp 1, matchea por token)"
+Write-Output "5e KARDEX SINCRONIZADO: telefono=$($pacs3[0].telefono) (esp +59179999999) email=$($pacs3[0].email) (esp pia@portal.bo)"
 
 # 6) Slot ocupado -> 409; consultorioId forjado -> 400 (whitelist)
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000002" } | ConvertTo-Json) } 409 "6 SLOT OCUPADO"

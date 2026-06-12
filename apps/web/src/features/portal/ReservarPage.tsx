@@ -246,7 +246,7 @@ export function ReservarPage() {
                 </div>
                 <div>
                   <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">
-                    Email <span className="text-muted-foreground/70 font-normal">(opcional)</span>
+                    Email
                   </label>
                   <input id="res-email" type="email" value={email} autoComplete="email"
                     onChange={(e) => setEmail(e.target.value)} className={inputUI} />

@@ -95,7 +95,7 @@ export enum AccionLog {
 
 // Colores de agenda por estado — fuente unica de verdad
 export const COLORES_ESTADO: Record<EstadoCita, string> = {
-  [EstadoCita.SOLICITADA]: '#EE9622',   // naranja (eleccion del owner)
+  [EstadoCita.SOLICITADA]: '#ff0e0e',   // rojo (eleccion del owner)
   [EstadoCita.PENDIENTE]: '#94A3B8',    // slate-400
   [EstadoCita.CONFIRMADA]: '#60A5FA',   // blue-400
   [EstadoCita.LLEGO]: '#34D399',        // emerald-400

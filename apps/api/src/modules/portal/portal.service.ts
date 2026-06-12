@@ -158,6 +158,23 @@ export class PortalService {
           select: { id: true },
         })
       : null
+
+    // El token identifica al paciente con certeza: si corrigio sus datos en
+    // el form, el kardex se sincroniza. Con match por telefono NO se pisa
+    // nada (otra persona puede reservar con el telefono de un paciente).
+    if (paciente) {
+      await this.prisma.paciente.update({
+        where: { id: paciente.id },
+        data: {
+          nombre: dto.nombre,
+          apellido: dto.apellido,
+          telefono: dto.telefono,
+          ...(dto.pais && { pais: dto.pais }),
+          ...(dto.email && { email: dto.email }),
+        },
+      })
+    }
+
     if (!paciente) {
       paciente = await this.prisma.paciente.findFirst({
         where: { consultorioId: c.id, deletedAt: null, telefono: dto.telefono },
