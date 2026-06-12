@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, Trash2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, AlertCircle, Trash2, BookmarkPlus } from 'lucide-react'
 import { TipoDisponibilidad } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, cn } from '../../lib/utils'
@@ -61,6 +61,26 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
   const [hasta, setHasta] = useState('')
   const [alcance, setAlcance] = useState<Alcance>('uno')
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
+  // Calendario f2b: plantillas nombradas del consultorio
+  const [guardandoPlantilla, setGuardandoPlantilla] = useState(false)
+  const [nombrePlantilla, setNombrePlantilla] = useState('')
+
+  const { data: plantillas = [] } = useQuery<Array<{ id: number; nombre: string; horaInicio: string; horaFin: string }>>({
+    queryKey: ['plantillas-horario'],
+    queryFn: () => api.get('/plantillas-horario').then((r) => r.data),
+    enabled: !editando,
+  })
+
+  const crearPlantilla = useMutation({
+    mutationFn: () =>
+      api.post('/plantillas-horario', { nombre: nombrePlantilla.trim(), horaInicio, horaFin }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['plantillas-horario'] })
+      setGuardandoPlantilla(false)
+      setNombrePlantilla('')
+    },
+    onError,
+  })
 
   function invalidar() {
     qc.invalidateQueries({ queryKey: ['disponibilidades'] })
@@ -154,6 +174,22 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                   {p.label}
                 </button>
               ))}
+              {plantillas.map((p) => (
+                <button
+                  key={`pl-${p.id}`}
+                  type="button"
+                  title={`${p.horaInicio} - ${p.horaFin}`}
+                  onClick={() => { setHoraInicio(p.horaInicio); setHoraFin(p.horaFin) }}
+                  className={cn(
+                    'text-xs font-medium px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    horaInicio === p.horaInicio && horaFin === p.horaFin
+                      ? 'bg-accent text-accent-foreground border-accent'
+                      : 'bg-card text-accent border-accent/40 hover:border-accent',
+                  )}
+                >
+                  {p.nombre}
+                </button>
+              ))}
             </div>
           )}
 
@@ -169,6 +205,45 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                 onChange={(e) => setHoraFin(e.target.value)} className={inputUI} />
             </div>
           </div>
+
+          {!editando && (
+            guardandoPlantilla ? (
+              <div className="flex gap-2">
+                <input
+                  value={nombrePlantilla}
+                  onChange={(e) => setNombrePlantilla(e.target.value)}
+                  placeholder="Nombre de la plantilla (ej: Mañana corta)"
+                  maxLength={40}
+                  aria-label="Nombre de la plantilla"
+                  className={cn(inputUI, 'flex-1 h-9 text-xs')}
+                />
+                <button
+                  type="button"
+                  disabled={!nombrePlantilla.trim() || crearPlantilla.isPending}
+                  onClick={() => crearPlantilla.mutate()}
+                  className="text-xs font-medium px-3 h-9 rounded-md bg-accent text-accent-foreground cursor-pointer hover:bg-accent/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                >
+                  {crearPlantilla.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setGuardandoPlantilla(false); setNombrePlantilla('') }}
+                  className="text-xs font-medium px-2 h-9 rounded-md text-muted-foreground cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setGuardandoPlantilla(true)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-accent cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+              >
+                <BookmarkPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                Guardar estas horas como plantilla
+              </button>
+            )
+          )}
 
           <div>
             <label htmlFor="disp-tipo" className="block text-sm font-medium text-foreground mb-1.5">Tipo *</label>

@@ -20,6 +20,7 @@ import { LogsModule } from './modules/logs/logs.module'
 import { PortalModule } from './modules/portal/portal.module'
 import { MailModule } from './modules/mail/mail.module'
 import { ReportesModule } from './modules/reportes/reportes.module'
+import { PlantillasModule } from './modules/plantillas/plantillas.module'
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ReportesModule } from './modules/reportes/reportes.module'
     LogsModule,
     PortalModule,
     ReportesModule,
+    PlantillasModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

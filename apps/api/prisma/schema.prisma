@@ -109,6 +109,7 @@ model Consultorio {
   gastos     Gasto[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
+  plantillasHorario PlantillaHorario[]
   logs       Log[]
 
   @@map("consultorios")
@@ -233,6 +234,9 @@ model Paciente {
   direccion       String?
   notas           String?
   deudaTotal      Decimal     @default(0) @db.Decimal(10, 2)
+  // E3 item 11: pacientes con historial de no-shows pueden exigir prepago.
+  // ALERTA al agendar, no bloquea (regla del proyecto: deudas alertan)
+  requierePrepago Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?
@@ -439,6 +443,22 @@ model Disponibilidad {
   @@index([consultorioId, fecha])
   @@index([consultorioId, doctorId, fecha])
   @@map("disponibilidades")
+}
+
+// Calendario f2b: presets de horario nombrados por consultorio, reutilizables
+// al crear bloques de disponibilidad ("Manana corta 8-12", etc.)
+model PlantillaHorario {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  horaInicio    String   // "HH:mm"
+  horaFin       String
+  createdAt     DateTime @default(now())
+  deletedAt     DateTime?
+
+  @@index([consultorioId])
+  @@map("plantillas_horario")
 }
 
 // Gastos administrativos (E2-M8): egresos con categoria y cuenta de origen.
