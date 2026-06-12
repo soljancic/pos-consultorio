@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
-import { IsInt, IsISO8601, IsString, IsNotEmpty, IsOptional, IsEmail, Matches, MaxLength } from 'class-validator'
+import { IsInt, IsISO8601, IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, Matches, MaxLength } from 'class-validator'
 import { OrigenCita, Rol } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { CitasService } from '../citas/citas.service'
@@ -32,13 +32,19 @@ export class ReservaPortalDto {
   @IsOptional()
   pais?: string
 
-  @IsEmail() @IsOptional()
-  email?: string
+  // Todos los datos de contacto del form son obligatorios (decision owner)
+  @IsEmail()
+  email: string
 
   // Token del link precargado: si viene, la reserva se asocia a ESE paciente
   // (mas confiable que el match por telefono)
   @IsString() @IsOptional() @MaxLength(40)
   token?: string
+
+  // El cliente marco "Actualizar mis datos": solo entonces (y con token)
+  // los cambios del form se escriben en el kardex
+  @IsBoolean() @IsOptional()
+  actualizarDatos?: boolean
 }
 
 // Portal publico de reservas (E2.5b). REGLA CRITICA: el consultorioId se
@@ -160,9 +166,10 @@ export class PortalService {
       : null
 
     // El token identifica al paciente con certeza: si corrigio sus datos en
-    // el form, el kardex se sincroniza. Con match por telefono NO se pisa
-    // nada (otra persona puede reservar con el telefono de un paciente).
-    if (paciente) {
+    // el form Y marco "Actualizar mis datos", el kardex se sincroniza. Con
+    // match por telefono NO se pisa nada (otra persona puede reservar con
+    // el telefono de un paciente).
+    if (paciente && dto.actualizarDatos) {
       await this.prisma.paciente.update({
         where: { id: paciente.id },
         data: {

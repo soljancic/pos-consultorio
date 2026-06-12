@@ -36,6 +36,7 @@ export function ReservarPage() {
   const [telefono, setTelefono] = useState('')
   const [pais, setPais] = useState(PAIS_DEFAULT)
   const [email, setEmail] = useState('')
+  const [actualizarDatos, setActualizarDatos] = useState(true)
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
 
@@ -64,6 +65,16 @@ export function ReservarPage() {
     setEmail(prefill.email ?? '')
   }, [prefill])
 
+  // El cliente toco algo de lo precargado: recien ahi se ofrece el check
+  // "Actualizar mis datos" (sin cambios no hay nada que sincronizar)
+  const datosModificados = !!prefill && (
+    nombre !== prefill.nombre ||
+    apellido !== prefill.apellido ||
+    telefono !== (prefill.telefono ?? '') ||
+    email !== (prefill.email ?? '') ||
+    (PAISES.some((p) => p.codigo === prefill.pais) && pais !== prefill.pais)
+  )
+
   const puedeBuscarSlots = !!(servicioId && doctorId && fecha)
   const { data: slotsData, isFetching: cargandoSlots } = useQuery<{ slots: string[]; modo: string }>({
     queryKey: ['portal-slots', slug, doctorId, servicioId, fecha],
@@ -85,10 +96,11 @@ export function ReservarPage() {
         apellido,
         telefono,
         pais,
-        // el backend rechaza el string vacio (@IsEmail)
-        email: email || undefined,
+        email,
         // con token la reserva se asocia al paciente exacto del link
         token: tokenPaciente || undefined,
+        // el kardex solo se toca si el cliente cambio algo y marco el check
+        actualizarDatos: tokenPaciente ? datosModificados && actualizarDatos : undefined,
       }),
     onSuccess: (res) => setConfirmacion(res.data),
     onError: (err: any) => {
@@ -245,12 +257,22 @@ export function ReservarPage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">
-                    Email
-                  </label>
-                  <input id="res-email" type="email" value={email} autoComplete="email"
+                  <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
+                  <input id="res-email" type="email" required value={email} autoComplete="email"
                     onChange={(e) => setEmail(e.target.value)} className={inputUI} />
                 </div>
+
+                {tokenPaciente && datosModificados && (
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={actualizarDatos}
+                      onChange={(e) => setActualizarDatos(e.target.checked)}
+                      className="rounded"
+                    />
+                    Actualizar mis datos en el sistema
+                  </label>
+                )}
               </div>
             )}
 

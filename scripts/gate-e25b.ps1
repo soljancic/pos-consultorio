@@ -39,7 +39,7 @@ $slots = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&se
 Write-Output "3 SLOTS: count=$(@($slots.slots).Count) (esp 6) primero=$($slots.slots[0]) (esp 09:00)"
 
 # 4) Reservar 09:30 -> paciente nuevo (con pais) + cita SOLICITADA origen PORTAL
-$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR" } | ConvertTo-Json)
+$res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR"; email = "pia@inicial.bo" } | ConvertTo-Json)
 Write-Output "4 RESERVA: reservada=$($res.reservada) hora=$($res.hora) (esp 09:30) doctor=$($res.doctor)"
 $citas = Invoke-RestMethod -Uri "$base/citas?fecha=$hoy" -Headers $h
 $citaPortal = @($citas) | Where-Object { $_.origen -eq 'PORTAL' }
@@ -52,7 +52,7 @@ $aceptada = Invoke-RestMethod -Uri "$base/citas/$($citaPortal[0].id)/estado" -Me
 Write-Output "4c ACEPTADA: estado=$($aceptada.estado) (esp PENDIENTE)"
 
 # 5) Mismo telefono reserva de nuevo -> NO duplica paciente
-Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "10:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "10:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; email = "pia@inicial.bo" } | ConvertTo-Json) | Out-Null
 $pacs2 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
 Write-Output "5 MATCH TELEFONO: pacientes=$(@($pacs2).Count) (esp 1, sin duplicar)"
 
@@ -62,16 +62,22 @@ $pre = Invoke-RestMethod -Uri "$base/public/$slug/prefill/$tok"
 Write-Output "5b PREFILL TOKEN: nombre=$($pre.nombre) (esp Pia) telefono=$($pre.telefono) (esp +59170000001) pais=$($pre.pais) (esp AR)"
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/prefill/token-falso" } 404 "5c TOKEN FALSO"
 
-# 5d) Reserva con token, OTRO telefono y email nuevo -> matchea por token,
-# no duplica, y el kardex se sincroniza con los datos corregidos
-Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59179999999"; email = "pia@portal.bo"; token = $tok } | ConvertTo-Json) | Out-Null
+# 5d) Reserva con token, OTRO telefono/email y check "actualizar datos" ->
+# matchea por token, no duplica, y el kardex se sincroniza
+Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59179999999"; email = "pia@portal.bo"; token = $tok; actualizarDatos = $true } | ConvertTo-Json) | Out-Null
 $pacs3 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
 Write-Output "5d RESERVA CON TOKEN: pacientes=$(@($pacs3).Count) (esp 1, matchea por token)"
 Write-Output "5e KARDEX SINCRONIZADO: telefono=$($pacs3[0].telefono) (esp +59179999999) email=$($pacs3[0].email) (esp pia@portal.bo)"
 
+# 5f) Reserva con token y cambios pero SIN el check -> el kardex NO se toca
+Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000777"; email = "otro@mail.bo"; token = $tok } | ConvertTo-Json) | Out-Null
+$pacs4 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
+Write-Output "5f SIN CHECK NO PISA: telefono=$($pacs4[0].telefono) (esp +59179999999) email=$($pacs4[0].email) (esp pia@portal.bo)"
+
 # 6) Slot ocupado -> 409; consultorioId forjado -> 400 (whitelist)
-Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000002" } | ConvertTo-Json) } 409 "6 SLOT OCUPADO"
-Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ consultorioId = 1; doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "X"; apellido = "Y"; telefono = "+59170000003" } | ConvertTo-Json) } 400 "7 CONSULTORIOID FORJADO"
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000002"; email = "x@y.bo" } | ConvertTo-Json) } 409 "6 SLOT OCUPADO"
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ consultorioId = 1; doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "X"; apellido = "Y"; telefono = "+59170000003"; email = "x@y.bo" } | ConvertTo-Json) } 400 "7 CONSULTORIOID FORJADO"
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000004" } | ConvertTo-Json) } 400 "7b EMAIL OBLIGATORIO"
 
 # 8) Fecha pasada -> sin slots (filtro de slots pasados)
 $slotsAyer = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&servicioId=$($srv.id)&fecha=$ayer"
