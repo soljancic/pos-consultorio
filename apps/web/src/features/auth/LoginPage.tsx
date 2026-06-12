@@ -65,17 +65,16 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Panel de marca (desktop) */}
-      <div className="hidden lg:flex lg:w-[45%] bg-primary text-primary-foreground flex-col justify-between p-12">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-white rounded-lg p-1.5">
-            <img src="/brand/isotipo.png" alt="" className="h-7 w-auto" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">ConsulTech</span>
-        </div>
-
+      <div className="hidden lg:flex lg:w-[45%] bg-primary text-primary-foreground flex-col justify-center p-12">
         <div className="space-y-8 max-w-md">
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-lg p-2">
+              <img src="/brand/isotipo.png" alt="" className="h-14 w-auto" />
+            </div>
+            <span className="text-5xl font-bold tracking-tight">ConsulTech</span>
+          </div>
           <h1 className="text-3xl font-bold leading-snug">
-            El dia a dia de tu consultorio, en una sola pantalla
+            El día a día de tu consultorio, en una sola pantalla
           </h1>
           <ul className="space-y-4">
             {BENEFICIOS.map(({ icon: Icon, texto }) => (
@@ -87,18 +86,17 @@ export function LoginPage() {
               </li>
             ))}
           </ul>
+          <p className="text-xs text-cyan-100/80">
+            Para consultorios de 1 a 10 profesionales
+          </p>
         </div>
-
-        <p className="text-xs text-cyan-100/80">
-          Para consultorios de 1 a 10 profesionales
-        </p>
       </div>
 
       {/* Formulario */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <div className="flex justify-center mb-3 lg:hidden">
-            <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-14 w-auto" />
+          <div className="flex justify-center mb-6 lg:hidden">
+            <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-24 w-auto" />
           </div>
 
           <div className="bg-card rounded-xl border shadow-sm p-8">
@@ -186,9 +184,9 @@ export function LoginPage() {
             </form>
           </div>
 
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <p className="mt-6 flex items-center justify-center gap-1.5 text-s text-muted-foreground">
             by
-            <img src="/brand/toptech.png" alt="Toptech" className="h-5 w-auto" />
+            <img src="/brand/toptech.png" alt="Toptech" className="h-14 w-auto" />
           </p>
         </div>
       </div>
