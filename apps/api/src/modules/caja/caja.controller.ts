@@ -30,6 +30,13 @@ export class CajaController {
     return this.service.cerrar(user.consultorioId, user.sub, dto)
   }
 
+  @Post('reabrir')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Reabrir el turno de hoy ya cerrado (descarta el arqueo)' })
+  reabrir(@CurrentUser() user: JwtPayload) {
+    return this.service.reabrir(user.consultorioId, user.sub)
+  }
+
   @Put(':id/revisar')
   @Roles(Rol.ADMIN)
   @ApiOperation({ summary: 'Aprobar la revision de un cierre con diferencia' })

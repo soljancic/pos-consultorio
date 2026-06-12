@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
 import { Lock, Unlock, Wallet, Undo2, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
@@ -10,6 +10,7 @@ import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
 import { AbrirCajaModal } from './AbrirCajaModal'
 import { CerrarCajaModal } from './CerrarCajaModal'
 import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export function CajaPage() {
   const user = useAuthStore((s) => s.user)
@@ -18,6 +19,8 @@ export function CajaPage() {
   const [modalAbrir, setModalAbrir] = useState(false)
   const [modalCerrar, setModalCerrar] = useState(false)
   const [cajaRevisar, setCajaRevisar] = useState<CajaRevisable | null>(null)
+  const [confirmarReabrir, setConfirmarReabrir] = useState(false)
+  const qc = useQueryClient()
   const [tab, setTab] = useState<'hoy' | 'historial'>('hoy')
   const [desde, setDesde] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -36,6 +39,19 @@ export function CajaPage() {
 
   const caja = data?.caja
   const pagos: any[] = data?.pagos || []
+
+  // Reabrir el turno cerrado (solo ADMIN): descarta el arqueo y vuelve a
+  // aceptar cobros; al re-cerrar se declara el efectivo de nuevo
+  const reabrir = useMutation({
+    mutationFn: () => api.post('/caja/reabrir'),
+    onSuccess: () => {
+      setConfirmarReabrir(false)
+      qc.invalidateQueries({ queryKey: ['caja-hoy'] })
+      qc.invalidateQueries({ queryKey: ['caja-estado'] })
+      qc.invalidateQueries({ queryKey: ['caja-historial'] })
+    },
+    onError: () => setConfirmarReabrir(false),
+  })
   const hoyStr = new Date().toDateString()
 
   return (
@@ -75,9 +91,17 @@ export function CajaPage() {
           </button>
         )}
         {tab === 'hoy' && caja?.cerrada && (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-            <Lock className="h-4 w-4" aria-hidden="true" />
-            Caja cerrada
+          <span className="inline-flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <Lock className="h-4 w-4" aria-hidden="true" />
+              Caja cerrada
+            </span>
+            {esAdmin && (
+              <button onClick={() => setConfirmarReabrir(true)} className={btnOutlineUI}>
+                <Unlock className="h-4 w-4" aria-hidden="true" />
+                Reabrir caja
+              </button>
+            )}
           </span>
         )}
       </div>
@@ -321,6 +345,17 @@ export function CajaPage() {
       {modalAbrir && <AbrirCajaModal onClose={() => setModalAbrir(false)} />}
 
       {modalCerrar && <CerrarCajaModal onClose={() => setModalCerrar(false)} />}
+
+      {confirmarReabrir && (
+        <ConfirmarModal
+          titulo="Reabrir caja"
+          mensaje="Se descarta el arqueo de hoy (al volver a cerrar se declara el efectivo de nuevo) y la caja vuelve a aceptar cobros y gastos. La reapertura queda registrada en la actividad."
+          confirmLabel="Reabrir"
+          pendiente={reabrir.isPending}
+          onConfirm={() => reabrir.mutate()}
+          onClose={() => setConfirmarReabrir(false)}
+        />
+      )}
 
       {cajaRevisar && (
         <RevisarCajaModal caja={cajaRevisar} onClose={() => setCajaRevisar(null)} />

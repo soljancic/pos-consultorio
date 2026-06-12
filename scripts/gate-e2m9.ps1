@@ -50,3 +50,13 @@ Write-Output "6 ARQUEO CON INICIAL: esperado=$($cierre.montoEsperado) (esp 1600)
 
 # 7) Tras el cierre: cobrar/gastar -> 409 (turno terminado)
 Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 50; descripcion = "y"; cuenta = "BANCO" } | ConvertTo-Json) } 409 "7 GASTAR TRAS CIERRE"
+
+# 8) Reabrir (ADMIN): el arqueo se descarta y la caja vuelve a aceptar dinero
+$re = Invoke-RestMethod -Uri "$base/caja/reabrir" -Method Post -Headers $h
+Write-Output "8 REABRIR: cerrada=$($re.cerrada) (esp False) declarado=$($re.montoDeclarado) (esp vacio)"
+Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 50; descripcion = "post-reapertura"; cuenta = "CAJA_EFECTIVO" } | ConvertTo-Json) | Out-Null
+Write-Output "9 GASTO TRAS REAPERTURA: OK"
+
+# 10) Re-cierre: esperado = 1600 - 50 = 1550 -> diferencia 0
+$cierre2 = Invoke-RestMethod -Uri "$base/caja/cerrar" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoDeclarado = 1550 } | ConvertTo-Json)
+Write-Output "10 RE-CIERRE: esperado=$($cierre2.montoEsperado) (esp 1550) diferencia=$($cierre2.diferencia) (esp 0)"

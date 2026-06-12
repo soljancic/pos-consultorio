@@ -237,6 +237,53 @@ export class CajaService {
     return actualizada
   }
 
+  // Reabrir el turno de HOY ya cerrado (solo ADMIN): vuelve a aceptar
+  // cobros/gastos. El arqueo anterior se descarta (al re-cerrar se declara
+  // de nuevo) pero sus valores quedan en el log.
+  async reabrir(consultorioId: number, usuarioId: number) {
+    const { clave: hoy } = diaCajaLocal()
+    const caja = await this.prisma.cajaDiaria.findUnique({
+      where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+    })
+    if (!caja) throw new NotFoundException('Hoy no se abrio caja')
+    if (!caja.cerrada) throw new BadRequestException('La caja de hoy no esta cerrada')
+
+    const [actualizada] = await this.prisma.$transaction([
+      this.prisma.cajaDiaria.update({
+        where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+        data: {
+          cerrada: false,
+          cierreAt: null,
+          usuarioCierreId: null,
+          montoDeclarado: null,
+          montoEsperado: null,
+          diferencia: null,
+          notasCierre: null,
+          revisadaPorId: null,
+          revisadaAt: null,
+          notasRevision: null,
+        },
+      }),
+      this.prisma.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'CajaDiaria',
+          entidadId: caja.id,
+          accion: 'UPDATE',
+          payloadAntes: {
+            cerrada: true,
+            montoDeclarado: caja.montoDeclarado?.toString(),
+            diferencia: caja.diferencia?.toString(),
+          },
+          payloadDespues: { cerrada: false, motivo: 'reapertura' },
+        },
+      }),
+    ])
+
+    return actualizada
+  }
+
   // Revision del ADMIN para cierres con diferencia (alerta, no bloquea)
   async revisar(consultorioId: number, cajaId: number, dto: RevisarCajaDto, usuarioId: number) {
     const caja = await this.prisma.cajaDiaria.findFirst({
