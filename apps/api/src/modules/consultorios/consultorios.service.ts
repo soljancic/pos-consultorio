@@ -93,9 +93,15 @@ export class ConsultoriosService {
     })
   }
 
-  // Sube el QR de pagos a Cloudinary (folder QR, un public_id por consultorio
-  // con overwrite: re-subir reemplaza) y guarda la URL segura en qrUrl
-  async subirQr(id: number, file: Express.Multer.File) {
+  // Upload generico de imagen del consultorio a Cloudinary: un public_id
+  // estable por consultorio con overwrite (re-subir reemplaza). Devuelve la
+  // URL segura.
+  private async subirImagen(
+    id: number,
+    file: Express.Multer.File,
+    folder: string,
+    format?: string,
+  ) {
     const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env
     if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
       throw new BadRequestException('Cloudinary no esta configurado en el servidor')
@@ -130,11 +136,11 @@ export class ConsultoriosService {
     const subida = await new Promise<{ secure_url: string }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          folder: 'QR',
+          folder,
           public_id: `${slugNombre}-${id}`,
           overwrite: true,
           invalidate: true,
-          format: 'jpg',
+          ...(format && { format }),
           resource_type: 'image',
         },
         (error, result) => {
@@ -147,9 +153,25 @@ export class ConsultoriosService {
       throw new BadRequestException('No se pudo subir la imagen a Cloudinary')
     })
 
+    return subida.secure_url
+  }
+
+  // QR de pagos: a jpg (criterio del qr2.php original)
+  async subirQr(id: number, file: Express.Multer.File) {
+    const url = await this.subirImagen(id, file, 'QR', 'jpg')
     return this.prisma.consultorio.update({
       where: { id },
-      data: { qrUrl: subida.secure_url },
+      data: { qrUrl: url },
+      select: CONSULTORIO_SELECT,
+    })
+  }
+
+  // Logo: conserva el formato original (PNG mantiene la transparencia)
+  async subirLogo(id: number, file: Express.Multer.File) {
+    const url = await this.subirImagen(id, file, 'logos')
+    return this.prisma.consultorio.update({
+      where: { id },
+      data: { logoUrl: url },
       select: CONSULTORIO_SELECT,
     })
   }

@@ -105,15 +105,6 @@ export function GastoModal({ gasto, onClose }: Props) {
                 onChange={(e) => set('fecha', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label htmlFor="gasto-monto" className="block text-sm font-medium text-foreground mb-1.5">Monto *</label>
-              <input id="gasto-monto" type="number" inputMode="decimal" required min={0.01} step="0.01"
-                value={form.monto} onChange={(e) => set('monto', e.target.value)}
-                placeholder="0.00" className={inputUI} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
               <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Categoría *</label>
               <select id="gasto-categoria" value={form.categoria}
                 onChange={(e) => set('categoria', e.target.value as CategoriaGasto)}
@@ -122,6 +113,15 @@ export function GastoModal({ gasto, onClose }: Props) {
                   <option key={c} value={c}>{LABEL_CATEGORIA[c]}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="gasto-monto" className="block text-sm font-medium text-foreground mb-1.5">Monto *</label>
+              <input id="gasto-monto" type="number" inputMode="decimal" required min={0.01} step="0.01"
+                value={form.monto} onChange={(e) => set('monto', e.target.value)}
+                placeholder="0.00" className={inputUI} />
             </div>
             <div>
               <label htmlFor="gasto-cuenta" className="block text-sm font-medium text-foreground mb-1.5">Cuenta *</label>

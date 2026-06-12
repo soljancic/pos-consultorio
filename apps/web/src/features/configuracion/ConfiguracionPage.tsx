@@ -74,14 +74,23 @@ export function ConfiguracionPage() {
     }
   }, [consultorio])
 
-  // QR de pagos: la imagen sube a Cloudinary via el backend (las claves no
-  // viven en el navegador) y la URL queda guardada en el consultorio
+  // QR de pagos y logo: la imagen sube a Cloudinary via el backend (las
+  // claves no viven en el navegador) y la URL queda guardada en el consultorio
   const qrFileRef = useRef<HTMLInputElement>(null)
+  const logoFileRef = useRef<HTMLInputElement>(null)
   const subirQr = useMutation({
     mutationFn: async (archivo: File) => {
       const fd = new FormData()
       fd.append('archivo', archivo)
       await api.post('/consultorio/qr', fd)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['consultorio'] }),
+  })
+  const subirLogo = useMutation({
+    mutationFn: async (archivo: File) => {
+      const fd = new FormData()
+      fd.append('archivo', archivo)
+      await api.post('/consultorio/logo', fd)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['consultorio'] }),
   })
@@ -187,11 +196,42 @@ export function ConfiguracionPage() {
               <input value={consForm.nombre} onChange={(e) => setConsForm((f) => ({ ...f, nombre: e.target.value }))}
                 className={inputUI} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Logo (URL)</label>
-              <input type="url" value={consForm.logoUrl} placeholder="https://..."
-                onChange={(e) => setConsForm((f) => ({ ...f, logoUrl: e.target.value }))}
-                className={inputUI} />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-[220px]">
+                <label htmlFor="cons-logourl" className="block text-sm font-medium text-foreground mb-1.5">
+                  Logo
+                </label>
+                <input id="cons-logourl" value={consultorio?.logoUrl ?? ''} readOnly
+                  placeholder="Subí una imagen para generarla"
+                  className={cn(inputUI, 'text-muted-foreground')} />
+              </div>
+              {consultorio?.logoUrl && (
+                <img src={consultorio.logoUrl} alt="Logo actual"
+                  className="h-16 w-16 rounded-md border object-contain bg-white" />
+              )}
+              <div className="pt-7">
+                <input
+                  ref={logoFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) subirLogo.mutate(f)
+                    e.target.value = ''
+                  }}
+                />
+                <button type="button" disabled={subirLogo.isPending}
+                  onClick={() => logoFileRef.current?.click()}
+                  className={btnPrimaryUI}>
+                  {subirLogo.isPending ? 'Subiendo...' : consultorio?.logoUrl ? 'Reemplazar logo' : 'Subir logo'}
+                </button>
+              </div>
+              {subirLogo.isError && (
+                <p role="alert" className="w-full text-xs text-destructive">
+                  {(subirLogo.error as any)?.response?.data?.message ?? 'No se pudo subir la imagen'}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

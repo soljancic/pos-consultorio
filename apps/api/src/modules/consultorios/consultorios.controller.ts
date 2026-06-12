@@ -31,4 +31,13 @@ export class ConsultoriosController {
     if (!archivo) throw new BadRequestException('Falta el archivo del QR')
     return this.service.subirQr(user.consultorioId, archivo)
   }
+
+  @Post('logo')
+  @Roles(Rol.ADMIN)
+  @UseInterceptors(FileInterceptor('archivo'))
+  @ApiOperation({ summary: 'Subir el logo del consultorio a Cloudinary y guardar la URL' })
+  subirLogo(@CurrentUser() user: JwtPayload, @UploadedFile() archivo?: Express.Multer.File) {
+    if (!archivo) throw new BadRequestException('Falta el archivo del logo')
+    return this.service.subirLogo(user.consultorioId, archivo)
+  }
 }
