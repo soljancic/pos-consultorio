@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -20,24 +20,22 @@ type Info = {
 
 export function ReservarPage() {
   const { slug } = useParams<{ slug: string }>()
-  // El link puede venir precargado: ?doctor= ?servicio= y/o los datos del
-  // paciente (?nombre= ?apellido= ?telefono= ?pais= ?email=). Asi la
-  // secretaria manda un link donde el cliente solo elige fecha y hora.
+  // El link puede venir precargado: ?doctor= ?servicio= y/o ?p=<token opaco
+  // del paciente>. Los datos personales NUNCA viajan en la URL: con ?p= el
+  // portal se los pide al backend y el cliente solo elige fecha y hora.
   const [params] = useSearchParams()
   const doctorFijo = params.get('doctor')
-  const paisParam = params.get('pais')
+  const tokenPaciente = params.get('p')
 
   const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
   const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [hora, setHora] = useState('')
-  const [nombre, setNombre] = useState(params.get('nombre') ?? '')
-  const [apellido, setApellido] = useState(params.get('apellido') ?? '')
-  const [telefono, setTelefono] = useState(params.get('telefono') ?? '')
-  const [pais, setPais] = useState(
-    paisParam && PAISES.some((p) => p.codigo === paisParam) ? paisParam : PAIS_DEFAULT,
-  )
-  const [email, setEmail] = useState(params.get('email') ?? '')
+  const [nombre, setNombre] = useState('')
+  const [apellido, setApellido] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [pais, setPais] = useState(PAIS_DEFAULT)
+  const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
 
@@ -46,6 +44,25 @@ export function ReservarPage() {
     queryFn: () => api.get(`/public/${slug}`).then((r) => r.data),
     retry: 1,
   })
+
+  // Datos del paciente del link precargado (token opaco, no enumerable)
+  const { data: prefill } = useQuery<{
+    nombre: string; apellido: string; telefono: string | null; pais: string; email: string | null
+  }>({
+    queryKey: ['portal-prefill', slug, tokenPaciente],
+    queryFn: () => api.get(`/public/${slug}/prefill/${tokenPaciente}`).then((r) => r.data),
+    enabled: !!tokenPaciente,
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (!prefill) return
+    setNombre(prefill.nombre)
+    setApellido(prefill.apellido)
+    setTelefono(prefill.telefono ?? '')
+    if (PAISES.some((p) => p.codigo === prefill.pais)) setPais(prefill.pais)
+    setEmail(prefill.email ?? '')
+  }, [prefill])
 
   const puedeBuscarSlots = !!(servicioId && doctorId && fecha)
   const { data: slotsData, isFetching: cargandoSlots } = useQuery<{ slots: string[]; modo: string }>({
@@ -70,6 +87,8 @@ export function ReservarPage() {
         pais,
         // el backend rechaza el string vacio (@IsEmail)
         email: email || undefined,
+        // con token la reserva se asocia al paciente exacto del link
+        token: tokenPaciente || undefined,
       }),
     onSuccess: (res) => setConfirmacion(res.data),
     onError: (err: any) => {

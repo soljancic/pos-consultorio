@@ -239,6 +239,9 @@ model Paciente {
   telefono        String?
   // ISO 3166-1 alfa-2; define el prefijo internacional para wa.me
   pais            String      @default("BO")
+  // Token opaco para links de reserva precargados (/reservar/:slug?p=token):
+  // aleatorio e impredecible, se genera al armar el primer link del paciente
+  portalToken     String?     @unique
   email           String?
   fechaNacimiento DateTime?   @db.Date
   sexo            String?     // "M" | "F" | "X"

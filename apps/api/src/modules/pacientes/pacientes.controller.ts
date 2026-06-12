@@ -15,6 +15,12 @@ export class PacientesController {
     return this.service.findAll(user.consultorioId, search)
   }
 
+  @Get(':id/portal-token')
+  @ApiOperation({ summary: 'Token para el link de reserva precargado (lo crea si no existe)' })
+  portalToken(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+    return this.service.portalToken(user.consultorioId, id)
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Ficha completa del paciente' })
   findOne(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {

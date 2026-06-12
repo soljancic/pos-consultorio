@@ -34,6 +34,11 @@ export class ReservaPortalDto {
 
   @IsEmail() @IsOptional()
   email?: string
+
+  // Token del link precargado: si viene, la reserva se asocia a ESE paciente
+  // (mas confiable que el match por telefono)
+  @IsString() @IsOptional() @MaxLength(40)
+  token?: string
 }
 
 // Portal publico de reservas (E2.5b). REGLA CRITICA: el consultorioId se
@@ -95,6 +100,19 @@ export class PortalService {
     }
   }
 
+  // Precarga del link con token opaco (?p=): devuelve SOLO los datos de
+  // contacto del paciente dueno del token. El token es aleatorio (18 bytes),
+  // no enumerable; 404 generico si no matchea.
+  async prefill(slug: string, token: string) {
+    const c = await this.consultorioPorSlug(slug)
+    const paciente = await this.prisma.paciente.findFirst({
+      where: { consultorioId: c.id, portalToken: token, deletedAt: null },
+      select: { nombre: true, apellido: true, telefono: true, pais: true, email: true },
+    })
+    if (!paciente) throw new NotFoundException('Link no disponible')
+    return paciente
+  }
+
   async slots(slug: string, doctorId: number, servicioId: number, fecha: string) {
     const c = await this.consultorioPorSlug(slug)
     const servicio = await this.prisma.servicio.findFirst({
@@ -132,11 +150,20 @@ export class PortalService {
       throw new ConflictException('Ese horario ya no esta disponible')
     }
 
-    // Match de paciente por telefono (no se confirma ni revela si existia)
-    let paciente = await this.prisma.paciente.findFirst({
-      where: { consultorioId: c.id, deletedAt: null, telefono: dto.telefono },
-      select: { id: true },
-    })
+    // Match de paciente: por token del link precargado si viene; si no, por
+    // telefono (no se confirma ni revela si existia)
+    let paciente = dto.token
+      ? await this.prisma.paciente.findFirst({
+          where: { consultorioId: c.id, portalToken: dto.token, deletedAt: null },
+          select: { id: true },
+        })
+      : null
+    if (!paciente) {
+      paciente = await this.prisma.paciente.findFirst({
+        where: { consultorioId: c.id, deletedAt: null, telefono: dto.telefono },
+        select: { id: true },
+      })
+    }
     if (!paciente) {
       paciente = await this.prisma.paciente.create({
         data: {

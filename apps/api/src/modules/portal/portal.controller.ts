@@ -19,6 +19,14 @@ export class PortalController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Get(':slug/prefill/:token')
+  @ApiOperation({ summary: 'Datos de contacto del paciente del link precargado (token opaco)' })
+  prefill(@Param('slug') slug: string, @Param('token') token: string) {
+    return this.service.prefill(slug, token)
+  }
+
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get(':slug/slots')
   @ApiOperation({ summary: 'Horas libres del doctor para un servicio y fecha' })

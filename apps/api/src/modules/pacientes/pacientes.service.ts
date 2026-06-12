@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, Matches } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
@@ -127,6 +128,25 @@ export class PacientesService {
         fechaNacimiento: dto.fechaNacimiento ? new Date(dto.fechaNacimiento) : undefined,
       },
     })
+  }
+
+  // Token opaco para el link de reserva precargado del portal: aleatorio e
+  // impredecible (capability URL), se crea la primera vez que se pide.
+  // Idempotente: siempre devuelve el mismo token del paciente.
+  async portalToken(consultorioId: number, id: number) {
+    const paciente = await this.prisma.paciente.findFirst({
+      where: { id, consultorioId, deletedAt: null },
+      select: { id: true, portalToken: true },
+    })
+    if (!paciente) throw new NotFoundException('Paciente no encontrado')
+    if (paciente.portalToken) return { token: paciente.portalToken }
+
+    const actualizado = await this.prisma.paciente.update({
+      where: { id },
+      data: { portalToken: randomBytes(18).toString('base64url') },
+      select: { portalToken: true },
+    })
+    return { token: actualizado.portalToken }
   }
 
   async softDelete(consultorioId: number, id: number) {

@@ -51,6 +51,17 @@ Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "
 $pacs2 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
 Write-Output "5 MATCH TELEFONO: pacientes=$(@($pacs2).Count) (esp 1, sin duplicar)"
 
+# 5b) Link precargado: el token opaco resuelve el prefill publico
+$tok = (Invoke-RestMethod -Uri "$base/pacientes/$($pacs2[0].id)/portal-token" -Headers $h).token
+$pre = Invoke-RestMethod -Uri "$base/public/$slug/prefill/$tok"
+Write-Output "5b PREFILL TOKEN: nombre=$($pre.nombre) (esp Pia) telefono=$($pre.telefono) (esp +59170000001) pais=$($pre.pais) (esp AR)"
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/prefill/token-falso" } 404 "5c TOKEN FALSO"
+
+# 5d) Reserva con token y OTRO telefono -> matchea por token, no duplica
+Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "Pia"; apellido = "Portal"; telefono = "+59179999999"; token = $tok } | ConvertTo-Json) | Out-Null
+$pacs3 = Invoke-RestMethod -Uri "$base/pacientes?search=Portal" -Headers $h
+Write-Output "5d RESERVA CON TOKEN: pacientes=$(@($pacs3).Count) (esp 1, matchea por token)"
+
 # 6) Slot ocupado -> 409; consultorioId forjado -> 400 (whitelist)
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000002" } | ConvertTo-Json) } 409 "6 SLOT OCUPADO"
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ consultorioId = 1; doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "X"; apellido = "Y"; telefono = "+59170000003" } | ConvertTo-Json) } 400 "7 CONSULTORIOID FORJADO"

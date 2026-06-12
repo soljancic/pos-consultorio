@@ -22,7 +22,6 @@ type PacienteBusqueda = Pick<Paciente, 'id' | 'nombre' | 'apellido'> & {
   deudaTotal?: number
   telefono?: string | null
   pais?: string
-  email?: string | null
 }
 
 export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pacienteInicial, onClose }: Props) {
@@ -64,6 +63,15 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     staleTime: 5 * 60 * 1000,
   })
 
+  // Token opaco del paciente: el link lleva ?p=<token> en vez de sus datos
+  // (el backend lo crea si no existe; pedirlo aca deja el click sincrono)
+  const { data: tokenPortal } = useQuery<{ token: string }>({
+    queryKey: ['portal-token', pacienteSeleccionado?.id],
+    queryFn: () => api.get(`/pacientes/${pacienteSeleccionado!.id}/portal-token`).then((r) => r.data),
+    enabled: !!pacienteSeleccionado && !!consultorio?.slug && consultorio.portalActivo,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const crearCita = useMutation({
     mutationFn: (data: object) => api.post('/citas', data),
     onSuccess: () => {
@@ -92,11 +100,12 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   }
 
   // Alternativa a crear la cita: mandar al paciente el link del portal con
-  // doctor, servicio y sus datos precargados para que el elija fecha y hora.
+  // doctor, servicio y su token opaco para que el elija fecha y hora con sus
+  // datos precargados (los datos personales NO viajan en la URL).
   // (pacienteInicial de la ficha no trae telefono: el boton no aparece ahi)
   const puedeEnviarLink = !!(
     consultorio?.slug && consultorio.portalActivo &&
-    pacienteSeleccionado?.telefono && doctorId && servicioId
+    pacienteSeleccionado?.telefono && tokenPortal?.token && doctorId && servicioId
   )
 
   function enviarLinkReserva() {
@@ -104,13 +113,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     const query = new URLSearchParams({
       doctor: doctorId,
       servicio: servicioId,
-      nombre: pacienteSeleccionado.nombre,
-      apellido: pacienteSeleccionado.apellido,
-      telefono: pacienteSeleccionado.telefono,
-      pais: pacienteSeleccionado.pais ?? '',
-      email: pacienteSeleccionado.email ?? '',
+      p: tokenPortal!.token,
     })
-    for (const [clave, valor] of [...query]) if (!valor) query.delete(clave)
     const link = `${window.location.origin}/reservar/${consultorio!.slug}?${query.toString()}`
     const servicio = servicios.find((s) => String(s.id) === servicioId)?.nombre ?? 'su cita'
     const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre ?? ''
