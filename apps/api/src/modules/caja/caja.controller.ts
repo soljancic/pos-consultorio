@@ -12,7 +12,7 @@ export class CajaController {
   constructor(private service: CajaService) {}
 
   @Get('hoy')
-  getHoy(@CurrentUser() user: JwtPayload) { return this.service.getHoy(user.consultorioId) }
+  getHoy(@CurrentUser() user: JwtPayload) { return this.service.getHoy(user.consultorioId, user.rol) }
 
   @Post('abrir')
   @ApiOperation({ summary: 'Abrir el turno del dia declarando la caja chica inicial' })

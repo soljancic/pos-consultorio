@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '../../lib/api-client'
 import {
   Calendar,
   Users,
@@ -79,6 +81,15 @@ export function AppShell() {
     .toUpperCase()
 
   const esAdmin = user?.rol === 'ADMIN'
+
+  // Badge del nav Mensajes (item 41a): refresca solo cada 2 min
+  const { data: pendientes } = useQuery<{ pendientes: number }>({
+    queryKey: ['mensajes-pendientes-count'],
+    queryFn: () => api.get('/mensajes/pendientes/count').then((r) => r.data),
+    refetchInterval: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
+  })
+  const badgeMensajes = pendientes?.pendientes ?? 0
 
   // En movil el drawer siempre se ve expandido; "colapsado" solo aplica en lg+
   const ocultarTexto = colapsado ? 'lg:hidden' : ''
@@ -162,8 +173,24 @@ export function AppShell() {
                   )
                 }
               >
-                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                <span className={cn('truncate', ocultarTexto)}>{label}</span>
+                <span className="relative shrink-0">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  {to === '/mensajes' && badgeMensajes > 0 && colapsado && (
+                    <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-amber-400" aria-hidden="true" />
+                  )}
+                </span>
+                <span className={cn('flex-1 truncate', ocultarTexto)}>{label}</span>
+                {to === '/mensajes' && badgeMensajes > 0 && (
+                  <span
+                    className={cn(
+                      'min-w-5 px-1.5 py-0.5 rounded-full bg-amber-400 text-teal-950 text-xs font-bold text-center tabular-nums',
+                      ocultarTexto,
+                    )}
+                    aria-label={`${badgeMensajes} mensajes pendientes`}
+                  >
+                    {badgeMensajes > 99 ? '99+' : badgeMensajes}
+                  </span>
+                )}
               </NavLink>
             ),
           )}

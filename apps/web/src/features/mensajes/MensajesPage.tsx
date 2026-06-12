@@ -46,15 +46,20 @@ export function MensajesPage() {
   })
   const visibles = tab === 'pendientes' ? mensajes : mensajes.filter((m) => m.estado !== 'PENDIENTE')
 
+  function invalidar() {
+    qc.invalidateQueries({ queryKey: ['mensajes'] })
+    qc.invalidateQueries({ queryKey: ['mensajes-pendientes-count'] }) // badge del nav
+  }
+
   const generar = useMutation({
     mutationFn: () => api.post('/mensajes/generar').then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['mensajes'] }),
+    onSuccess: invalidar,
   })
 
   const resolver = useMutation({
     mutationFn: ({ id, estado }: { id: number; estado: 'ENVIADO' | 'OMITIDO' }) =>
       api.put(`/mensajes/${id}/resolver`, { estado }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['mensajes'] }),
+    onSuccess: invalidar,
   })
 
   function mensajeDe(m: Mensaje) {

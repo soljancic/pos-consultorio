@@ -99,17 +99,25 @@ export function CajaPage() {
               { label: 'Tarjeta', value: caja?.totalTarjeta },
               { label: 'Vales', value: caja?.totalVales },
               { label: 'TOTAL', value: caja?.totalGeneral, highlight: true },
-            ].map((item) => (
+            ].map((item) => {
+              // Arqueo ciego estricto: el backend manda null en los montos de
+              // efectivo para quien no es ADMIN mientras el turno este abierto
+              const oculto = caja && item.value === null
+              return (
               <div
                 key={item.label}
                 className={cn(cardUI, 'p-4', item.highlight && 'border-primary/60 bg-primary/10')}
               >
                 <div className="text-xs font-medium text-muted-foreground mb-1">{item.label}</div>
-                <div className={cn('text-xl font-bold tabular-nums', item.highlight ? 'text-primary' : 'text-foreground')}>
-                  {formatMoneda(Number(item.value || 0))}
+                <div
+                  className={cn('text-xl font-bold tabular-nums', item.highlight ? 'text-primary' : 'text-foreground')}
+                  title={oculto ? 'Oculto hasta el cierre (arqueo ciego)' : undefined}
+                >
+                  {oculto ? '••••' : formatMoneda(Number(item.value || 0))}
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Desglose deuda + egresos (MVP + E2-M8) */}

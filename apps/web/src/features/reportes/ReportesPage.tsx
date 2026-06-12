@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, TrendingUp, TrendingDown, CalendarDays } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, CalendarDays, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
-import { inputUI, cardUI } from '../../lib/ui'
+import { inputUI, cardUI, btnOutlineUI } from '../../lib/ui'
 
 const LABEL_ESTADO: Record<string, string> = {
   PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', LLEGO: 'Llegó',
@@ -51,6 +51,39 @@ export function ReportesPage() {
     queryFn: () => api.get('/reportes/mensual', { params: { mes } }).then((r) => r.data),
   })
 
+  // Export CSV con ; (Excel es) y BOM UTF-8 para que respete las tildes
+  function exportarCsv() {
+    if (!reporte) return
+    const num = (v: number) => v.toFixed(2).replace('.', ',')
+    const filas: string[][] = [
+      ['Reporte mensual', reporte.mes],
+      [],
+      ['Ingresos', num(reporte.ingresos.total)],
+      ...Object.entries(reporte.ingresos.porFormaPago).map(([f, t]) => [`  ${LABEL_FORMA[f] ?? f}`, num(t)]),
+      ['Gastos', num(reporte.gastos.total)],
+      ...reporte.gastos.porCategoria.map((g) => [`  ${LABEL_CATEGORIA[g.categoria] ?? g.categoria}`, num(g.total)]),
+      ['Resultado neto', num(reporte.resultadoNeto)],
+      ['Citas del mes', String(reporte.citas.total)],
+      ...Object.entries(reporte.citas.porEstado).map(([e, n]) => [`  ${LABEL_ESTADO[e] ?? e}`, String(n)]),
+      [],
+      ['Doctor', 'Atendidas', 'Pacientes', 'Canceladas', 'No asistió', 'Ingresos', 'Comisión %', 'Comisión'],
+      ...reporte.porDoctor.map((d) => [
+        d.nombre, String(d.citasAtendidas), String(d.pacientesAtendidos), String(d.canceladas),
+        String(d.noShows), num(d.ingresos),
+        d.comisionPct !== null ? num(d.comisionPct) : '', d.comision !== null ? num(d.comision) : '',
+      ]),
+      ['Total comisiones', '', '', '', '', '', '', num(reporte.totalComisiones)],
+    ]
+    const csv = filas.map((f) => f.map((c) => `"${c.replace(/"/g, '""')}"`).join(';')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `reporte-${reporte.mes}.csv`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
@@ -60,7 +93,7 @@ export function ReportesPage() {
           </span>
           Reportes
         </h1>
-        <div>
+        <div className="flex items-center gap-2">
           <label htmlFor="reporte-mes" className="sr-only">Mes</label>
           <input
             id="reporte-mes"
@@ -69,6 +102,10 @@ export function ReportesPage() {
             onChange={(e) => e.target.value && setMes(e.target.value)}
             className={cn(inputUI, 'w-44')}
           />
+          <button onClick={exportarCsv} disabled={!reporte} className={btnOutlineUI}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            CSV
+          </button>
         </div>
       </div>
 

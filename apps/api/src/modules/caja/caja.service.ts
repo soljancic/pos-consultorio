@@ -48,12 +48,20 @@ export function diaCajaLocal(): { clave: Date; inicioLocal: Date; finLocal: Date
 export class CajaService {
   constructor(private prisma: PrismaService) {}
 
-  async getHoy(consultorioId: number) {
+  async getHoy(consultorioId: number, rol?: string) {
     const { clave: hoy, inicioLocal, finLocal } = diaCajaLocal()
 
-    const caja = await this.prisma.cajaDiaria.findUnique({
+    let caja: Record<string, unknown> | null = await this.prisma.cajaDiaria.findUnique({
       where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
     })
+
+    // Arqueo ciego ESTRICTO (mejora anotada en E2-M2): mientras el turno
+    // este abierto, quien no es ADMIN no ve los agregados de efectivo (con
+    // ellos se deduce el esperado y el conteo deja de ser ciego). Los pagos
+    // individuales siguen visibles: son la operacion del dia.
+    if (caja && !caja.cerrada && rol !== 'ADMIN') {
+      caja = { ...caja, montoInicial: null, totalEfectivo: null, totalGeneral: null }
+    }
 
     const pagos = await this.prisma.pago.findMany({
       where: {
