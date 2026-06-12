@@ -119,6 +119,14 @@ export class PortalService {
     return paciente
   }
 
+  // Pagina publica de pago con QR (/qr/:slug): no exige portalActivo, solo
+  // que el consultorio este activo y tenga el QR cargado en Configuracion
+  async qr(slug: string) {
+    const c = await this.prisma.consultorio.findUnique({ where: { slug } })
+    if (!c || !c.activo || !c.qrUrl) throw new NotFoundException('QR no disponible')
+    return { consultorio: c.nombre, logoUrl: c.logoUrl, qrUrl: c.qrUrl }
+  }
+
   async slots(slug: string, doctorId: number, servicioId: number, fecha: string) {
     const c = await this.consultorioPorSlug(slug)
     const servicio = await this.prisma.servicio.findFirst({

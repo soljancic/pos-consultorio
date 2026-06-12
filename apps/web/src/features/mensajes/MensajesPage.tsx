@@ -4,7 +4,7 @@ import { MessageCircle, RefreshCw, Check, X, CalendarClock, CircleDollarSign } f
 import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, buildWhatsAppUrl, cn } from '../../lib/utils'
-import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
+import { usePlantillasWhatsApp, renderPlantilla, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 
 type Mensaje = {
@@ -35,7 +35,7 @@ const LABEL_ESTADO: Record<Mensaje['estado'], string> = {
 export function MensajesPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'pendientes' | 'resueltos'>('pendientes')
-  const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
+  const { plantillas, consultorioNombre, linkQRBase } = usePlantillasWhatsApp()
 
   const { data: mensajes = [], isLoading } = useQuery<Mensaje[]>({
     queryKey: ['mensajes', tab],
@@ -71,11 +71,11 @@ export function MensajesPage() {
         consultorio: consultorioNombre,
       })
     }
-    return renderPlantilla(plantillas.deuda, {
+    return renderDeuda(plantillas.deuda, {
       nombre: m.paciente.nombre,
       monto: formatMoneda(Number(m.paciente.deudaTotal)),
       consultorio: consultorioNombre,
-    })
+    }, linkQRBase)
   }
 
   return (

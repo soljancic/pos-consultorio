@@ -11,6 +11,7 @@ import { GastosPage } from './features/gastos/GastosPage'
 import { CalendarioAtencionPage } from './features/calendario/CalendarioAtencionPage'
 import { ActividadPage } from './features/actividad/ActividadPage'
 import { ReservarPage } from './features/portal/ReservarPage'
+import { QrPage } from './features/portal/QrPage'
 import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       {/* Publicas: sin auth ni AppShell */}
       <Route path="/reservar/:slug" element={<ReservarPage />} />
+      <Route path="/qr/:slug" element={<QrPage />} />
       <Route path="/establecer-password" element={<EstablecerPasswordPage />} />
       <Route
         path="/"

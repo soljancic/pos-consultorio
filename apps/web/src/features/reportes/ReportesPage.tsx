@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart3, TrendingUp, TrendingDown, CalendarDays, Download } from 'lucide-react'
 import { format } from 'date-fns'
+import * as XLSX from 'xlsx'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { inputUI, cardUI, btnOutlineUI } from '../../lib/ui'
@@ -52,37 +53,42 @@ export function ReportesPage() {
     queryFn: () => api.get('/reportes/mensual', { params: { mes } }).then((r) => r.data),
   })
 
-  // Export CSV con ; (Excel es) y BOM UTF-8 para que respete las tildes
-  function exportarCsv() {
+  // Export directo a Excel (.xlsx, decision owner 2026-06-12): los montos
+  // van como numeros nativos para que Excel los sume sin pelear con comas
+  function exportarExcel() {
     if (!reporte) return
-    const num = (v: number) => v.toFixed(2).replace('.', ',')
-    const filas: string[][] = [
+    const filas: Array<Array<string | number>> = [
       ['Reporte mensual', reporte.mes],
       [],
-      ['Ingresos', num(reporte.ingresos.total)],
-      ...Object.entries(reporte.ingresos.porFormaPago).map(([f, t]) => [`  ${LABEL_FORMA[f] ?? f}`, num(t)]),
-      ['Gastos', num(reporte.gastos.total)],
-      ...reporte.gastos.porCategoria.map((g) => [`  ${LABEL_CATEGORIA[g.categoria] ?? g.categoria}`, num(g.total)]),
-      ['Resultado neto', num(reporte.resultadoNeto)],
-      ['Citas del mes', String(reporte.citas.total)],
-      ...Object.entries(reporte.citas.porEstado).map(([e, n]) => [`  ${LABEL_ESTADO[e] ?? e}`, String(n)]),
+      ['Ingresos', reporte.ingresos.total],
+      ...Object.entries(reporte.ingresos.porFormaPago).map(
+        ([f, t]): Array<string | number> => [`  ${LABEL_FORMA[f] ?? f}`, t],
+      ),
+      ['Gastos', reporte.gastos.total],
+      ...reporte.gastos.porCategoria.map(
+        (g): Array<string | number> => [`  ${LABEL_CATEGORIA[g.categoria] ?? g.categoria}`, g.total],
+      ),
+      ['Resultado neto', reporte.resultadoNeto],
+      ['Citas del mes', reporte.citas.total],
+      ...Object.entries(reporte.citas.porEstado).map(
+        ([e, n]): Array<string | number> => [`  ${LABEL_ESTADO[e] ?? e}`, n],
+      ),
       [],
       ['Doctor', 'Atendidas', 'Pacientes', 'Canceladas', 'No asistió', 'Ingresos', 'Comisión %', 'Comisión'],
-      ...reporte.porDoctor.map((d) => [
-        d.nombre, String(d.citasAtendidas), String(d.pacientesAtendidos), String(d.canceladas),
-        String(d.noShows), num(d.ingresos),
-        d.comisionPct !== null ? num(d.comisionPct) : '', d.comision !== null ? num(d.comision) : '',
-      ]),
-      ['Total comisiones', '', '', '', '', '', '', num(reporte.totalComisiones)],
+      ...reporte.porDoctor.map(
+        (d): Array<string | number> => [
+          d.nombre, d.citasAtendidas, d.pacientesAtendidos, d.canceladas,
+          d.noShows, d.ingresos,
+          d.comisionPct !== null ? d.comisionPct : '', d.comision !== null ? d.comision : '',
+        ],
+      ),
+      ['Total comisiones', '', '', '', '', '', '', reporte.totalComisiones],
     ]
-    const csv = filas.map((f) => f.map((c) => `"${c.replace(/"/g, '""')}"`).join(';')).join('\r\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `reporte-${reporte.mes}.csv`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    const hoja = XLSX.utils.aoa_to_sheet(filas)
+    hoja['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }]
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, `Reporte ${reporte.mes}`)
+    XLSX.writeFile(libro, `reporte-${reporte.mes}.xlsx`)
   }
 
   return (
@@ -103,9 +109,9 @@ export function ReportesPage() {
             onChange={(e) => e.target.value && setMes(e.target.value)}
             className={cn(inputUI, 'w-44')}
           />
-          <button onClick={exportarCsv} disabled={!reporte} className={btnOutlineUI}>
+          <button onClick={exportarExcel} disabled={!reporte} className={btnOutlineUI}>
             <Download className="h-4 w-4" aria-hidden="true" />
-            CSV
+            Excel
           </button>
         </div>
       </div>

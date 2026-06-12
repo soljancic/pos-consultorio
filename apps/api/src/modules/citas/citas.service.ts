@@ -42,6 +42,10 @@ export class ReprogramarCitaDto {
   @IsInt() @IsOptional()
   doctorId?: number
 
+  // Cambio de servicio al reprogramar: recalcula duracion y cobro
+  @IsInt() @IsOptional()
+  servicioId?: number
+
   @IsString() @IsOptional()
   notasSecretaria?: string
 }
@@ -374,6 +378,7 @@ export class CitasService {
   ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
+      include: { cobro: true },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
     if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
@@ -382,9 +387,22 @@ export class CitasService {
       )
     }
 
+    // Cambio de servicio (decision owner 2026-06-12): nueva duracion y el
+    // cobro se recalcula al precio del nuevo servicio respetando lo pagado
+    const servicioNuevo =
+      dto.servicioId && dto.servicioId !== cita.servicioId
+        ? await this.prisma.servicio.findFirst({
+            where: { id: dto.servicioId, consultorioId, activo: true },
+          })
+        : null
+    if (dto.servicioId && dto.servicioId !== cita.servicioId && !servicioNuevo) {
+      throw new NotFoundException('Servicio no encontrado')
+    }
+
     const doctorId = dto.doctorId ?? cita.doctorId
+    const duracionMin = servicioNuevo?.duracionMin ?? cita.duracionMin
     const fechaHora = new Date(dto.fechaHora)
-    const fechaFin = new Date(fechaHora.getTime() + cita.duracionMin * 60 * 1000)
+    const fechaFin = new Date(fechaHora.getTime() + duracionMin * 60 * 1000)
     await this.verificarDisponibilidad(consultorioId, doctorId, fechaHora, fechaFin, citaId)
     await this.verificarHorarioAtencion(consultorioId, doctorId, fechaHora, fechaFin)
 
@@ -396,9 +414,27 @@ export class CitasService {
           doctorId,
           // la cita movida vuelve a PENDIENTE: hay que re-confirmar con el paciente
           estado: EstadoCita.PENDIENTE,
+          ...(servicioNuevo && {
+            servicioId: servicioNuevo.id,
+            duracionMin: servicioNuevo.duracionMin,
+          }),
           ...(dto.notasSecretaria !== undefined && { notasSecretaria: dto.notasSecretaria }),
         },
       })
+
+      if (servicioNuevo && cita.cobro && cita.cobro.estado !== EstadoCobro.ANULADO) {
+        const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
+        const nuevoSaldo = servicioNuevo.precioBase.minus(pagado)
+        if (nuevoSaldo.lt(0)) {
+          throw new BadRequestException(
+            'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+          )
+        }
+        await tx.cobro.update({
+          where: { citaId },
+          data: { total: servicioNuevo.precioBase, saldoPendiente: nuevoSaldo },
+        })
+      }
 
       await tx.log.create({
         data: {
@@ -410,11 +446,13 @@ export class CitasService {
           payloadAntes: {
             fechaHora: cita.fechaHora.toISOString(),
             doctorId: cita.doctorId,
+            servicioId: cita.servicioId,
             estado: cita.estado,
           },
           payloadDespues: {
             fechaHora: fechaHora.toISOString(),
             doctorId,
+            servicioId: servicioNuevo?.id ?? cita.servicioId,
             estado: EstadoCita.PENDIENTE,
             motivo: 'reprogramacion',
           },

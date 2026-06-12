@@ -13,6 +13,8 @@ export type PlantillasWhatsApp = { recordatorio: string; deuda: string; contacto
 
 type ConsultorioConfig = {
   nombre: string
+  slug: string | null
+  qrUrl: string | null
   msjRecordatorio: string | null
   msjDeuda: string | null
   msjContacto: string | null
@@ -22,6 +24,24 @@ export function renderPlantilla(plantilla: string, vars: Record<string, string |
   return plantilla.replace(/\{(\w+)\}/g, (token, clave) =>
     clave in vars ? String(vars[clave]) : token,
   )
+}
+
+// Recordatorio de deuda con link a la pagina publica de pago con QR.
+// {linkQR} es variable de plantilla; si la plantilla no la usa, el link se
+// agrega solo al final. Sin QR cargado (linkQRBase vacio) el link se omite.
+export function renderDeuda(
+  plantilla: string,
+  vars: Record<string, string | number>,
+  linkQRBase: string,
+) {
+  const linkQR = linkQRBase
+    ? `${linkQRBase}?cliente=${encodeURIComponent(String(vars.nombre ?? ''))}`
+    : ''
+  const msg = renderPlantilla(plantilla, { ...vars, linkQR })
+  if (linkQR && !plantilla.includes('{linkQR}')) {
+    return `${msg}\nPuede pagar con QR acá: ${linkQR}`
+  }
+  return msg
 }
 
 // Las plantillas del consultorio con fallback a los defaults; el nombre del
@@ -37,5 +57,8 @@ export function usePlantillasWhatsApp() {
     deuda: data?.msjDeuda || PLANTILLAS_DEFAULT.deuda,
     contacto: data?.msjContacto || PLANTILLAS_DEFAULT.contacto,
   }
-  return { plantillas, consultorioNombre: data?.nombre ?? 'el consultorio' }
+  // Base del link de pago: requiere QR cargado y slug configurado
+  const linkQRBase =
+    data?.qrUrl && data?.slug ? `${window.location.origin}/qr/${data.slug}` : ''
+  return { plantillas, consultorioNombre: data?.nombre ?? 'el consultorio', linkQRBase }
 }

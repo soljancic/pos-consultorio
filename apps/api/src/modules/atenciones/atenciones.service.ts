@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
-import { IsString, IsOptional, IsISO8601 } from 'class-validator'
+import { IsString, IsOptional, IsISO8601, IsInt } from 'class-validator'
 import { promises as fs } from 'fs'
 import { join, resolve, extname } from 'path'
 import { PrismaService } from '../../prisma/prisma.service'
-import { EstadoCita } from '@prisma/client'
+import { EstadoCita, EstadoCobro } from '@prisma/client'
 
 export class UpsertAtencionDto {
+  // El paciente vino por una cosa y el doctor hizo otra: la cita y el cobro
+  // se actualizan al servicio realmente prestado
+  @IsInt() @IsOptional()
+  servicioId?: number
+
   @IsString() @IsOptional()
   motivo?: string
 
@@ -141,6 +146,20 @@ export class AtencionesService {
       )
     }
 
+    // Cambio de servicio: vino por una cosa, el doctor hizo otra
+    let servicioNuevo: { id: number; duracionMin: number; precioBase: any } | null = null
+    if (dto.servicioId && dto.servicioId !== cita.servicioId) {
+      if (cita.estado === EstadoCita.COBRADO) {
+        throw new BadRequestException(
+          'La cita ya esta cobrada: anule el pago antes de cambiar el servicio',
+        )
+      }
+      servicioNuevo = await this.prisma.servicio.findFirst({
+        where: { id: dto.servicioId, consultorioId, activo: true },
+      })
+      if (!servicioNuevo) throw new NotFoundException('Servicio no encontrado')
+    }
+
     const data = {
       motivo: dto.motivo,
       diagnostico: dto.diagnostico,
@@ -149,13 +168,14 @@ export class AtencionesService {
       proximoControl: dto.proximoControl ? new Date(dto.proximoControl) : null,
     }
 
-    const [atencion] = await this.prisma.$transaction([
-      this.prisma.atencion.upsert({
+    const atencion = await this.prisma.$transaction(async (tx) => {
+      const upserted = await tx.atencion.upsert({
         where: { citaId },
         create: { citaId, ...data },
         update: data,
-      }),
-      this.prisma.log.create({
+      })
+
+      await tx.log.create({
         data: {
           consultorioId,
           usuarioId,
@@ -167,8 +187,62 @@ export class AtencionesService {
             : undefined,
           payloadDespues: { diagnostico: dto.diagnostico, tratamiento: dto.tratamiento },
         },
-      }),
-    ])
+      })
+
+      if (servicioNuevo) {
+        await tx.cita.update({
+          where: { id: citaId },
+          data: { servicioId: servicioNuevo.id, duracionMin: servicioNuevo.duracionMin },
+        })
+
+        const cobro = await tx.cobro.findUnique({ where: { citaId } })
+        if (cobro && cobro.estado !== EstadoCobro.ANULADO) {
+          const pagado = cobro.total.minus(cobro.saldoPendiente)
+          const nuevoSaldo = servicioNuevo.precioBase.minus(pagado)
+          if (nuevoSaldo.lt(0)) {
+            throw new BadRequestException(
+              'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+            )
+          }
+          await tx.cobro.update({
+            where: { citaId },
+            data: {
+              total: servicioNuevo.precioBase,
+              saldoPendiente: nuevoSaldo,
+              estado: nuevoSaldo.eq(0) && pagado.gt(0)
+                ? EstadoCobro.COMPLETO
+                : pagado.gt(0)
+                  ? EstadoCobro.PARCIAL
+                  : EstadoCobro.PENDIENTE,
+            },
+          })
+
+          // La deuda del paciente ya nacio (ATENDIDA/CON_DEUDA): se ajusta
+          // por el delta entre el saldo viejo y el nuevo
+          if (cita.estado === EstadoCita.ATENDIDA || cita.estado === EstadoCita.CON_DEUDA) {
+            const delta = nuevoSaldo.minus(cobro.saldoPendiente)
+            await tx.paciente.update({
+              where: { id: cita.pacienteId },
+              data: { deudaTotal: { increment: delta } },
+            })
+          }
+        }
+
+        await tx.log.create({
+          data: {
+            consultorioId,
+            usuarioId,
+            entidad: 'Cita',
+            entidadId: citaId,
+            accion: 'UPDATE',
+            payloadAntes: { servicioId: cita.servicioId },
+            payloadDespues: { servicioId: servicioNuevo.id, motivo: 'cambio de servicio en atencion' },
+          },
+        })
+      }
+
+      return upserted
+    })
 
     return atencion
   }

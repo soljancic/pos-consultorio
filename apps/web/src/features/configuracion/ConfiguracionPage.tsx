@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
@@ -28,6 +28,7 @@ type Consultorio = {
   moneda: string; timezone: string
   slug: string | null; portalActivo: boolean
   msjRecordatorio: string | null; msjDeuda: string | null; msjContacto: string | null
+  qrUrl: string | null
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
@@ -72,6 +73,18 @@ export function ConfiguracionPage() {
       })
     }
   }, [consultorio])
+
+  // QR de pagos: la imagen sube a Cloudinary via el backend (las claves no
+  // viven en el navegador) y la URL queda guardada en el consultorio
+  const qrFileRef = useRef<HTMLInputElement>(null)
+  const subirQr = useMutation({
+    mutationFn: async (archivo: File) => {
+      const fd = new FormData()
+      fd.append('archivo', archivo)
+      await api.post('/consultorio/qr', fd)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['consultorio'] }),
+  })
 
   const updateConsultorio = useMutation({
     mutationFn: (data: typeof consForm) =>
@@ -253,12 +266,59 @@ export function ConfiguracionPage() {
               )}
             </div>
 
+            {/* QR de pagos (Cloudinary) */}
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">QR de pagos</h3>
+              <p className="text-xs text-muted-foreground">
+                La imagen del QR de tu banco/billetera. Los pacientes la ven y descargan en la página
+                pública de pago, y el recordatorio de deuda incluye el link automáticamente.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[220px]">
+                  <label htmlFor="cons-qrurl" className="block text-sm font-medium text-foreground mb-1.5">
+                    URL del QR
+                  </label>
+                  <input id="cons-qrurl" value={consultorio?.qrUrl ?? ''} readOnly
+                    placeholder="Subí una imagen para generarla"
+                    className={cn(inputUI, 'text-muted-foreground')} />
+                </div>
+                {consultorio?.qrUrl && (
+                  <img src={consultorio.qrUrl} alt="QR de pagos actual"
+                    className="h-16 w-16 rounded-md border object-contain bg-white" />
+                )}
+                <div className="pt-7">
+                  <input
+                    ref={qrFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) subirQr.mutate(f)
+                      e.target.value = ''
+                    }}
+                  />
+                  <button type="button" disabled={subirQr.isPending}
+                    onClick={() => qrFileRef.current?.click()}
+                    className={btnPrimaryUI}>
+                    {subirQr.isPending ? 'Subiendo...' : consultorio?.qrUrl ? 'Reemplazar QR' : 'Subir QR'}
+                  </button>
+                </div>
+              </div>
+              {subirQr.isError && (
+                <p role="alert" className="text-xs text-destructive">
+                  {(subirQr.error as any)?.response?.data?.message ?? 'No se pudo subir la imagen'}
+                </p>
+              )}
+            </div>
+
             {/* Mensajes de WhatsApp (E3 item 26) */}
             <div className="border-t pt-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Mensajes de WhatsApp</h3>
               <p className="text-xs text-muted-foreground">
-                Variables disponibles: {'{nombre} {hora} {fecha} {monto} {consultorio}'}. Si dejás un
-                mensaje vacío se usa el texto por defecto del sistema.
+                Variables disponibles: {'{nombre} {hora} {fecha} {monto} {consultorio}'} y {'{linkQR}'}
+                {' '}en el recordatorio de deuda (link a la página de pago con QR; vacío si no hay QR
+                cargado). Si dejás un mensaje vacío se usa el texto por defecto del sistema.
               </p>
               {([
                 ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora}.'],

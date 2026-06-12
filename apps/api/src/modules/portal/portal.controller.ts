@@ -27,6 +27,14 @@ export class PortalController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Get(':slug/qr')
+  @ApiOperation({ summary: 'QR de pagos del consultorio (para ver y descargar)' })
+  qr(@Param('slug') slug: string) {
+    return this.service.qr(slug)
+  }
+
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get(':slug/slots')
   @ApiOperation({ summary: 'Horas libres del doctor para un servicio y fecha' })

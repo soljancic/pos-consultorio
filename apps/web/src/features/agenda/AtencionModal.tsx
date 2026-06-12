@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
-import { EstadoCita, type Cita } from '@pos/types'
+import { EstadoCita, type Cita, type Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { abrirAdjunto, abrirRecetaPdf, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
@@ -37,6 +37,15 @@ export function AtencionModal({ cita, onClose }: Props) {
     motivo: '', diagnostico: '', tratamiento: '', evolucion: '', proximoControl: '',
   })
 
+  // El paciente vino por una cosa y el doctor hizo otra: el servicio se
+  // puede corregir aca y el cobro se recalcula en el backend
+  const [servicioId, setServicioId] = useState(String(cita.servicioId))
+  const { data: servicios = [] } = useQuery<Servicio[]>({
+    queryKey: ['servicios'],
+    queryFn: () => api.get('/servicios').then((r) => r.data),
+    enabled: puedeEditar,
+  })
+
   useEffect(() => {
     if (atencion) {
       setForm({
@@ -51,9 +60,12 @@ export function AtencionModal({ cita, onClose }: Props) {
 
   const guardar = useMutation({
     mutationFn: async ({ marcarAtendida }: { marcarAtendida: boolean }) => {
-      const payload = Object.fromEntries(
-        Object.entries(form).map(([k, v]) => [k, v === '' ? undefined : v])
-      )
+      const payload = {
+        ...Object.fromEntries(
+          Object.entries(form).map(([k, v]) => [k, v === '' ? undefined : v])
+        ),
+        ...(puedeEditar && { servicioId: Number(servicioId) }),
+      }
       await api.put(`/atenciones/cita/${cita.id}`, payload)
       if (marcarAtendida) {
         await api.put(`/citas/${cita.id}/estado`, { estado: EstadoCita.ATENDIDA })
@@ -137,6 +149,27 @@ export function AtencionModal({ cita, onClose }: Props) {
           <div className="p-6 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Servicio realizado</label>
+              <select
+                value={servicioId}
+                disabled={!puedeEditar || cita.estado === EstadoCita.COBRADO}
+                onChange={(e) => setServicioId(e.target.value)}
+                className={inputUI}
+              >
+                {servicios.length === 0 && (
+                  <option value={String(cita.servicioId)}>{cita.servicio?.nombre ?? 'Servicio'}</option>
+                )}
+                {servicios.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
+                ))}
+              </select>
+              {String(cita.servicioId) !== servicioId && (
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Al guardar, la cita y el cobro se actualizan al precio de este servicio.
+                </p>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Motivo de consulta</label>
               <input value={form.motivo} disabled={!puedeEditar} onChange={(e) => set('motivo', e.target.value)} className={inputUI} />

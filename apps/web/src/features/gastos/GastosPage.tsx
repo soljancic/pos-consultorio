@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format, startOfMonth } from 'date-fns'
+import { format } from 'date-fns'
 import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
 import { CategoriaGasto } from '@pos/types'
 import { api } from '../../lib/api-client'
@@ -15,7 +15,9 @@ export function GastosPage() {
   const esAdmin = user?.rol === 'ADMIN'
   const qc = useQueryClient()
 
-  const [desde, setDesde] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
+  // Default: los gastos de HOY (decision owner 2026-06-12); el rango se
+  // amplia con los filtros de fecha
+  const [desde, setDesde] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [categoria, setCategoria] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)

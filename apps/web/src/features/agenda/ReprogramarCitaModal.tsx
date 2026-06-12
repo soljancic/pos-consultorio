@@ -5,7 +5,7 @@ import { X, AlertCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
-import type { Cita, Doctor } from '@pos/types'
+import type { Cita, Doctor, Servicio } from '@pos/types'
 
 interface Props {
   cita: Cita
@@ -20,6 +20,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
   const [fecha, setFecha] = useState(format(fechaActual, 'yyyy-MM-dd'))
   const [hora, setHora] = useState(format(fechaActual, 'HH:mm'))
   const [doctorId, setDoctorId] = useState(String(cita.doctorId))
+  const [servicioId, setServicioId] = useState(String(cita.servicioId))
   const [error, setError] = useState('')
 
   const { data: doctores = [] } = useQuery<Doctor[]>({
@@ -27,11 +28,17 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
     queryFn: () => api.get('/doctores').then((r) => r.data),
   })
 
+  const { data: servicios = [] } = useQuery<Servicio[]>({
+    queryKey: ['servicios'],
+    queryFn: () => api.get('/servicios').then((r) => r.data),
+  })
+
   const reprogramar = useMutation({
     mutationFn: () =>
       api.put(`/citas/${cita.id}`, {
         fechaHora: new Date(`${fecha}T${hora}:00`).toISOString(),
         doctorId: Number(doctorId),
+        servicioId: Number(servicioId),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['citas'] })
@@ -114,6 +121,28 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
                 <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="reprog-servicio" className="block text-sm font-medium text-foreground mb-1.5">
+              Servicio
+            </label>
+            <select
+              id="reprog-servicio"
+              value={servicioId}
+              onChange={(e) => setServicioId(e.target.value)}
+              className={inputUI}
+              required
+            >
+              {servicios.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
+              ))}
+            </select>
+            {String(cita.servicioId) !== servicioId && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Al cambiar el servicio, el cobro se recalcula al precio del nuevo servicio.
+              </p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">

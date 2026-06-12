@@ -79,6 +79,12 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Pos
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ consultorioId = 1; doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:00"; nombre = "X"; apellido = "Y"; telefono = "+59170000003"; email = "x@y.bo" } | ConvertTo-Json) } 400 "7 CONSULTORIOID FORJADO"
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "11:30"; nombre = "X"; apellido = "Y"; telefono = "+59170000004" } | ConvertTo-Json) } 400 "7b EMAIL OBLIGATORIO"
 
+# 7c) QR publico: 404 sin QR cargado; con qrUrl seteada devuelve los datos
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/qr" } 404 "7c QR SIN CARGAR"
+Invoke-RestMethod -Uri "$base/consultorio" -Method Put -Headers $h -ContentType "application/json" -Body (@{ qrUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg" } | ConvertTo-Json) | Out-Null
+$qr = Invoke-RestMethod -Uri "$base/public/$slug/qr"
+Write-Output "7d QR PUBLICO: consultorio=$($qr.consultorio) tieneUrl=$([bool]$qr.qrUrl) (esp True)"
+
 # 8) Fecha pasada -> sin slots (filtro de slots pasados)
 $slotsAyer = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&servicioId=$($srv.id)&fecha=$ayer"
 Write-Output "8 SLOTS PASADOS: count=$(@($slotsAyer.slots).Count) (esp 0)"
