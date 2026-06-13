@@ -173,6 +173,7 @@ model Servicio {
 
   citas Cita[]
   doctores Doctor[] @relation("DoctorServicios")
+  preciosDoctor DoctorServicioPrecio[]
 
   @@index([consultorioId])
   @@map("servicios")
@@ -201,9 +202,28 @@ model Doctor {
   // Calendario f2: servicios que atiende. Lista vacia = atiende todos
   // (compatibilidad con doctores existentes)
   servicios Servicio[] @relation("DoctorServicios")
+  // Precio por servicio especifico de este doctor (override del precioBase)
+  preciosServicio DoctorServicioPrecio[]
 
   @@index([consultorioId])
   @@map("doctores")
+}
+
+// Precio que cobra un doctor por un servicio puntual. Si no hay fila, la cita
+// usa el precioBase del servicio; si la hay, al crear la cita el cobro toma
+// este precio (override). Tabla aditiva: la membresia doctor-servicio sigue
+// viviendo en el M2M DoctorServicios.
+model DoctorServicioPrecio {
+  id         Int      @id @default(autoincrement())
+  doctorId   Int
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  servicioId Int
+  servicio   Servicio @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+  precio     Decimal  @db.Decimal(10, 2)
+
+  @@unique([doctorId, servicioId])
+  @@index([doctorId])
+  @@map("doctor_servicio_precios")
 }
 
 model HorarioAtencion {

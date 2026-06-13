@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, Matches, IsArray } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, Matches, IsArray, ValidateNested } from 'class-validator'
+import { Type } from 'class-transformer'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita, TipoDisponibilidad } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -27,10 +28,23 @@ export class UpdateDoctorDto extends PartialType(CreateDoctorDto) {
   activo?: boolean
 }
 
+// Precio override de un doctor para un servicio puntual
+export class PrecioServicioDto {
+  @IsInt()
+  servicioId: number
+
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
+  precio: number
+}
+
 // Calendario f2: que servicios atiende el doctor. Lista vacia = todos.
 export class SetServiciosDto {
   @IsArray() @IsInt({ each: true })
   servicioIds: number[]
+
+  // Precio por servicio especifico (vacio = precioBase del servicio)
+  @IsArray() @ValidateNested({ each: true }) @Type(() => PrecioServicioDto) @IsOptional()
+  precios?: PrecioServicioDto[]
 }
 
 export class CreateHorarioDto {
@@ -54,13 +68,20 @@ export class DoctoresService {
       include: {
         horarios: { where: { activo: true }, orderBy: { diaSemana: 'asc' } },
         servicios: { select: { id: true } },
+        preciosServicio: { select: { servicioId: true, precio: true } },
       },
       orderBy: { nombre: 'asc' },
     })
   }
 
-  // Calendario f2: set completo de servicios del doctor (sin lista = todos)
-  async setServicios(consultorioId: number, doctorId: number, servicioIds: number[]) {
+  // Calendario f2: set completo de servicios del doctor (sin lista = todos).
+  // Ademas reconcilia los precios override por servicio (reemplazo completo).
+  async setServicios(
+    consultorioId: number,
+    doctorId: number,
+    servicioIds: number[],
+    precios: PrecioServicioDto[] = [],
+  ) {
     const doctor = await this.prisma.doctor.findFirst({ where: { id: doctorId, consultorioId } })
     if (!doctor) throw new NotFoundException('Doctor no encontrado')
 
@@ -69,10 +90,33 @@ export class DoctoresService {
       where: { id: { in: servicioIds }, consultorioId },
       select: { id: true },
     })
-    return this.prisma.doctor.update({
+    // Overrides: solo servicios del tenant (la membresia M2M es aparte; un
+    // doctor "atiende todos" igual puede tener override de un servicio puntual)
+    const idsTenant = new Set(
+      (await this.prisma.servicio.findMany({ where: { consultorioId }, select: { id: true } })).map((s) => s.id),
+    )
+    const overrides = precios.filter((p) => idsTenant.has(p.servicioId))
+
+    await this.prisma.$transaction([
+      this.prisma.doctor.update({
+        where: { id: doctorId },
+        data: { servicios: { set: validos.map((s) => ({ id: s.id })) } },
+      }),
+      // Reemplazo completo de los overrides del doctor
+      this.prisma.doctorServicioPrecio.deleteMany({ where: { doctorId } }),
+      ...overrides.map((p) =>
+        this.prisma.doctorServicioPrecio.create({
+          data: { doctorId, servicioId: p.servicioId, precio: p.precio },
+        }),
+      ),
+    ])
+
+    return this.prisma.doctor.findUnique({
       where: { id: doctorId },
-      data: { servicios: { set: validos.map((s) => ({ id: s.id })) } },
-      include: { servicios: { select: { id: true, nombre: true } } },
+      include: {
+        servicios: { select: { id: true, nombre: true } },
+        preciosServicio: { select: { servicioId: true, precio: true } },
+      },
     })
   }
 

@@ -56,7 +56,7 @@ $sl2 = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($docA.id)&ser
 Write-Output "5 SLOTS PROPIO: count=$(@($sl2.slots).Count) (esp 4)"
 
 # 6) Reservar A con S2 -> 409
-Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $docA.id; servicioId = $s2.id; fecha = $manana; hora = "09:00"; nombre = "X"; apellido = "Y"; telefono = "+59171111111" } | ConvertTo-Json) } 409 "6 RESERVA NO ATIENDE"
+Esperar-Error { Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $docA.id; servicioId = $s2.id; fecha = $manana; hora = "09:00"; nombre = "X"; apellido = "Y"; telefono = "+59171111111"; email = "x@y.bo" } | ConvertTo-Json) } 409 "6 RESERVA NO ATIENDE"
 
 # 7) Doctor B sin lista atiende cualquiera
 $sl3 = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($docB.id)&servicioId=$($s2.id)&fecha=$manana"
@@ -72,3 +72,27 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/doctores/$($docA.id)/servicios" -M
 Invoke-RestMethod -Uri "$base/doctores/$($docA.id)/servicios" -Method Put -Headers $h -ContentType "application/json" -Body (@{ servicioIds = @() } | ConvertTo-Json) | Out-Null
 $sl4 = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($docA.id)&servicioId=$($s2.id)&fecha=$manana"
 Write-Output "9 LISTA VACIA: count=$(@($sl4.slots).Count) (esp 4)"
+
+# 10) Precio override: doctor B atiende S1 (1500) y S2 (sin override = 500 base)
+# JSON manual: ConvertTo-Json colapsa arrays/objetos anidados (gotcha PS 5.1)
+$bodyOv = "{ ""servicioIds"": [$($s1.id),$($s2.id)], ""precios"": [{ ""servicioId"": $($s1.id), ""precio"": 1500 }] }"
+$asigB = Invoke-RestMethod -Uri "$base/doctores/$($docB.id)/servicios" -Method Put -Headers $h -ContentType "application/json" -Body $bodyOv
+Write-Output "10 OVERRIDE SET: count=$(@($asigB.preciosServicio).Count) (esp 1) precio=$($asigB.preciosServicio[0].precio) (esp 1500)"
+
+# 11) GET /doctores expone el override
+$docs2 = Invoke-RestMethod -Uri "$base/doctores" -Headers $h
+$bb = @($docs2) | Where-Object { $_.id -eq $docB.id }
+Write-Output "11 LISTADO OVERRIDE: count=$(@($bb.preciosServicio).Count) (esp 1)"
+
+# 12) Crear cita B+S1 -> el cobro toma el override (1500, no el base 1000)
+$pac = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Precio"; apellido = "Test" } | ConvertTo-Json)
+$fh1 = ([datetime]::ParseExact($manana, 'yyyy-MM-dd', $null).AddHours(9)).ToString("yyyy-MM-ddTHH:mm:ss")
+$cita1 = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ pacienteId = $pac.id; doctorId = $docB.id; servicioId = $s1.id; fechaHora = $fh1 } | ConvertTo-Json)
+$cob1 = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita1.id)" -Headers $h
+Write-Output "12 COBRO CON OVERRIDE: total=$($cob1.total) (esp 1500, no 1000)"
+
+# 13) Crear cita B+S2 (sin override) -> cobro al precioBase (500)
+$fh2 = ([datetime]::ParseExact($manana, 'yyyy-MM-dd', $null).AddHours(10)).ToString("yyyy-MM-ddTHH:mm:ss")
+$cita2 = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ pacienteId = $pac.id; doctorId = $docB.id; servicioId = $s2.id; fechaHora = $fh2 } | ConvertTo-Json)
+$cob2 = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita2.id)" -Headers $h
+Write-Output "13 COBRO SIN OVERRIDE: total=$($cob2.total) (esp 500 base)"

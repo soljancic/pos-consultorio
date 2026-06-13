@@ -17,6 +17,8 @@ interface Doctor {
   colorAgenda: string
   activo: boolean
   servicios?: Array<{ id: number }>
+  // Precio override por servicio (vacio = precioBase del servicio)
+  preciosServicio?: Array<{ servicioId: number; precio: string | number }>
 }
 interface Props { doctor?: Doctor | null; onClose: () => void }
 
@@ -34,6 +36,10 @@ export function DoctorModal({ doctor, onClose }: Props) {
   // Calendario f2: sin seleccion = atiende todos los servicios
   const [serviciosSel, setServiciosSel] = useState<number[]>(
     doctor?.servicios?.map((s) => s.id) ?? [],
+  )
+  // Precio override por servicio (string para el input; vacio = precio del servicio)
+  const [preciosSel, setPreciosSel] = useState<Record<number, string>>(
+    () => Object.fromEntries((doctor?.preciosServicio ?? []).map((p) => [p.servicioId, String(Number(p.precio))])),
   )
 
   const { data: servicios = [] } = useQuery<Servicio[]>({
@@ -58,7 +64,11 @@ export function DoctorModal({ doctor, onClose }: Props) {
         ? await api.put(`/doctores/${doctor!.id}`, payload)
         : await api.post('/doctores', payload)
       const doctorId = editando ? doctor!.id : res.data.id
-      await api.put(`/doctores/${doctorId}/servicios`, { servicioIds: serviciosSel })
+      // Solo enviar overrides de servicios marcados y con precio cargado
+      const precios = serviciosSel
+        .filter((id) => preciosSel[id] != null && preciosSel[id] !== '')
+        .map((id) => ({ servicioId: id, precio: Number(preciosSel[id]) }))
+      await api.put(`/doctores/${doctorId}/servicios`, { servicioIds: serviciosSel, precios })
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['doctores'] }); onClose() },
     onError: (err: any) => {
@@ -124,22 +134,39 @@ export function DoctorModal({ doctor, onClose }: Props) {
             {servicios.length === 0 ? (
               <p className="text-xs text-muted-foreground/70">Todavía no hay servicios en el catálogo</p>
             ) : (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto border rounded-md p-3">
+              <div className="space-y-1.5 max-h-48 overflow-y-auto border rounded-md p-3">
                 {servicios.map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={serviciosSel.includes(s.id)}
-                      onChange={() => toggleServicio(s.id)}
-                      className="rounded"
-                    />
-                    {s.nombre}
-                  </label>
+                  <div key={s.id} className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer flex-1 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={serviciosSel.includes(s.id)}
+                        onChange={() => toggleServicio(s.id)}
+                        className="rounded shrink-0"
+                      />
+                      <span className="truncate">{s.nombre}</span>
+                    </label>
+                    {serviciosSel.includes(s.id) && (
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        value={preciosSel[s.id] ?? ''}
+                        onChange={(e) => setPreciosSel((m) => ({ ...m, [s.id]: e.target.value }))}
+                        placeholder={`$ ${Number(s.precioBase)}`}
+                        title="Precio de este doctor para el servicio (vacío = precio del servicio)"
+                        aria-label={`Precio de ${s.nombre} para este doctor`}
+                        className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1.5">
-              Sin selección, atiende todos los servicios. El portal público solo ofrece los marcados.
+              Sin selección, atiende todos los servicios (el portal público solo ofrece los marcados).
+              El precio es opcional: vacío toma el precio del servicio; si lo cargás, la cita usa ese precio.
             </p>
           </div>
           {editando && (

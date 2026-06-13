@@ -160,6 +160,17 @@ export class AtencionesService {
       if (!servicioNuevo) throw new NotFoundException('Servicio no encontrado')
     }
 
+    // El cobro se recalcula al precio override del doctor para el servicio nuevo
+    // (si existe); si no, al precioBase del servicio
+    let precioServicioNuevo = servicioNuevo?.precioBase ?? null
+    if (servicioNuevo) {
+      const ov = await this.prisma.doctorServicioPrecio.findUnique({
+        where: { doctorId_servicioId: { doctorId: cita.doctorId, servicioId: servicioNuevo.id } },
+        select: { precio: true },
+      })
+      if (ov) precioServicioNuevo = ov.precio
+    }
+
     const data = {
       motivo: dto.motivo,
       diagnostico: dto.diagnostico,
@@ -198,7 +209,7 @@ export class AtencionesService {
         const cobro = await tx.cobro.findUnique({ where: { citaId } })
         if (cobro && cobro.estado !== EstadoCobro.ANULADO) {
           const pagado = cobro.total.minus(cobro.saldoPendiente)
-          const nuevoSaldo = servicioNuevo.precioBase.minus(pagado)
+          const nuevoSaldo = precioServicioNuevo.minus(pagado)
           if (nuevoSaldo.lt(0)) {
             throw new BadRequestException(
               'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
@@ -207,7 +218,7 @@ export class AtencionesService {
           await tx.cobro.update({
             where: { citaId },
             data: {
-              total: servicioNuevo.precioBase,
+              total: precioServicioNuevo,
               saldoPendiente: nuevoSaldo,
               estado: nuevoSaldo.eq(0) && pagado.gt(0)
                 ? EstadoCobro.COMPLETO

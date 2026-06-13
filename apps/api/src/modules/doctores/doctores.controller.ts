@@ -34,7 +34,7 @@ export class DoctoresController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: SetServiciosDto,
   ) {
-    return this.service.setServicios(user.consultorioId, id, dto.servicioIds)
+    return this.service.setServicios(user.consultorioId, id, dto.servicioIds, dto.precios)
   }
 
   @Post(':id/horarios')

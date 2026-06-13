@@ -153,13 +153,19 @@ export class CitasService {
       },
     })
 
-    // Crear cobro pendiente asociado a la cita
+    // Crear cobro pendiente asociado a la cita. El precio es el del servicio,
+    // salvo que el doctor tenga un precio override para ese servicio.
+    const override = await this.prisma.doctorServicioPrecio.findUnique({
+      where: { doctorId_servicioId: { doctorId: dto.doctorId, servicioId: dto.servicioId } },
+      select: { precio: true },
+    })
+    const precio = override?.precio ?? servicio.precioBase
     await this.prisma.cobro.create({
       data: {
         citaId: cita.id,
         consultorioId,
-        total: servicio.precioBase,
-        saldoPendiente: servicio.precioBase,
+        total: precio,
+        saldoPendiente: precio,
       },
     })
 
@@ -406,6 +412,17 @@ export class CitasService {
     await this.verificarDisponibilidad(consultorioId, doctorId, fechaHora, fechaFin, citaId)
     await this.verificarHorarioAtencion(consultorioId, doctorId, fechaHora, fechaFin)
 
+    // Al cambiar de servicio el cobro se recalcula al precio override del doctor
+    // para el servicio nuevo (si existe); si no, al precioBase del servicio
+    let precioServicioNuevo = servicioNuevo?.precioBase ?? null
+    if (servicioNuevo) {
+      const ov = await this.prisma.doctorServicioPrecio.findUnique({
+        where: { doctorId_servicioId: { doctorId, servicioId: servicioNuevo.id } },
+        select: { precio: true },
+      })
+      if (ov) precioServicioNuevo = ov.precio
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },
@@ -424,7 +441,7 @@ export class CitasService {
 
       if (servicioNuevo && cita.cobro && cita.cobro.estado !== EstadoCobro.ANULADO) {
         const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
-        const nuevoSaldo = servicioNuevo.precioBase.minus(pagado)
+        const nuevoSaldo = precioServicioNuevo!.minus(pagado)
         if (nuevoSaldo.lt(0)) {
           throw new BadRequestException(
             'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
@@ -432,7 +449,7 @@ export class CitasService {
         }
         await tx.cobro.update({
           where: { citaId },
-          data: { total: servicioNuevo.precioBase, saldoPendiente: nuevoSaldo },
+          data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
         })
       }
 
