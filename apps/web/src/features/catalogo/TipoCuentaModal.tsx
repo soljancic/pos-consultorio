@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle } from 'lucide-react'
+import { AlertCircle, Landmark } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 interface TipoCuenta {
   id?: number
@@ -49,18 +50,11 @@ export function TipoCuentaModal({ tipo, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-foreground">
-            {editando ? 'Editar tipo de cuenta' : 'Nuevo tipo de cuenta'}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={Landmark}
+          title={editando ? 'Editar tipo de cuenta' : 'Nuevo tipo de cuenta'}
+          onClose={onClose}
+        />
         <form
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
           className="p-6 space-y-4"
