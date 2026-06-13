@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths } from 'date-fns'
-import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
@@ -42,6 +42,8 @@ export function ReservarPage() {
   const [actualizarDatos, setActualizarDatos] = useState(true)
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
+  // Al revelar el formulario, bajamos el scroll para que se vea la sgte parte
+  const datosRef = useRef<HTMLDivElement>(null)
 
   const { data: info, isLoading, isError } = useQuery<Info>({
     queryKey: ['portal', slug],
@@ -58,6 +60,11 @@ export function ReservarPage() {
     enabled: !!tokenPaciente,
     retry: false,
   })
+
+  // El formulario aparece recien al tocar "Siguiente": llevamos el foco/scroll ahi
+  useEffect(() => {
+    if (mostrarForm) datosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [mostrarForm])
 
   useEffect(() => {
     if (!prefill) return
@@ -78,26 +85,30 @@ export function ReservarPage() {
     (PAISES.some((p) => p.codigo === prefill.pais) && pais !== prefill.pais)
   )
 
-  // Calendario Calendly: dias del mes con al menos un horario libre
+  // Calendario Calendly: dias del mes con al menos un horario libre. Se refresca
+  // solo cada 60s (y al volver al foco) para reflejar reservas de otros: isLoading
+  // (no isFetching) evita que el poll de fondo parpadee la UI.
   const puedeVerCalendario = !!(servicioId && doctorId)
-  const { data: diasData, isFetching: cargandoDias } = useQuery<{ dias: string[] }>({
+  const { data: diasData, isLoading: cargandoDias } = useQuery<{ dias: string[] }>({
     queryKey: ['portal-dias', slug, doctorId, servicioId, mesCal],
     queryFn: () =>
       api
         .get(`/public/${slug}/dias?doctorId=${doctorId}&servicioId=${servicioId}&mes=${mesCal}`)
         .then((r) => r.data),
     enabled: puedeVerCalendario,
+    refetchInterval: 60_000,
   })
   const diasSet = new Set(diasData?.dias ?? [])
 
   const puedeBuscarSlots = !!(servicioId && doctorId && fecha)
-  const { data: slotsData, isFetching: cargandoSlots } = useQuery<{ slots: string[]; modo: string }>({
+  const { data: slotsData, isLoading: cargandoSlots } = useQuery<{ slots: string[]; modo: string }>({
     queryKey: ['portal-slots', slug, doctorId, servicioId, fecha],
     queryFn: () =>
       api
         .get(`/public/${slug}/slots?doctorId=${doctorId}&servicioId=${servicioId}&fecha=${fecha}`)
         .then((r) => r.data),
     enabled: puedeBuscarSlots,
+    refetchInterval: 60_000,
   })
 
   const reservar = useMutation({
@@ -162,7 +173,7 @@ export function ReservarPage() {
   return (
     <div className="min-h-dvh bg-background">
       <header className="bg-primary text-primary-foreground px-6 py-5">
-        <div className="max-w-lg mx-auto flex items-center gap-2.5">
+        <div className="max-w-2xl mx-auto flex items-center gap-2.5">
           <span className="bg-white/15 rounded-lg p-2">
             <Stethoscope className="h-5 w-5" aria-hidden="true" />
           </span>
@@ -173,7 +184,7 @@ export function ReservarPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto p-4 sm:p-6">
+      <main className="max-w-2xl mx-auto p-4 sm:p-6">
         {confirmacion ? (
           <div className={cn(cardUI, 'p-6 space-y-4 text-center')}>
             <CheckCircle2 className="h-12 w-12 text-accent mx-auto" aria-hidden="true" />
@@ -226,9 +237,9 @@ export function ReservarPage() {
             </div>
 
             {puedeVerCalendario && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 border-t pt-4">
                 {/* Mini calendario mensual estilo Calendly: solo dias con disponibilidad */}
-                <div>
+                <div className="sm:w-[300px] sm:shrink-0">
                   <span className="block text-sm font-medium text-foreground mb-2">Elegí el día *</span>
                   <div className="rounded-lg border border-input bg-card p-3">
                     <div className="flex items-center justify-between mb-2">
@@ -291,8 +302,9 @@ export function ReservarPage() {
                   </div>
                 </div>
 
-                {/* Horarios del dia elegido: al tocar uno, el boton se parte en [hora | Siguiente] */}
-                <div>
+                {/* Horarios del dia elegido: grilla de columnas dinamicas (auto-fill,
+                    1-N segun el ancho); "Siguiente" revela el formulario y baja el scroll */}
+                <div className="sm:flex-1 min-w-0">
                   <span className="block text-sm font-medium text-foreground mb-2">
                     {fecha ? 'Horarios disponibles *' : 'Horarios'}
                   </span>
@@ -307,39 +319,48 @@ export function ReservarPage() {
                       No hay horarios libres ese día. Probá con otra fecha.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2" role="group" aria-label="Horarios disponibles">
-                      {slotsData.slots.map((s) =>
-                        s === hora ? (
-                          <div key={s} className="flex rounded-md overflow-hidden border border-primary shadow-sm">
-                            <span className="h-10 px-3 flex items-center bg-primary/10 text-primary text-sm font-semibold tabular-nums">{s}</span>
-                            <button
-                              type="button"
-                              onClick={() => setMostrarForm(true)}
-                              className="h-10 px-3 bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
-                            >
-                              Siguiente
-                            </button>
-                          </div>
-                        ) : (
+                    <>
+                      <div
+                        className="grid gap-2"
+                        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(4.25rem, 1fr))' }}
+                        role="group"
+                        aria-label="Horarios disponibles"
+                      >
+                        {slotsData.slots.map((s) => (
                           <button
                             key={s}
                             type="button"
                             onClick={() => setHora(s)}
-                            aria-pressed={false}
-                            className="h-10 w-[4.75rem] rounded-md text-sm font-medium tabular-nums border border-input bg-card text-foreground hover:border-primary/60 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
+                            aria-pressed={s === hora}
+                            className={cn(
+                              'h-10 rounded-md text-sm font-medium tabular-nums border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                              s === hora
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-card text-foreground border-input hover:border-primary/60',
+                            )}
                           >
                             {s}
                           </button>
-                        ),
+                        ))}
+                      </div>
+                      {hora && !mostrarForm && (
+                        <button
+                          type="button"
+                          onClick={() => setMostrarForm(true)}
+                          className={cn(btnPrimaryUI, 'w-full h-11 mt-3')}
+                        >
+                          Siguiente
+                          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                        </button>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
             )}
 
             {mostrarForm && hora && (
-              <div className="space-y-4 border-t pt-4">
+              <div ref={datosRef} className="space-y-4 border-t pt-4 scroll-mt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="res-nombre" className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
