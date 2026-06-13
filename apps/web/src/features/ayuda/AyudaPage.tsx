@@ -9,6 +9,25 @@ import { AYUDA } from './contenido'
 // cualquiera puede explorar las demas secciones (el contenido de ayuda no es
 // sensible). El contenido vive en contenido.ts; aca solo se renderiza.
 
+// La captura de cada tema vive en /ayuda/<id>.png (convencion). Si el archivo no
+// existe todavia, cae a un placeholder. `key={tema.id}` resetea el error al cambiar.
+function Captura({ id, imagen, titulo }: { id: string; imagen?: string; titulo: string }) {
+  const [error, setError] = useState(false)
+  const src = imagen ?? `/ayuda/${id}.png`
+  return (
+    <div className={cn(cardUI, 'mt-6 overflow-hidden')}>
+      {error ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground/70 bg-muted/30">
+          <ImageIcon className="h-7 w-7" aria-hidden="true" />
+          <p className="text-sm">Captura próximamente</p>
+        </div>
+      ) : (
+        <img src={src} alt={`Captura: ${titulo}`} className="w-full" onError={() => setError(true)} />
+      )}
+    </div>
+  )
+}
+
 export function AyudaPage() {
   const user = useAuthStore((s) => s.user)
   const rolInicial = AYUDA.find((s) => s.rol === user?.rol)?.rol ?? AYUDA[0].rol
@@ -95,17 +114,8 @@ export function AyudaPage() {
               ))}
             </ol>
 
-            {/* Captura: la real se cablea en la fase de capturas */}
-            <div className={cn(cardUI, 'mt-6 overflow-hidden')}>
-              {tema.imagen ? (
-                <img src={tema.imagen} alt={`Captura: ${tema.titulo}`} className="w-full" />
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground/70 bg-muted/30">
-                  <ImageIcon className="h-7 w-7" aria-hidden="true" />
-                  <p className="text-sm">Captura próximamente</p>
-                </div>
-              )}
-            </div>
+            {/* Captura: por convencion /ayuda/<id>.png; si no existe, placeholder */}
+            <Captura key={tema.id} id={tema.id} imagen={tema.imagen} titulo={tema.titulo} />
           </article>
         </div>
       </div>
