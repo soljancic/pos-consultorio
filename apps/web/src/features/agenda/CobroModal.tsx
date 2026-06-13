@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Pencil, Check, Undo2 } from 'lucide-react'
+import { X, Pencil, Check, Undo2, Wallet } from 'lucide-react'
 import { FormaPago, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 interface CobroModalProps {
   cita: Cita
@@ -108,21 +109,12 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   return (
     <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div>
-            <h2 className="font-semibold text-foreground">Registrar Cobro</h2>
-            <p className="text-sm text-muted-foreground">
-              {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={Wallet}
+          title="Registrar Cobro"
+          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre}</>}
+          onClose={onClose}
+        />
 
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">Cargando cobro...</div>

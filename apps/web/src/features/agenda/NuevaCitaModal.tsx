@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { X, Search, AlertCircle, AlertTriangle, MessageCircle } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, buildWhatsAppUrl } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 interface Props {
   fechaInicial: Date
@@ -143,16 +144,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-foreground">Nueva cita</h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader icon={CalendarPlus} title="Nueva cita" onClose={onClose} />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Paciente */}

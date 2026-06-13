@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { X, AlertCircle } from 'lucide-react'
+import { AlertCircle, UserPlus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 import type { Paciente } from '@pos/types'
 
 interface Props {
@@ -74,18 +75,11 @@ export function PacienteModal({ paciente, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
-          <h2 className="text-lg font-semibold text-foreground">
-            {editando ? 'Editar paciente' : 'Nuevo paciente'}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={UserPlus}
+          title={editando ? 'Editar paciente' : 'Nuevo paciente'}
+          onClose={onClose}
+        />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
