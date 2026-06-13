@@ -11,6 +11,7 @@ import { TipoGastoModal } from './TipoGastoModal'
 import { TipoCuentaModal } from './TipoCuentaModal'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 
 export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
@@ -180,7 +181,7 @@ export function CatalogoPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(doctores as any[]).map((d) => (
             <div key={d.id} className={cn(cardUI, 'p-4 flex items-center gap-3')}>
-              <div className="h-10 w-10 rounded-full shrink-0" style={{ backgroundColor: d.colorAgenda }} />
+              <DoctorAvatar nombre={d.nombre} colorAgenda={d.colorAgenda} fotoUrl={d.fotoUrl} size={40} />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-foreground truncate">{d.nombre}</div>
                 <div className="text-sm text-muted-foreground">{d.especialidad || 'Sin especialidad'}</div>

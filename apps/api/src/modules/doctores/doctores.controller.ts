@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { Rol } from '@pos/types'
 import { Roles } from '../../common/decorators/roles.decorator'
@@ -35,6 +36,19 @@ export class DoctoresController {
     @Body() dto: SetServiciosDto,
   ) {
     return this.service.setServicios(user.consultorioId, id, dto.servicioIds, dto.precios)
+  }
+
+  @Post(':id/foto')
+  @Roles(Rol.ADMIN)
+  @UseInterceptors(FileInterceptor('archivo'))
+  @ApiOperation({ summary: 'Subir la foto del doctor a Cloudinary y guardar la URL' })
+  subirFoto(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() archivo?: Express.Multer.File,
+  ) {
+    if (!archivo) throw new BadRequestException('Falta el archivo de la foto')
+    return this.service.subirFoto(user.consultorioId, id, archivo)
   }
 
   @Post(':id/horarios')

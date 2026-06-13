@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { v2 as cloudinary } from 'cloudinary'
 import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, Matches, IsArray, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer'
 import { PartialType } from '@nestjs/swagger'
@@ -132,6 +133,62 @@ export class DoctoresService {
 
   create(consultorioId: number, dto: CreateDoctorDto) {
     return this.prisma.doctor.create({ data: { ...dto, consultorioId } })
+  }
+
+  // Foto del doctor a Cloudinary (mismo patron que el logo del consultorio):
+  // public_id estable por doctor con overwrite. Sin foto, la agenda usa el color.
+  async subirFoto(consultorioId: number, doctorId: number, file: Express.Multer.File) {
+    const doctor = await this.prisma.doctor.findFirst({
+      where: { id: doctorId, consultorioId },
+      select: { id: true },
+    })
+    if (!doctor) throw new NotFoundException('Doctor no encontrado')
+
+    const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+      throw new BadRequestException('Cloudinary no esta configurado en el servidor')
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      throw new BadRequestException('Solo se aceptan imagenes JPG, PNG o WebP')
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('La imagen supera el maximo de 5 MB')
+    }
+
+    cloudinary.config({
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      secure: true,
+    })
+
+    const subida = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'doctores',
+          public_id: `doctor-${consultorioId}-${doctorId}`,
+          overwrite: true,
+          invalidate: true,
+          resource_type: 'image',
+        },
+        (error, result) => {
+          if (error || !result) reject(error ?? new Error('Cloudinary sin respuesta'))
+          else resolve(result)
+        },
+      )
+      stream.end(file.buffer)
+    }).catch(() => {
+      throw new BadRequestException('No se pudo subir la imagen a Cloudinary')
+    })
+
+    return this.prisma.doctor.update({
+      where: { id: doctorId },
+      data: { fotoUrl: subida.secure_url },
+      include: {
+        servicios: { select: { id: true } },
+        preciosServicio: { select: { servicioId: true, precio: true } },
+      },
+    })
   }
 
   async update(consultorioId: number, id: number, dto: UpdateDoctorDto) {

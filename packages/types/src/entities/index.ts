@@ -39,6 +39,7 @@ export interface Doctor {
   nombre: string
   especialidad?: string
   colorAgenda: string
+  fotoUrl?: string | null
   activo: boolean
 }
 

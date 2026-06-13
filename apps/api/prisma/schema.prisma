@@ -191,6 +191,8 @@ model Doctor {
   // (null = sin comision configurada; la liquidacion vive en /reportes)
   comisionPct   Decimal?    @db.Decimal(5, 2)
   colorAgenda   String      @default("#3B82F6")
+  // Foto del doctor (Cloudinary); si no tiene, la agenda usa el circulo de color
+  fotoUrl       String?
   activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

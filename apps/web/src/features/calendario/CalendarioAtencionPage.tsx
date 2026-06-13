@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils'
 import { btnIconUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 import { DisponibilidadModal, LABEL_TIPO, type BloqueEditable } from './DisponibilidadModal'
 
 // Scheduler semanal: filas = doctores, columnas = dias, bloques = horarios.
@@ -130,10 +131,7 @@ export function CalendarioAtencionPage() {
                 <div key={doc.id} className="grid border-b last:border-0"
                   style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
                   <div className="flex items-center gap-2 px-3 py-3">
-                    <span className="h-7 w-7 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: doc.colorAgenda }} aria-hidden="true">
-                      {doc.nombre.replace(/^dr\.?a?\s*/i, '').slice(0, 2).toUpperCase()}
-                    </span>
+                    <DoctorAvatar nombre={doc.nombre} colorAgenda={doc.colorAgenda} fotoUrl={doc.fotoUrl} size={28} />
                     <span className="text-sm font-medium text-foreground truncate">{doc.nombre}</span>
                   </div>
                   {dias.map((dia) => {

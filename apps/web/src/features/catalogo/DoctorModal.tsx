@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, UserRound } from 'lucide-react'
 import type { Servicio } from '@pos/types'
@@ -6,6 +6,7 @@ import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 
 const COLORES = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -15,6 +16,7 @@ interface Doctor {
   especialidad?: string
   comisionPct?: number | string | null
   colorAgenda: string
+  fotoUrl?: string | null
   activo: boolean
   servicios?: Array<{ id: number }>
   // Precio override por servicio (vacio = precioBase del servicio)
@@ -41,6 +43,10 @@ export function DoctorModal({ doctor, onClose }: Props) {
   const [preciosSel, setPreciosSel] = useState<Record<number, string>>(
     () => Object.fromEntries((doctor?.preciosServicio ?? []).map((p) => [p.servicioId, String(Number(p.precio))])),
   )
+  // Foto del doctor: archivo pendiente de subir + preview (la actual o la nueva)
+  const fotoRef = useRef<HTMLInputElement>(null)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string | null>(doctor?.fotoUrl ?? null)
 
   const { data: servicios = [] } = useQuery<Servicio[]>({
     queryKey: ['servicios', 'activos'],
@@ -69,6 +75,12 @@ export function DoctorModal({ doctor, onClose }: Props) {
         .filter((id) => preciosSel[id] != null && preciosSel[id] !== '')
         .map((id) => ({ servicioId: id, precio: Number(preciosSel[id]) }))
       await api.put(`/doctores/${doctorId}/servicios`, { servicioIds: serviciosSel, precios })
+      // Foto: se sube despues de existir el doctor (vale para alta y edicion)
+      if (fotoFile) {
+        const fd = new FormData()
+        fd.append('archivo', fotoFile)
+        await api.post(`/doctores/${doctorId}/foto`, fd)
+      }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['doctores'] }); onClose() },
     onError: (err: any) => {
@@ -89,6 +101,30 @@ export function DoctorModal({ doctor, onClose }: Props) {
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
           className="p-6 space-y-4"
         >
+          {/* Foto: se ve en la agenda dia y horarios; sin foto, el circulo de color */}
+          <div className="flex items-center gap-3">
+            {fotoPreview ? (
+              <img src={fotoPreview} alt="" className="h-16 w-16 rounded-full object-cover ring-1 ring-black/5 shrink-0" />
+            ) : (
+              <DoctorAvatar nombre={form.nombre || 'Dr'} colorAgenda={form.colorAgenda} size={64} />
+            )}
+            <div>
+              <input
+                ref={fotoRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) { setFotoFile(f); setFotoPreview(URL.createObjectURL(f)) }
+                }}
+              />
+              <button type="button" onClick={() => fotoRef.current?.click()} className={cn(btnOutlineUI, 'h-9')}>
+                {fotoPreview ? 'Cambiar foto' : 'Subir foto'}
+              </button>
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG o WebP, máx 5 MB.</p>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
             <input required value={form.nombre}

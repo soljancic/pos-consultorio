@@ -2,6 +2,7 @@ import { UserRound } from 'lucide-react'
 import { COLORES_ESTADO, type Cita, type Doctor } from '@pos/types'
 import { formatHora } from '../../lib/utils'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 
 // Grilla horaria del día con una columna por doctor (estilo Pabau).
 // Las citas se posicionan por hora/duracion; el color es el estado.
@@ -57,16 +58,7 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
           <div />
           {doctores.map((d) => (
             <div key={d.id} className="flex items-center gap-2 px-3 py-3 border-l">
-              <span
-                className="h-7 w-7 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
-                style={{ backgroundColor: d.colorAgenda }}
-                aria-hidden="true"
-              >
-                {d.nombre
-                  .replace(/^dr\.?a?\s*/i, '')
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </span>
+              <DoctorAvatar nombre={d.nombre} colorAgenda={d.colorAgenda} fotoUrl={d.fotoUrl} size={28} />
               <span className="text-sm font-semibold text-foreground truncate">{d.nombre}</span>
             </div>
           ))}
