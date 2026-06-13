@@ -9,7 +9,7 @@ const PASS = 'Password123!'
 
 test('/ sin sesion muestra la landing y el CTA va a /login; /agenda protegida', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Gestioná tu consultorio/i })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /Tu consultorio/i })).toBeVisible()
 
   // El CTA principal lleva al login
   await page.getByRole('link', { name: /Iniciar sesión/i }).first().click()
