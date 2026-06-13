@@ -15,6 +15,13 @@ export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
 
+  // 2 tabs para que la pagina no quede larguisima (los tipos solo los ve ADMIN)
+  const [tab, setTab] = useState<'prestaciones' | 'finanzas'>('prestaciones')
+  const TABS = [
+    { id: 'prestaciones' as const, label: 'Servicios y doctores' },
+    ...(esAdmin ? [{ id: 'finanzas' as const, label: 'Tipos de gasto y cuenta' }] : []),
+  ]
+
   const [servicioEdit, setServicioEdit] = useState<any | null>(null)
   const [servicioModal, setServicioModal] = useState(false)
   const [doctorEdit, setDoctorEdit] = useState<any | null>(null)
@@ -77,13 +84,34 @@ export function CatalogoPage() {
   })
 
   return (
-    <div className="p-4 sm:p-6 space-y-8 max-w-4xl mx-auto">
-      <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-        <span className={chipIconUI}>
-          <ClipboardList className="h-4 w-4" aria-hidden="true" />
-        </span>
-        Catálogo
-      </h1>
+    <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+      <div>
+        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <span className={chipIconUI}>
+            <ClipboardList className="h-4 w-4" aria-hidden="true" />
+          </span>
+          Catálogo
+        </h1>
+        <div className="flex gap-1 mt-3" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              role="tab"
+              aria-selected={tab === t.id}
+              className={cn(
+                'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                tab === t.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === 'prestaciones' && (
+        <div className="space-y-8">
 
       {/* Servicios */}
       <section>
@@ -175,6 +203,11 @@ export function CatalogoPage() {
           )}
         </div>
       </section>
+        </div>
+      )}
+
+      {tab === 'finanzas' && esAdmin && (
+        <div className="space-y-8">
 
       {/* Tipos de gasto (solo ADMIN) */}
       {esAdmin && (
@@ -286,6 +319,8 @@ export function CatalogoPage() {
             </table>
           </div>
         </section>
+      )}
+        </div>
       )}
 
       {servicioModal && (

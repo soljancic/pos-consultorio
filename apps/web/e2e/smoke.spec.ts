@@ -130,6 +130,11 @@ test('catalogo y configuracion (ADMIN ve CRUD; ficha muestra atencion)', async (
   await expect(page.getByRole('button', { name: /nuevo servicio/i })).toBeVisible()
   await expect(page.getByText('Dr. Smoke')).toBeVisible()
 
+  // Catalogo en 2 tabs: el de finanzas muestra los tipos de gasto/cuenta (ADMIN)
+  await page.getByRole('tab', { name: 'Tipos de gasto y cuenta' }).click()
+  await expect(page.getByRole('button', { name: /nuevo tipo/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tipos de cuenta' })).toBeVisible()
+
   await page.goto('/configuracion')
   // exact: el aria-label del boton editar ("Editar usuario Admin Smoke") tambien matchea
   await expect(page.getByRole('cell', { name: 'Admin Smoke', exact: true })).toBeVisible()
