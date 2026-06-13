@@ -1,4 +1,4 @@
-# Plan de Trabajo — POS del Consultorio
+﻿# Plan de Trabajo â€” POS del Consultorio
 
 > Ultima actualizacion: 2026-06-10
 > Fuente: MVP.pdf + FRD en NotebookLM (notebook: f7ea57f8-2fb2-4690-ac2c-09599034c535)
@@ -21,79 +21,79 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 
 ---
 
-## 1b. Objetivos del Sistema — checklist vivo
+## 1b. Objetivos del Sistema â€” checklist vivo
 
-> Marcar al completar cada objetivo (✅ hecho · 🔄 en curso · ⬜ pendiente, con su etapa).
-> El detalle de cada item vive en §10 (roadmap) y en los planes/specs de `docs/superpowers/`.
+> Marcar al completar cada objetivo (âœ… hecho Â· ðŸ”„ en curso Â· â¬œ pendiente, con su etapa).
+> El detalle de cada item vive en Â§10 (roadmap) y en los planes/specs de `docs/superpowers/`.
 
-**➡️ SIGUIENTE PASO:** todo lo ejecutable sin decisiones esta HECHO (incl. pulidos 2026-06-11: badge de Mensajes en el nav, export de reportes [a Excel .xlsx desde 2026-06-12], arqueo ciego estricto; y lote 2026-06-12: marca ConsulTech cableada [by Toptech en login], cambio de servicio en reprogramar/atencion con recalculo de cobro, gastos default HOY, QR de pagos a Cloudinary + pagina publica /qr/:slug + variable {linkQR} en recordatorio de deuda). Quedan solo items que dependen del owner: **41b WhatsApp Business API (PAUSADO)**, **22 facturacion electronica (PAUSADO)**, E2-M6 Visitas (espera piloto), deploy Railway (lo activa el owner) — y las etapas grandes 4 (paquetes prepagos, inventario/insumos, modelo POS de modelo.jpeg), 5 (multi-sucursal), 6 (portal del paciente con pagos) y 7 (verticales). **ETAPAS 1, 2, 2.5 y 3 (canal manual) COMPLETAS · E4 comisiones HECHO**.
+**âž¡ï¸ SIGUIENTE PASO:** todo lo ejecutable sin decisiones esta HECHO (incl. pulidos 2026-06-11: badge de Mensajes en el nav, export de reportes [a Excel .xlsx desde 2026-06-12], arqueo ciego estricto; y lote 2026-06-12: marca ConsulTech cableada [by Toptech en login], cambio de servicio en reprogramar/atencion con recalculo de cobro, gastos default HOY, QR de pagos a Cloudinary + pagina publica /qr/:slug + variable {linkQR} en recordatorio de deuda). Quedan solo items que dependen del owner: **41b WhatsApp Business API (PAUSADO)**, **22 facturacion electronica (PAUSADO)**, E2-M6 Visitas (espera piloto), deploy Railway (lo activa el owner) â€” y las etapas grandes 4 (paquetes prepagos, inventario/insumos, modelo POS de modelo.jpeg), 5 (multi-sucursal), 6 (portal del paciente con pagos) y 7 (verticales). **ETAPAS 1, 2, 2.5 y 3 (canal manual) COMPLETAS Â· E4 comisiones HECHO**.
 
 ### Agenda y citas
-1. ✅ Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
-2. ✅ Vistas dia (columnas por doctor, estilo Pabau) y semana
-3. ✅ Nueva cita con validacion de solape; click en slot vacio precarga
-4. ✅ Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
-5. ✅ Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
-6. ✅ Calendario de Atencion (E2.5a, 2026-06-11) COMPLETO: horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. F2a servicios-por-doctor (M2M; lista vacia = atiende todos; el portal filtra y rechaza; gate `gate-doctor-servicios.ps1`). F2b plantillas de horario nombradas (tabla `plantillas_horario`, chips en DisponibilidadModal + guardar inline; gate `gate-plantillas.ps1`)
-7. ✅ Portal publico de agendamiento tipo Calendly (E2.5b, 2026-06-11): /reservar/:slug con slots reales, reserva crea paciente + cita PENDIENTE origen PORTAL; slug + toggle en Configuracion. Gate: `gate-e25b.ps1`. Links precargados (2026-06-12): ?doctor= ?servicio= y ?p=<token opaco del paciente> precargan el form (el cliente solo elige fecha y hora); los datos personales NUNCA viajan en la URL: Paciente.portalToken (aleatorio, unique) + GET /pacientes/:id/portal-token (auth, lo crea si falta) + GET /public/:slug/prefill/:token (publico, throttle 30/min, 404 generico); la reserva con token matchea al paciente exacto (fallback: telefono); si el cliente modifica datos precargados aparece el check "Actualizar mis datos en el sistema" (marcado por defecto) y solo con el check el kardex se sincroniza (el match por telefono NUNCA pisa datos: otra persona puede reservar con el telefono de un paciente); todos los campos del form son obligatorios (email incluido); boton "Enviar link de reserva por WhatsApp" en NuevaCitaModal (con doctor+servicio+paciente elegidos, requiere portal activo y telefono del paciente). Estado SOLICITADA (2026-06-12): las reservas del portal nacen SOLICITADA (cyan, primeras en la agenda); la secretaria revisa y acepta (→PENDIENTE) o cancela; no se confirma directo; las citas manuales siguen naciendo PENDIENTE; SOLICITADA bloquea el slot pero no recibe recordatorios ni no-show automatico. Al aceptar (SOLICITADA→PENDIENTE) el paciente recibe email automatico "Tu reserva fue aceptada" (Resend, fire-and-forget, requiere email en el kardex; mismo caveat de dominio que E2-M10)
+1. âœ… Agenda diaria con estados de cita (maquina de estados) y filtro por doctor
+2. âœ… Vistas dia (columnas por doctor, estilo Pabau) y semana
+3. âœ… Nueva cita con validacion de solape; click en slot vacio precarga
+4. âœ… Registrar atencion basica desde la agenda (motivo, diagnostico, tratamiento)
+5. âœ… Cancelar / No asistio / Reprogramar desde la UI (E2-M7, 2026-06-10)
+6. âœ… Calendario de Atencion (E2.5a, 2026-06-11) COMPLETO: horarios por doctor con serie semanal y fecha limite, bloqueos, scheduler semanal, edicion por alcance, citas validadas contra el horario. F2a servicios-por-doctor (M2M; lista vacia = atiende todos; el portal filtra y rechaza; gate `gate-doctor-servicios.ps1`). F2b plantillas de horario nombradas (tabla `plantillas_horario`, chips en DisponibilidadModal + guardar inline; gate `gate-plantillas.ps1`)
+7. âœ… Portal publico de agendamiento tipo Calendly (E2.5b, 2026-06-11): /reservar/:slug con slots reales, reserva crea paciente + cita PENDIENTE origen PORTAL; slug + toggle en Configuracion. Gate: `gate-e25b.ps1`. Links precargados (2026-06-12): ?doctor= ?servicio= y ?p=<token opaco del paciente> precargan el form (el cliente solo elige fecha y hora); los datos personales NUNCA viajan en la URL: Paciente.portalToken (aleatorio, unique) + GET /pacientes/:id/portal-token (auth, lo crea si falta) + GET /public/:slug/prefill/:token (publico, throttle 30/min, 404 generico); la reserva con token matchea al paciente exacto (fallback: telefono); si el cliente modifica datos precargados aparece el check "Actualizar mis datos en el sistema" (marcado por defecto) y solo con el check el kardex se sincroniza (el match por telefono NUNCA pisa datos: otra persona puede reservar con el telefono de un paciente); todos los campos del form son obligatorios (email incluido); boton "Enviar link de reserva por WhatsApp" en NuevaCitaModal (con doctor+servicio+paciente elegidos, requiere portal activo y telefono del paciente). Estado SOLICITADA (2026-06-12): las reservas del portal nacen SOLICITADA (cyan, primeras en la agenda); la secretaria revisa y acepta (â†’PENDIENTE) o cancela; no se confirma directo; las citas manuales siguen naciendo PENDIENTE; SOLICITADA bloquea el slot pero no recibe recordatorios ni no-show automatico. Al aceptar (SOLICITADAâ†’PENDIENTE) el paciente recibe email automatico "Tu reserva fue aceptada" (Resend, fire-and-forget, requiere email en el kardex; mismo caveat de dominio que E2-M10)
 
 ### Pacientes
-8. ✅ CRUD con busqueda (nombre, DNI, telefono) y ficha completa
-9. ✅ Historial de citas con atencion expandible y deuda visible
-10. ✅ Historia clinica completa (E2-M4, 2026-06-11). F1: guard duro 403 en PUT /atenciones (solo ADMIN o el doctor de la cita), agenda DOCTOR forzada en backend, AtencionModal solo lectura para staff, boton "Agendar control" desde proximoControl. F2: tab "Historia clínica" en la ficha (timeline con busqueda via GET /atenciones/paciente/:id?q=) + adjuntos a disco local (subida 5MB JPG/PNG/WebP/PDF, streaming autenticado, borrado con ConfirmarModal y log). Gates: `gate-e2m4.ps1`, `gate-e2m4-f2.ps1`
-11. ✅ Contador de no-shows + requierePrepago (E3, 2026-06-11): cron cada 30 min marca NO_ASISTIO las citas PENDIENTE/CONFIRMADA vencidas (gracia `NO_SHOW_GRACIA_HORAS`=2h, manual con POST /citas/no-shows/procesar); al 3er no-show (`NO_SHOWS_PREPAGO`) el paciente queda requierePrepago automatico (desmarcable); ficha muestra contador + badge; NuevaCitaModal alerta sin bloquear. Gate: `gate-e3-noshow.ps1`
+8. âœ… CRUD con busqueda (nombre, DNI, telefono) y ficha completa
+9. âœ… Historial de citas con atencion expandible y deuda visible
+10. âœ… Historia clinica completa (E2-M4, 2026-06-11). F1: guard duro 403 en PUT /atenciones (solo ADMIN o el doctor de la cita), agenda DOCTOR forzada en backend, AtencionModal solo lectura para staff, boton "Agendar control" desde proximoControl. F2: tab "Historia clÃ­nica" en la ficha (timeline con busqueda via GET /atenciones/paciente/:id?q=) + adjuntos a disco local (subida 5MB JPG/PNG/WebP/PDF, streaming autenticado, borrado con ConfirmarModal y log). Gates: `gate-e2m4.ps1`, `gate-e2m4-f2.ps1`
+11. âœ… Contador de no-shows + requierePrepago (E3, 2026-06-11): cron cada 30 min marca NO_ASISTIO las citas PENDIENTE/CONFIRMADA vencidas (gracia `NO_SHOW_GRACIA_HORAS`=2h, manual con POST /citas/no-shows/procesar); al 3er no-show (`NO_SHOWS_PREPAGO`) el paciente queda requierePrepago automatico (desmarcable); ficha muestra contador + badge; NuevaCitaModal alerta sin bloquear. Gate: `gate-e3-noshow.ps1`
 
 ### Cobros y deudas
-12. ✅ Cobro automatico por cita; pagos parciales y divididos (multi forma de pago)
-13. ✅ Ajuste de precio con motivo (descuento) auditado
-14. ✅ Deudores agrupados por paciente con deuda real y ultimo pago
-15. ✅ Recordatorio de deuda por WhatsApp (link manual)
-16. ✅ Anulacion de pagos con asiento de reversa (E2-M1, 2026-06-10)
+12. âœ… Cobro automatico por cita; pagos parciales y divididos (multi forma de pago)
+13. âœ… Ajuste de precio con motivo (descuento) auditado
+14. âœ… Deudores agrupados por paciente con deuda real y ultimo pago
+15. âœ… Recordatorio de deuda por WhatsApp (link manual)
+16. âœ… Anulacion de pagos con asiento de reversa (E2-M1, 2026-06-10)
 
 ### Caja y finanzas
-17. ✅ Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
-18. ✅ Desglose: pagos de deuda anterior vs nuevas deudas del dia
-19. ✅ Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10). ESTRICTO desde 2026-06-11: con el turno abierto /caja/hoy oculta inicial/efectivo/total a quien no es ADMIN (gate `gate-arqueo-estricto.ps1`)
-20. ✅ Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
-21. ✅ Comisiones por doctor y liquidacion mensual (E4, 2026-06-11): Doctor.comisionPct (0-100, opcional); /reportes/mensual calcula comision por doctor sobre pagos netos + total a liquidar; campo % en DoctorModal y columna en /reportes. Gate: caso 5b de `gate-reportes.ps1`
-22. ⬜ Facturacion electronica (E4)
-43. ✅ Apertura de caja con monto inicial (caja chica) + bloqueo de cobros/gastos sin turno abierto (E2-M9, 2026-06-11). Chip GLOBAL de turno en el sidebar (2026-06-11): ambar "Caja sin abrir · Abrir" (modal desde cualquier pantalla), verde "Caja abierta", gris "Turno cerrado"; `GET /caja/estado`. Reapertura (2026-06-12): POST /caja/reabrir (solo ADMIN, boton en /caja con confirmacion) descarta el arqueo (se declara de nuevo al re-cerrar), vuelve a aceptar cobros/gastos y queda en logs. Casos 8-10 en `gate-e2m9.ps1`
-44. ✅ Cero dialogos nativos EN TODO EL PROYECTO (verificado 2026-06-11: grep sin window.confirm/alert en apps/web/src; GastosPage y DisponibilidadModal usan ConfirmarModal, AnularPagoModal muestra la advertencia inline en el modal) — convencion en CLAUDE.md Don'ts
-45. ✅ Pase de acentos (2026-06-11): labels, titulos, badges y mensajes principales con tildes (script reusable `scripts/pase-acentos.ps1`, specs actualizados en el mismo commit). El copy NUEVO se escribe con acentos (CLAUDE.md); refinamiento de frases menores: continuo
-46. ✅ Usuario DOCTOR asociado a su Doctor (2026-06-11): selector en UsuarioModal (1:1 sobre Doctor.usuarioId, 409 si esta tomado, cambiar de rol suelta el vinculo); el doctor logueado edita SOLO su fila del Calendario de Atencion (403 para ajenos; guard en backend) y desde E2-M4 f1 su agenda y sus atenciones tambien estan acotadas en backend. Gates: `gate-usuario-doctor.ps1`, `gate-e2m4.ps1`
-47. ✅ Emails de cuenta (E2-M10, 2026-06-11, Resend): alta de usuario sin contraseña envia invitacion con link de un solo uso (tabla `password_tokens`, hash SHA-256, 48h); "¿Olvidaste tu contraseña?" en el login usa el mismo flujo; cero enumeracion de cuentas; convive con Google Sign-In. Gate: `gate-e2m10.ps1`. PENDIENTE OPERATIVO: verificar dominio en resend.com/domains y cambiar MAIL_FROM (el sandbox solo entrega al correo del owner)
-48. ✅ Kardex de paciente: CI en vez de DNI, telefono unico (sirve para WhatsApp) y correo en la ficha en lugar del sexo (2026-06-11). La columna `whatsapp` se elimino de la BD (2026-06-12): `telefono` es el unico numero de contacto en schema, API, portal y UI (migracion preserva numeros copiando whatsapp→telefono donde faltaba). Campo `pais` en Paciente (ISO alfa-2, default BO, 2026-06-12): selector con bandera y buscador (`SelectorPais` + `lib/paises.ts`) en PacienteModal y portal de reservas; define el prefijo internacional en `buildWhatsAppUrl` y el telefono se muestra en formato internacional en tabla y ficha. Gate: caso pais=AR en `gate-e25b.ps1`
-49. ✅ Cambio de servicio en reprogramar y en el modal de atencion (2026-06-12): el cobro se recalcula al precio del nuevo servicio respetando lo pagado (400 si los pagos lo superan); con deuda ya nacida (ATENDIDA/CON_DEUDA) deudaTotal se ajusta por el delta; bloqueado si la cita esta COBRADA; queda en logs
-50. ✅ QR de pagos (2026-06-12): subida a Cloudinary desde Configuracion (POST /consultorio/qr, folder QR, public_id estable con overwrite; claves en .env del server), columna `qrUrl`; pagina publica `/qr/:slug?cliente=` para ver/descargar el QR (no requiere portalActivo); variable {linkQR} en el recordatorio de deuda (se agrega sola al final si la plantilla no la usa; sin QR cargado se omite). Gates 7c/7d en `gate-e25b.ps1`
-51. ✅ Marca ConsulTech cableada (2026-06-12): favicons + manifest reales, imagotipo en login/establecer-password, isotipo en sidebar, "by Toptech" al pie del login; gastos default HOY; export de reportes directo a Excel (.xlsx via SheetJS)
+17. âœ… Caja diaria por forma de pago (efectivo, QR, tarjeta, vales) con cierre e historial
+18. âœ… Desglose: pagos de deuda anterior vs nuevas deudas del dia
+19. âœ… Arqueo de caja ciego con revision del admin (E2-M2, 2026-06-10). ESTRICTO desde 2026-06-11: con el turno abierto /caja/hoy oculta inicial/efectivo/total a quien no es ADMIN (gate `gate-arqueo-estricto.ps1`)
+20. âœ… Gastos administrativos con categorias + KPI en dashboard (E2-M8, 2026-06-11)
+21. âœ… Comisiones por doctor y liquidacion mensual (E4, 2026-06-11): Doctor.comisionPct (0-100, opcional); /reportes/mensual calcula comision por doctor sobre pagos netos + total a liquidar; campo % en DoctorModal y columna en /reportes. Gate: caso 5b de `gate-reportes.ps1`
+22. â¬œ Facturacion electronica (E4)
+43. âœ… Apertura de caja con monto inicial (caja chica) + bloqueo de cobros/gastos sin turno abierto (E2-M9, 2026-06-11). Chip GLOBAL de turno en el sidebar (2026-06-11): ambar "Caja sin abrir Â· Abrir" (modal desde cualquier pantalla), verde "Caja abierta", gris "Turno cerrado"; `GET /caja/estado`. Reapertura (2026-06-12): POST /caja/reabrir (solo ADMIN, boton en /caja con confirmacion) descarta el arqueo (se declara de nuevo al re-cerrar), vuelve a aceptar cobros/gastos y queda en logs. Casos 8-10 en `gate-e2m9.ps1`
+44. âœ… Cero dialogos nativos EN TODO EL PROYECTO (verificado 2026-06-11: grep sin window.confirm/alert en apps/web/src; GastosPage y DisponibilidadModal usan ConfirmarModal, AnularPagoModal muestra la advertencia inline en el modal) â€” convencion en CLAUDE.md Don'ts
+45. âœ… Pase de acentos (2026-06-11): labels, titulos, badges y mensajes principales con tildes (script reusable `scripts/pase-acentos.ps1`, specs actualizados en el mismo commit). El copy NUEVO se escribe con acentos (CLAUDE.md); refinamiento de frases menores: continuo
+46. âœ… Usuario DOCTOR asociado a su Doctor (2026-06-11): selector en UsuarioModal (1:1 sobre Doctor.usuarioId, 409 si esta tomado, cambiar de rol suelta el vinculo); el doctor logueado edita SOLO su fila del Calendario de Atencion (403 para ajenos; guard en backend) y desde E2-M4 f1 su agenda y sus atenciones tambien estan acotadas en backend. Gates: `gate-usuario-doctor.ps1`, `gate-e2m4.ps1`
+47. âœ… Emails de cuenta (E2-M10, 2026-06-11, Resend): alta de usuario sin contraseÃ±a envia invitacion con link de un solo uso (tabla `password_tokens`, hash SHA-256, 48h); "Â¿Olvidaste tu contraseÃ±a?" en el login usa el mismo flujo; cero enumeracion de cuentas; convive con Google Sign-In. Gate: `gate-e2m10.ps1`. PENDIENTE OPERATIVO: verificar dominio en resend.com/domains y cambiar MAIL_FROM (el sandbox solo entrega al correo del owner)
+48. âœ… Kardex de paciente: CI en vez de DNI, telefono unico (sirve para WhatsApp) y correo en la ficha en lugar del sexo (2026-06-11). La columna `whatsapp` se elimino de la BD (2026-06-12): `telefono` es el unico numero de contacto en schema, API, portal y UI (migracion preserva numeros copiando whatsappâ†’telefono donde faltaba). Campo `pais` en Paciente (ISO alfa-2, default BO, 2026-06-12): selector con bandera y buscador (`SelectorPais` + `lib/paises.ts`) en PacienteModal y portal de reservas; define el prefijo internacional en `buildWhatsAppUrl` y el telefono se muestra en formato internacional en tabla y ficha. Gate: caso pais=AR en `gate-e25b.ps1`
+49. âœ… Cambio de servicio en reprogramar y en el modal de atencion (2026-06-12): el cobro se recalcula al precio del nuevo servicio respetando lo pagado (400 si los pagos lo superan); con deuda ya nacida (ATENDIDA/CON_DEUDA) deudaTotal se ajusta por el delta; bloqueado si la cita esta COBRADA; queda en logs
+50. âœ… QR de pagos (2026-06-12): subida a Cloudinary desde Configuracion (POST /consultorio/qr, folder QR, public_id estable con overwrite; claves en .env del server), columna `qrUrl`; pagina publica `/qr/:slug?cliente=` para ver/descargar el QR (no requiere portalActivo); variable {linkQR} en el recordatorio de deuda (se agrega sola al final si la plantilla no la usa; sin QR cargado se omite). Gates 7c/7d en `gate-e25b.ps1`
+51. âœ… Marca ConsulTech cableada (2026-06-12): favicons + manifest reales, imagotipo en login/establecer-password, isotipo en sidebar, "by Toptech" al pie del login; gastos default HOY; export de reportes directo a Excel (.xlsx via SheetJS)
 
 ### Catalogo y configuracion
-23. ✅ CRUD de servicios y doctores (con color de agenda)
-24. ✅ Gestion de usuarios con roles (ADMIN, SECRETARIA, DOCTOR, CAJA)
-25. ✅ Datos del consultorio (nombre, logo, moneda, timezone)
-26. ✅ Templates de mensajes WhatsApp editables (E3, 2026-06-11): msjRecordatorio/msjDeuda/msjContacto en Consultorio (vacio = default), variables {nombre} {hora} {fecha} {monto} {consultorio}; edicion en Configuracion (ADMIN), usados por agenda/deudores/ficha via lib/whatsapp.ts. Gate: `gate-whatsapp-templates.ps1`
+23. âœ… CRUD de servicios y doctores (con color de agenda)
+24. âœ… Gestion de usuarios con roles (ADMIN, SECRETARIA, DOCTOR, CAJA)
+25. âœ… Datos del consultorio (nombre, logo, moneda, timezone)
+26. âœ… Templates de mensajes WhatsApp editables (E3, 2026-06-11): msjRecordatorio/msjDeuda/msjContacto en Consultorio (vacio = default), variables {nombre} {hora} {fecha} {monto} {consultorio}; edicion en Configuracion (ADMIN), usados por agenda/deudores/ficha via lib/whatsapp.ts. Gate: `gate-whatsapp-templates.ps1`
 
 ### Dashboard y reportes
-27. ✅ Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
-28. ✅ KPI de gastos y resultado neto (E2-M8, 2026-06-11)
-29. ✅ Reportes mensual y por doctor (2026-06-11): pagina /reportes (ADMIN) sobre `GET /reportes/mensual?mes=` — ingresos por forma de pago (reversas netean), gastos por categoria, resultado neto, citas por estado y tabla por doctor (atendidas, pacientes unicos, canceladas, no-shows, ingresos). Gate: `gate-reportes.ps1`
-30. ✅ Vista de actividad reciente sobre logs (E2-M3, 2026-06-11)
+27. âœ… Dashboard del dia: citas, en espera, atendidos, por cobrar, caja, deudas, ingresos del mes
+28. âœ… KPI de gastos y resultado neto (E2-M8, 2026-06-11)
+29. âœ… Reportes mensual y por doctor (2026-06-11): pagina /reportes (ADMIN) sobre `GET /reportes/mensual?mes=` â€” ingresos por forma de pago (reversas netean), gastos por categoria, resultado neto, citas por estado y tabla por doctor (atendidas, pacientes unicos, canceladas, no-shows, ingresos). Gate: `gate-reportes.ps1`
+30. âœ… Vista de actividad reciente sobre logs (E2-M3, 2026-06-11)
 
 ### Clinico
-31. ✅ Atencion basica por cita (modulo atenciones)
-32. ✅ Recetas PDF con membrete (E2-M5, 2026-06-11): emision desde AtencionModal (medicamentos por linea + indicaciones), PDF A5 generado al descargar con membrete del consultorio y firma del doctor; mismo guard que la atencion. Gate: `gate-e2m5.ps1`. Pendiente para hosting: link wa.me con URL publica del PDF
-33. ⬜ Decision entidad Visitas / walk-ins (E2-M6)
-34. ⬜ Verticales: odontograma, consentimientos, notas privadas (E7)
+31. âœ… Atencion basica por cita (modulo atenciones)
+32. âœ… Recetas PDF con membrete (E2-M5, 2026-06-11): emision desde AtencionModal (medicamentos por linea + indicaciones), PDF A5 generado al descargar con membrete del consultorio y firma del doctor; mismo guard que la atencion. Gate: `gate-e2m5.ps1`. Pendiente para hosting: link wa.me con URL publica del PDF
+33. â¬œ Decision entidad Visitas / walk-ins (E2-M6)
+34. â¬œ Verticales: odontograma, consentimientos, notas privadas (E7)
 
 ### Plataforma
-35. ✅ Multi-tenant estricto (consultorioId del JWT en toda query)
-36. ✅ Auth JWT + roles + hardening (helmet, throttler, /health)
-37. ✅ Login con Google (commit f4fe21d "Google Autentificacion"; verificado 2026-06-11: tsc limpio, boton en LoginPage con VITE_GOOGLE_CLIENT_ID, POST /auth/google valida idToken y exige cuenta existente)
-38. ✅ Design system ui-ux-pro-max en todas las pantallas + dark mode + responsive
-39. ✅ Suite de pruebas: gates de API + Playwright E2E (11/11)
-40. ⬜ Deploy en Railway + consultorio piloto (diferido: lo activa el owner cuando decida)
-41. 🔄 Automatizacion WhatsApp (E3): **41a cola manual asistida HECHA 2026-06-11** — tabla `mensajes_pendientes`, cron diario 07:30 (recordatorios de citas hoy/manana + avisos de deuda max 1/semana), pagina /mensajes con wa.me + plantillas y marcar enviado/omitido (gate `gate-mensajes.ps1`, spec `mensajes-reportes.spec.ts`). **41b Business API: PAUSADO por decision del owner (2026-06-11) hasta que lo active**
-42. ⬜ Multi-sucursal (E5) · Portal del paciente con pagos online (E6)
+35. âœ… Multi-tenant estricto (consultorioId del JWT en toda query)
+36. âœ… Auth JWT + roles + hardening (helmet, throttler, /health)
+37. âœ… Login con Google (commit f4fe21d "Google Autentificacion"; verificado 2026-06-11: tsc limpio, boton en LoginPage con VITE_GOOGLE_CLIENT_ID, POST /auth/google valida idToken y exige cuenta existente)
+38. âœ… Design system ui-ux-pro-max en todas las pantallas + dark mode + responsive
+39. âœ… Suite de pruebas: gates de API + Playwright E2E (11/11)
+40. â¬œ Deploy en Railway + consultorio piloto (diferido: lo activa el owner cuando decida)
+41. ðŸ”„ Automatizacion WhatsApp (E3): **41a cola manual asistida HECHA 2026-06-11** â€” tabla `mensajes_pendientes`, cron diario 07:30 (recordatorios de citas hoy/manana + avisos de deuda max 1/semana), pagina /mensajes con wa.me + plantillas y marcar enviado/omitido (gate `gate-mensajes.ps1`, spec `mensajes-reportes.spec.ts`). **41b Business API: PAUSADO por decision del owner (2026-06-11) hasta que lo active**
+42. â¬œ Multi-sucursal (E5) Â· Portal del paciente con pagos online (E6)
 
 ---
 
@@ -108,7 +108,7 @@ No es un sistema hospitalario: es rapido, visual y accionable.
 | Monorepo | No especificado | pnpm workspaces |
 | Hosting | Railway / VPS / Docker | Pendiente de definir |
 
-NestJS reemplaza a Express para mayor estructura modular. PostgreSQL reemplaza a MySQL — mismo modelo relacional, mejor soporte para queries avanzadas.
+NestJS reemplaza a Express para mayor estructura modular. PostgreSQL reemplaza a MySQL â€” mismo modelo relacional, mejor soporte para queries avanzadas.
 
 ---
 
@@ -117,7 +117,7 @@ NestJS reemplaza a Express para mayor estructura modular. PostgreSQL reemplaza a
 ```
 pos-consultorio/
   apps/
-    api/                     NestJS — API REST multi-tenant
+    api/                     NestJS â€” API REST multi-tenant
       src/
         auth/                Login, JWT, estrategia, guards
         modules/
@@ -138,7 +138,7 @@ pos-consultorio/
       prisma/
         schema.prisma        Esquema completo de la BD
         migrations/          Historial de migraciones
-    web/                     React SPA — frontend
+    web/                     React SPA â€” frontend
       src/
         features/
           auth/              LoginPage
@@ -183,7 +183,7 @@ pos-consultorio/
 | caja_diaria | id, consultorioId, fecha, totalEfectivo, totalQr, totalTransferencia, totalTarjeta, cerrada |
 | logs | id, consultorioId, usuarioId, entidad, entidadId, accion, payloadAntes, payloadDespues |
 
-**Regla critica:** Toda tabla tiene `consultorioId` — filtro obligatorio en cada query de la API. (En modelo.jpeg: `empresa_id` "va con todos" — mismo concepto.)
+**Regla critica:** Toda tabla tiene `consultorioId` â€” filtro obligatorio en cada query de la API. (En modelo.jpeg: `empresa_id` "va con todos" â€” mismo concepto.)
 
 **Tablas futuras ya especificadas** (no crear hasta su hito): `gastos` (E2-M8, plan maestro Etapa 2), `disponibilidades` + `series_disponibilidad` + `plantillas_horario` + `doctor_servicios` (Etapa 2.5a, evolucionan a `horarios_atencion`; spec `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md`).
 
@@ -193,14 +193,14 @@ Mapeo verificado el 2026-06-09 contra el diagrama del usuario:
 
 | modelo.jpeg | Schema actual | Estado |
 |---|---|---|
-| Empresas (id, nombre, logo, telefono, direccion, moneda, activo) | Consultorio | Faltan `telefono`, `direccion` → se agregan en plan configuracion. Schema suma `timezone`, `plan` |
+| Empresas (id, nombre, logo, telefono, direccion, moneda, activo) | Consultorio | Faltan `telefono`, `direccion` â†’ se agregan en plan configuracion. Schema suma `timezone`, `plan` |
 | Usuarios (usuario, password_hash, rol, activo) | Usuario | Cubierto; `email` reemplaza a `usuario` (decision: mejor para SaaS multi-tenant) |
 | Doctores (nombre, activo) | Doctor | Cubierto y ampliado (especialidad, colorAgenda, horarios, usuarioId) |
-| Pacientes (documento, telefono, whatsapp, fecha_nacimiento, sexo, direccion, observaciones) | Paciente | Faltan `sexo`, `direccion` → se agregan en plan pacientes. Schema suma apellido, email, deudaTotal |
+| Pacientes (documento, telefono, whatsapp, fecha_nacimiento, sexo, direccion, observaciones) | Paciente | Faltan `sexo`, `direccion` â†’ se agregan en plan pacientes. Schema suma apellido, email, deudaTotal |
 | Citas (paciente, doctor, servicio, fecha_inicio, fecha_fin, estado, observacion, created_by) | Cita | Cubierto; `fechaHora + duracionMin` equivale a inicio/fin |
 | Atenciones (motivo, diagnostico, tratamiento, observaciones, proximo_control) | Atencion | Etapa 2; al implementarla separar `tratamiento` de `evolucion` segun el diagrama |
-| Visitas (fecha, cita_id 0..1, paciente_id) | — no existe | Diferido: la cita + estado LLEGO cubre el MVP; walk-in = crear cita en el momento. Revisar en Etapa 2 |
-| Servicios-Productos (tipo, precio, duracion, stock_actual, controla_stock) | Servicio | Parcial: sin `tipo` ni stock. Productos con inventario → Etapa 4 |
+| Visitas (fecha, cita_id 0..1, paciente_id) | â€” no existe | Diferido: la cita + estado LLEGO cubre el MVP; walk-in = crear cita en el momento. Revisar en Etapa 2 |
+| Servicios-Productos (tipo, precio, duracion, stock_actual, controla_stock) | Servicio | Parcial: sin `tipo` ni stock. Productos con inventario â†’ Etapa 4 |
 | DetalleCuenta (cantidad, precio_unit, costo, pago, debe, borrada) | Cobro (1:1 con cita) | Diferido a Etapa 4: venta multi-linea con costo/margen reemplazara al Cobro simple |
 | Pagos (detalle_cuenta_id, monto, cuenta_id, usuario_id, fecha) | Pago | Cubierto para MVP; `cuenta_id` se mapeara cuando exista tabla Cuentas |
 | Cuentas (nombre, activa) | enum FormaPago | Diferido a Etapa 4: formas de pago configurables como tabla en lugar de enum |
@@ -223,7 +223,7 @@ Mapeo verificado el 2026-06-09 contra el diagrama del usuario:
 
 ## 6. Pantallas del frontend
 
-### Etapa 1 — MVP Operativo
+### Etapa 1 â€” MVP Operativo
 
 | Ruta | Pantalla | Rol | Estado |
 |---|---|---|---|
@@ -239,52 +239,52 @@ Mapeo verificado el 2026-06-09 contra el diagrama del usuario:
 
 ### Detalle de cada pantalla
 
-**/ — Dashboard**
+**/ â€” Dashboard**
 - Total citas hoy / en espera / en atencion
 - Total cobrado hoy
 - Total deudas pendientes
 - Acceso rapido a agenda del dia
 
-**/ agenda — Agenda operativa**
-- Navegacion por fecha (← hoy →)
+**/ agenda â€” Agenda operativa**
+- Navegacion por fecha (â† hoy â†’)
 - Filtro por doctor (dropdown)
 - Tarjeta por cita: hora, paciente, doctor, servicio, estado (color), saldo pendiente
 - Acciones: cambiar estado, abrir cobro, link WhatsApp
 - Boton nueva cita (modal)
 
-**/ pacientes — Lista de pacientes**
+**/ pacientes â€” Lista de pacientes**
 - Busqueda por nombre, apellido, DNI, telefono
 - Tabla: nombre, DNI, telefono, deuda total
 - Boton nuevo paciente (modal)
 - Click en fila abre ficha del paciente
 
-**/ pacientes/:id — Ficha del paciente**
+**/ pacientes/:id â€” Ficha del paciente**
 - Datos personales: nombre, DNI, fecha de nacimiento, telefono
 - Deuda total actual
 - Historial de citas (fecha, doctor, servicio, estado, monto, saldo)
 - Boton cobrar deuda pendiente
 - Boton enviar WhatsApp
 
-**/ deudores — Vista de deudores**
+**/ deudores â€” Vista de deudores**
 - Listado de pacientes con saldo > 0
 - Columnas: paciente, ultima cita, total adeudado, dias sin pagar
 - Boton WhatsApp por deudor
 
-**/ caja — Caja diaria**
+**/ caja â€” Caja diaria**
 - Total cobrado hoy por forma de pago (efectivo, QR, transferencia, tarjeta)
 - Nuevas deudas generadas hoy
 - Cobros de deudas de dias anteriores
 - Boton cerrar caja
 - Historial de cajas anteriores
 
-**/ catalogo — Servicios y doctores**
+**/ catalogo â€” Servicios y doctores**
 - Tabla de servicios: nombre, duracion, precio (con CRUD)
 - Cards de doctores: nombre, especialidad, color, horarios (con CRUD)
 
-**/ configuracion — Configuracion (solo ADMIN)**
+**/ configuracion â€” Configuracion (solo ADMIN)**
 - Gestion de usuarios: crear, editar rol, activar/desactivar
 - Datos del consultorio: nombre, logo (URL), moneda, timezone
-- Templates de mensajes WhatsApp (Etapa 3 — no en MVP)
+- Templates de mensajes WhatsApp (Etapa 3 â€” no en MVP)
 
 ---
 
@@ -321,7 +321,7 @@ Prefijo global: `/api/v1`
 | POST | /doctores | Crear doctor |
 | POST | /doctores/:id/horarios | Agregar horario de atencion |
 | GET | /doctores/:id/disponibilidad?fecha= | Slots disponibles |
-| GET | /usuarios | Listar usuarios (ADMIN, solo activos — a ajustar) |
+| GET | /usuarios | Listar usuarios (ADMIN, solo activos â€” a ajustar) |
 | GET | /consultorio | Datos del consultorio autenticado |
 | PUT | /consultorio | Actualizar nombre, logoUrl, moneda, timezone (ADMIN) |
 
@@ -342,32 +342,32 @@ Prefijo global: `/api/v1`
 
 | Modulo | Rutas |
 |---|---|
-| Citas (E2-M7) | ✔ PUT /citas/:id implementado (2026-06-10): reprogramar en el lugar, solape revalidado, estado a PENDIENTE; cancelar/no-asistio anulan el cobro |
-| Gastos (E2-M8) | ✔ Implementados (2026-06-11): GET/POST /gastos, PUT/DELETE (ADMIN, soft), GET /gastos/resumen; /caja/hoy expone egresos |
+| Citas (E2-M7) | âœ” PUT /citas/:id implementado (2026-06-10): reprogramar en el lugar, solape revalidado, estado a PENDIENTE; cancelar/no-asistio anulan el cobro |
+| Gastos (E2-M8) | âœ” Implementados (2026-06-11): GET/POST /gastos, PUT/DELETE (ADMIN, soft), GET /gastos/resumen; /caja/hoy expone egresos |
 | Atenciones | POST /atenciones, GET /atenciones/:citaId |
 | Recetas | POST /recetas, GET /recetas/:id (PDF) |
 | Reportes | GET /reportes/mensual, GET /reportes/por-doctor |
-| Horarios | ~~GET/POST/PUT/DELETE /doctores/:id/horarios~~ → reemplazado por Calendario de Atencion (E2.5a) |
+| Horarios | ~~GET/POST/PUT/DELETE /doctores/:id/horarios~~ â†’ reemplazado por Calendario de Atencion (E2.5a) |
 | Calendario de Atencion (E2.5a) | GET/POST/PUT/DELETE /disponibilidades, CRUD /plantillas-horario, PUT /doctores/:id/servicios |
 | Portal publico (E2.5b) | GET /public/:slug, GET /public/:slug/slots, POST /public/:slug/reservas |
 | Configuracion WhatsApp | GET/PUT /configuracion/whatsapp-templates |
 
 ---
 
-## 7b. Issues conocidos — TODOS RESUELTOS en v0.1.0-mvp
+## 7b. Issues conocidos â€” TODOS RESUELTOS en v0.1.0-mvp
 
 Los 4 detectados en la auditoria pre-ejecucion (DTOs sin validators, deudaTotal sin incremento, deudores con citas futuras, timezone del modal) fueron corregidos. Los gates runtime encontraron y se corrigieron ademas:
 
-5. **@pos/types era TS crudo** — el API compilado crasheaba al arrancar. El paquete ahora buildea a `dist/` (CJS + d.ts); correr `pnpm build` en packages/types tras cambiar tipos.
-6. **ClassSerializerInterceptor rompia los Decimal** — todos los montos llegaban como `{s,e,d}`. Eliminado (no habia @Exclude en ningun lado).
-7. **UpdatePacienteDto rechazaba PUT parcial** — ahora usa PartialType.
-8. **Dia de caja y dia de agenda usaban fecha UTC** — despues de las 20:00 GMT-4 los cobros caian al dia siguiente y las citas nocturnas desaparecian. Ambos usan ahora el dia LOCAL del negocio (`diaCajaLocal()`); el server DEBE correr con TZ del consultorio (var `TZ`, ver docs/DEPLOY.md).
+5. **@pos/types era TS crudo** â€” el API compilado crasheaba al arrancar. El paquete ahora buildea a `dist/` (CJS + d.ts); correr `pnpm build` en packages/types tras cambiar tipos.
+6. **ClassSerializerInterceptor rompia los Decimal** â€” todos los montos llegaban como `{s,e,d}`. Eliminado (no habia @Exclude en ningun lado).
+7. **UpdatePacienteDto rechazaba PUT parcial** â€” ahora usa PartialType.
+8. **Dia de caja y dia de agenda usaban fecha UTC** â€” despues de las 20:00 GMT-4 los cobros caian al dia siguiente y las citas nocturnas desaparecian. Ambos usan ahora el dia LOCAL del negocio (`diaCajaLocal()`); el server DEBE correr con TZ del consultorio (var `TZ`, ver docs/DEPLOY.md).
 
 ### Gaps vs MVP.pdf (documentados, decididos)
 
 | Item del MVP | Estado | Decision |
 |---|---|---|
-| Descuento en cobros | ✔ Implementado (2026-06-10) | `PUT /cobros/:id/total` + edicion inline en CobroModal, auditado, con reglas (no menor a lo pagado, no sobre COMPLETO) |
+| Descuento en cobros | âœ” Implementado (2026-06-10) | `PUT /cobros/:id/total` + edicion inline en CobroModal, auditado, con reglas (no menor a lo pagado, no sobre COMPLETO) |
 | "Ultimo pago" en vista deudores | Incorporado | Columna agregada al spec/plan de deudores |
 | Logo del consultorio en config | Incorporado | Campo URL en ConfiguracionPage (upload de archivo: etapa posterior) |
 | Horarios de atencion en config | Parcial | API por-doctor existe (`POST /doctores/:id/horarios`); UI se difiere a Etapa 2 |
@@ -385,9 +385,9 @@ Los 4 detectados en la auditoria pre-ejecucion (DTOs sin validators, deudaTotal 
 - Al registrar un pago se actualiza la caja diaria del dia (por forma de pago)
 - **Sin caja abierta no se cobra ni se gasta** (E2-M9, vigente desde 2026-06-11): la jornada abre declarando el monto inicial (caja chica) y el cierre lo contempla: `inicial + cobros efectivo - gastos efectivo`
 - **Las deudas ALERTAN pero NO BLOQUEAN**: un paciente deudor puede seguir agendando; el sistema muestra el saldo, no impide operar
-- **Pagos divididos**: un cobro acepta multiples pagos (registros Pago) — distintos montos y formas de pago hasta cubrir el total
+- **Pagos divididos**: un cobro acepta multiples pagos (registros Pago) â€” distintos montos y formas de pago hasta cubrir el total
 - **Los pagos nunca se borran ni editan**: un pago mal registrado se corrige con un asiento de reversa (Etapa 2); el original queda auditado
-- Toda eliminacion es soft-delete (campo deletedAt) — nunca se borra fisicamente
+- Toda eliminacion es soft-delete (campo deletedAt) â€” nunca se borra fisicamente
 - Toda accion critica (cambio de estado, pago, cancelacion) genera un registro en logs
 
 ---
@@ -399,9 +399,9 @@ Aplica a TODO codigo nuevo de los planes. Corto y obligatorio; los planes ya lo 
 ### Seguridad (backend)
 - **Multi-tenant:** `consultorioId` SIEMPRE sale del JWT (`@CurrentUser()`), nunca del body ni de params. Todo `findFirst/findMany/update` filtra por el.
 - **Validacion:** todo body entra por un DTO con decoradores class-validator (whitelist global ya activo). Nada de `@Body() body: any`.
-- **Autorizacion:** las rutas son privadas por defecto (guard global); `@Public()` solo en auth. Mutaciones administrativas llevan `@Roles(Rol.ADMIN)` — el guard de UI (AdminRoute) es UX, la seguridad real es el backend.
-- **Passwords:** solo argon2. `passwordHash` jamas viaja en una respuesta — usar `select` explicito en todas las queries de usuarios.
-- **Secrets:** por variables de entorno; `.env` no se commitea. El fallback de `JWT_SECRET` en jwt.strategy es solo para dev — en produccion debe fallar si falta.
+- **Autorizacion:** las rutas son privadas por defecto (guard global); `@Public()` solo en auth. Mutaciones administrativas llevan `@Roles(Rol.ADMIN)` â€” el guard de UI (AdminRoute) es UX, la seguridad real es el backend.
+- **Passwords:** solo argon2. `passwordHash` jamas viaja en una respuesta â€” usar `select` explicito en todas las queries de usuarios.
+- **Secrets:** por variables de entorno; `.env` no se commitea. El fallback de `JWT_SECRET` en jwt.strategy es solo para dev â€” en produccion debe fallar si falta.
 - **Dinero:** siempre `Decimal` de Prisma (ya es asi). Nunca float para montos; en el frontend convertir con `Number()` solo para mostrar.
 - **Integridad:** operaciones multi-tabla (pago, cambio de estado) en `prisma.$transaction`. Acciones criticas registran en `logs`. Borrado siempre soft (`deletedAt` / `activo: false`).
 - **Errores:** mensajes genericos al cliente en 500; los detalles van al log del server (HttpExceptionFilter existente).
@@ -426,58 +426,59 @@ Aplica a TODO codigo nuevo de los planes. Corto y obligatorio; los planes ya lo 
 - **Seguridad:** passwords con argon2, JWT con expiracion, roles validados en cada endpoint, consultorioId obligatorio en queries
 - **Auditoria:** tabla logs para cambios de estado, eliminaciones y pagos
 - **Responsividad:** desktop-first, compatible con tablet y celulares; la agenda debe funcionar en pantalla tactil
-- **Multi-tenant:** aislamiento total por consultorioId — un usuario nunca puede ver datos de otro consultorio
+- **Multi-tenant:** aislamiento total por consultorioId â€” un usuario nunca puede ver datos de otro consultorio
 - **Backups:** automaticos en la infraestructura de hosting
 
 ---
 
 ## 10. Roadmap completo
 
-### Etapa 1 — MVP Operativo — ✔ COMPLETADA (tag `v0.1.0-mvp`, 2026-06-10)
+### Etapa 1 â€” MVP Operativo â€” âœ” COMPLETADA (tag `v0.1.0-mvp`, 2026-06-10)
 
 Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtime verdes, smoke E2E de UI con Playwright (5/5, `apps/web/e2e/smoke.spec.ts`), hardening pre-deploy (helmet, throttler, fail-hard de secrets, /health, REGISTRO_ABIERTO). Regresion: `scripts/gate-*.ps1`.
 
-**Pendiente operativo (no de codigo):** deploy en Railway segun `docs/DEPLOY.md` + consultorio piloto — **diferido por decision del owner (2026-06-10)**: el desarrollo avanza con Etapa 2 sin esperar el deploy.
+**Pendiente operativo (no de codigo):** deploy en Railway segun `docs/DEPLOY.md` + consultorio piloto â€” **diferido por decision del owner (2026-06-10)**: el desarrollo avanza con Etapa 2 sin esperar el deploy.
 
 ---
 
-### Etapa 2 — Valor Clinico + Solidez Operativa
+### Etapa 2 â€” Valor Clinico + Solidez Operativa
 
-**Trigger:** ~~al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas~~ → **se adelanta por decision del owner (2026-06-10)**: se ejecuta en orden de hitos sin esperar piloto. Solo E2-M6 (decision Visitas) requiere datos de uso real.
-**Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` — 8 hitos ordenados (cancelar/reprogramar → reversal de pagos → arqueo ciego → gastos → actividad → historia clinica → recetas PDF → decision Visitas) con mini-specs y decisiones fijadas.
+**Trigger:** ~~al menos 1 consultorio activo usando Etapa 1 a diario durante 2 semanas~~ â†’ **se adelanta por decision del owner (2026-06-10)**: se ejecuta en orden de hitos sin esperar piloto. Solo E2-M6 (decision Visitas) requiere datos de uso real.
+**Plan maestro:** `docs/superpowers/plans/2026-06-10-etapa2-master-plan.md` â€” 8 hitos ordenados (cancelar/reprogramar â†’ reversal de pagos â†’ arqueo ciego â†’ gastos â†’ actividad â†’ historia clinica â†’ recetas PDF â†’ decision Visitas) con mini-specs y decisiones fijadas.
 
-- ✔ **Historia clinica completa** (E2-M4, HECHO 2026-06-11): F1 — guard duro en `PUT /atenciones` (solo ADMIN o el doctor de la cita; 403 al resto, lectura abierta al staff); agenda DOCTOR forzada en backend (`GET /citas` ignora el doctorId del query para rol DOCTOR y usa el Doctor vinculado al token); AtencionModal solo lectura para SECRETARIA/CAJA; boton "Agendar control" precarga NuevaCitaModal. F2 — tab "Historia clínica" en la ficha: timeline con busqueda (`GET /atenciones/paciente/:id?q=`) y adjuntos a disco local (`UPLOADS_DIR`, 5MB JPG/PNG/WebP/PDF, max 10 por atencion, streaming autenticado con guard de path traversal, borrado logueado). Gates: `gate-e2m4.ps1` 8/8, `gate-e2m4-f2.ps1` 9/9
-- Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional — habilita walk-ins)
+- âœ” **Historia clinica completa** (E2-M4, HECHO 2026-06-11): F1 â€” guard duro en `PUT /atenciones` (solo ADMIN o el doctor de la cita; 403 al resto, lectura abierta al staff); agenda DOCTOR forzada en backend (`GET /citas` ignora el doctorId del query para rol DOCTOR y usa el Doctor vinculado al token); AtencionModal solo lectura para SECRETARIA/CAJA; boton "Agendar control" precarga NuevaCitaModal. F2 â€” tab "Historia clÃ­nica" en la ficha: timeline con busqueda (`GET /atenciones/paciente/:id?q=`) y adjuntos a disco local (`UPLOADS_DIR`, 5MB JPG/PNG/WebP/PDF, max 10 por atencion, streaming autenticado con guard de path traversal, borrado logueado). Gates: `gate-e2m4.ps1` 8/8, `gate-e2m4-f2.ps1` 9/9
+- Evaluar entidad `Visitas` de modelo.jpeg (asistencia con cita opcional â€” habilita walk-ins)
 - Historia clinica cronologica en la ficha del paciente
-- ✔ **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "⋯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE → NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
-- ✔ **Gastos administrativos** (E2-M8, HECHO 2026-06-11): tabla `gastos` + `/gastos` CRUD (SECRETARIA registra, ADMIN edita/borra) y `/gastos/resumen`; los egresos CAJA_EFECTIVO descuentan del arqueo (efectivo NETO, computado on-the-fly sin reescribir la caja); pagina `/gastos` + KPIs "Gastos del mes"/"Resultado neto" en dashboard. Gate: `gate-e2m8.ps1`; E2E: `gastos.spec.ts`
-- ✔ **Anulacion de pagos con asiento de reversa** (E2-M1, HECHO 2026-06-10): `POST /cobros/pagos/:id/anular` (ADMIN) crea pago espejo negativo, restaura saldo/deuda/cita y descuenta la caja de HOY; UI en Caja y CobroModal. Gate: `gate-e2m1.ps1`; E2E: `anular-pago.spec.ts`
-- **Mejoras pedidas por el owner (2026-06-11)**: (a) ✔ cero `window.confirm/alert` — ConfirmarModal compartido, regla en CLAUDE.md; (b) ✔ pase de acentos en el copy visible (script `scripts/pase-acentos.ps1`); (c) ✔ usuario DOCTOR asociado a su Doctor con edicion de su propio Calendario de Atencion (gate-usuario-doctor 9/9)
-- ✔ **Emails de cuenta** (E2-M10, HECHO 2026-06-11, proveedor: **Resend**): (a) alta de usuario con password opcional — sin password la cuenta nace inaccesible (hash aleatorio) y recibe invitacion con link de un solo uso (`password_tokens`: hash SHA-256, expira 48h, un vigente por usuario); (b) "¿Olvidaste tu contraseña?" dispara el mismo flujo. `POST /auth/password/solicitar` (respuesta identica exista o no la cuenta) y `/establecer` (publicos con throttle de login). MailModule global; el envio nunca bloquea. MAIL_DEBUG=1 solo en dev expone devToken para gates. Pagina publica `/establecer-password`. Gate: `gate-e2m10.ps1` 11/11; email real entregado. OPERATIVO: el sandbox de Resend solo entrega a alejandrosoljancic@gmail.com — para enviar a cualquier destinatario, verificar dominio en resend.com/domains y actualizar `MAIL_FROM`
-- ✔ **Apertura de caja / turno** (E2-M9, HECHO 2026-06-11): `POST /caja/abrir { montoInicial }` crea la caja del dia (ya no se auto-crea con el primer pago); cobrar, anular pagos y registrar gastos exigen turno abierto y no cerrado (409); arqueo `esperado = inicial + cobros efectivo - gastos efectivo`. UI: boton/modal Abrir caja, banner de estado y card "Caja inicial". Gates y specs existentes actualizados para abrir el turno en su setup. Gate: `gate-e2m9.ps1`
-- ✔ **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
-- ✔ **Vista de actividad reciente** (E2-M3, HECHO 2026-06-11): `GET /logs` paginado con filtros (ADMIN) + pagina `/actividad` agrupada por dia con payloads antes/despues expandibles. Gate: `gate-e2m3.ps1`
-- ✔ **Recetas PDF** (E2-M5, HECHO 2026-06-11): `POST /atenciones/cita/:citaId/recetas` + `GET /atenciones/recetas/:id/pdf` (PDF A5 con membrete generado al descargar via pdfkit; guard de escritura de la atencion, lectura staff, tenant en toda query); RecetaModal + seccion Recetas en AtencionModal. Gate: `gate-e2m5.ps1` 7/7. El link wa.me con el PDF requiere URL publica (queda para el deploy)
+- âœ” **Cancelar / No asistio / Reprogramar desde la UI** (E2-M7, HECHO 2026-06-10): menu "â‹¯" en CitaCard/CitaDetalleModal; reprogramar edita fecha/hora/doctor en el lugar via `PUT /citas/:id`; cancelar anula el cobro sin pagos (`EstadoCobro.ANULADO`); transicion `PENDIENTE â†’ NO_ASISTIO` agregada. Gate: `scripts/gate-e2m7.ps1`; E2E: `cancelar-reprogramar.spec.ts`
+- âœ” **Gastos administrativos** (E2-M8, HECHO 2026-06-11): tabla `gastos` + `/gastos` CRUD (SECRETARIA registra, ADMIN edita/borra) y `/gastos/resumen`; los egresos CAJA_EFECTIVO descuentan del arqueo (efectivo NETO, computado on-the-fly sin reescribir la caja); pagina `/gastos` + KPIs "Gastos del mes"/"Resultado neto" en dashboard. Gate: `gate-e2m8.ps1`; E2E: `gastos.spec.ts`
+- âœ” **Anulacion de pagos con asiento de reversa** (E2-M1, HECHO 2026-06-10): `POST /cobros/pagos/:id/anular` (ADMIN) crea pago espejo negativo, restaura saldo/deuda/cita y descuenta la caja de HOY; UI en Caja y CobroModal. Gate: `gate-e2m1.ps1`; E2E: `anular-pago.spec.ts`
+- **Mejoras pedidas por el owner (2026-06-11)**: (a) âœ” cero `window.confirm/alert` â€” ConfirmarModal compartido, regla en CLAUDE.md; (b) âœ” pase de acentos en el copy visible (script `scripts/pase-acentos.ps1`); (c) âœ” usuario DOCTOR asociado a su Doctor con edicion de su propio Calendario de Atencion (gate-usuario-doctor 9/9)
+- âœ” **Emails de cuenta** (E2-M10, HECHO 2026-06-11, proveedor: **Resend**): (a) alta de usuario con password opcional â€” sin password la cuenta nace inaccesible (hash aleatorio) y recibe invitacion con link de un solo uso (`password_tokens`: hash SHA-256, expira 48h, un vigente por usuario); (b) "Â¿Olvidaste tu contraseÃ±a?" dispara el mismo flujo. `POST /auth/password/solicitar` (respuesta identica exista o no la cuenta) y `/establecer` (publicos con throttle de login). MailModule global; el envio nunca bloquea. MAIL_DEBUG=1 solo en dev expone devToken para gates. Pagina publica `/establecer-password`. Gate: `gate-e2m10.ps1` 11/11; email real entregado. OPERATIVO: el sandbox de Resend solo entrega a alejandrosoljancic@gmail.com â€” para enviar a cualquier destinatario, verificar dominio en resend.com/domains y actualizar `MAIL_FROM`
+- âœ” **Apertura de caja / turno** (E2-M9, HECHO 2026-06-11): `POST /caja/abrir { montoInicial }` crea la caja del dia (ya no se auto-crea con el primer pago); cobrar, anular pagos y registrar gastos exigen turno abierto y no cerrado (409); arqueo `esperado = inicial + cobros efectivo - gastos efectivo`. UI: boton/modal Abrir caja, banner de estado y card "Caja inicial". Gates y specs existentes actualizados para abrir el turno en su setup. Gate: `gate-e2m9.ps1`
+- ✔ **Catalogos de tipos de gasto y cuenta** (2026-06-13): `TipoGasto` y `TipoCuenta` por consultorio (tablas `tipos_gasto`/`tipos_cuenta`) reemplazan los enums fijos; CRUD ADMIN en Catalogo (alta/editar/inactivar con guard de uso). `TipoCuenta.esEfectivo` (0 o 1 por consultorio, la nueva desplaza a la anterior) hace dinamico el arqueo de caja. `Gasto` pasa de enum a FK `tipoGastoId`/`tipoCuentaId`; migracion de datos sin perdida y seeding de defaults al registrar. `TipoCuenta` queda preparado para cobros (futuro). Gate: `gate-tipos-gasto-cuenta.ps1`; spec/plan 2026-06-13
+- âœ” **Arqueo de caja ciego** (E2-M2, HECHO 2026-06-10): `POST /caja/cerrar` exige `montoDeclarado` (modal ciego en UI); diferencia 0 auto-aprobada, distinto queda pendiente; `PUT /caja/:id/revisar` (ADMIN) con nota. Gate: `gate-e2m2.ps1`; E2E: `arqueo-caja.spec.ts`. Mejora futura anotada: ocultar el total de efectivo a SECRETARIA hasta el cierre para un ciego estricto
+- âœ” **Vista de actividad reciente** (E2-M3, HECHO 2026-06-11): `GET /logs` paginado con filtros (ADMIN) + pagina `/actividad` agrupada por dia con payloads antes/despues expandibles. Gate: `gate-e2m3.ps1`
+- âœ” **Recetas PDF** (E2-M5, HECHO 2026-06-11): `POST /atenciones/cita/:citaId/recetas` + `GET /atenciones/recetas/:id/pdf` (PDF A5 con membrete generado al descargar via pdfkit; guard de escritura de la atencion, lectura staff, tenant en toda query); RecetaModal + seccion Recetas en AtencionModal. Gate: `gate-e2m5.ps1` 7/7. El link wa.me con el PDF requiere URL publica (queda para el deploy)
 - Adjuntos por atencion (fotos, estudios)
-- Flujo del doctor: agenda → registrar atencion → receta, en un solo flow sin salir de la pantalla
+- Flujo del doctor: agenda â†’ registrar atencion â†’ receta, en un solo flow sin salir de la pantalla
 
 ---
 
-### Etapa 2.5 — Agendamiento avanzado
+### Etapa 2.5 â€” Agendamiento avanzado
 
 **Trigger:** Etapa 2 cerrada, o feedback del piloto pidiendo agenda online.
 **Specs:** `docs/superpowers/specs/2026-06-10-calendario-atencion-design.md` y `2026-06-10-portal-agendamiento-design.md` (planes de implementacion just-in-time, como E1/E2).
 
-- 🔄 **2.5a — Calendario de Atencion** (NUCLEO HECHO 2026-06-11): cada doctor define su horario por dia (lunes 9-17, etc.) en `/calendario-atencion` (nav "Horarios"). Hecho: scheduler semanal (filas = doctores), presets, series semanales materializadas con fecha limite, edicion/borrado por alcance (uno/serie/desde), bloqueos (vacaciones/ausencia/capacitacion/reunion/bloqueado), validacion de citas (bloqueos 409; fuera de horario 400 si el doctor tiene calendario; sin calendario = legacy), edicion por ADMIN o el propio doctor. ✔ `GET /doctores/:id/disponibilidad` reescrito sobre el modelo nuevo (slots = bloques DISPONIBLE − citas − bloqueos; gate-slots 5/5) — el portal 2.5b ya tiene su base. Gates: `gate-e25a.ps1`, `gate-usuario-doctor.ps1`, `gate-slots.ps1`; E2E: `calendario-atencion.spec.ts`. **Fase 2 pendiente**: plantillas de horarios y servicios por doctor. Sedes/ambientes → Etapa 5.
-- ✔ **2.5b — Portal publico de agendamiento (tipo Calendly)** (HECHO 2026-06-11): link `/reservar/:slug` (con `?doctor=` para doctor fijo); el cliente ve los slots reales del calendario, elige horario y deja sus datos; se crea paciente (match por correo o telefono sin duplicar ni revelar existencia) y envío de correo autoamtico de gracias por tu reserva + cita PENDIENTE origen PORTAL atribuida al primer ADMIN. Endpoints `/public/:slug|/slots|/reservas` con throttle por ruta y consultorioId SIEMPRE derivado del slug; slug + toggle + link copiable en Configuracion. Gate: `gate-e25b.ps1` 8/8. Pendiente menor: badge "Portal" en la agenda y filtro min-fecha en slots pasados.
+- ðŸ”„ **2.5a â€” Calendario de Atencion** (NUCLEO HECHO 2026-06-11): cada doctor define su horario por dia (lunes 9-17, etc.) en `/calendario-atencion` (nav "Horarios"). Hecho: scheduler semanal (filas = doctores), presets, series semanales materializadas con fecha limite, edicion/borrado por alcance (uno/serie/desde), bloqueos (vacaciones/ausencia/capacitacion/reunion/bloqueado), validacion de citas (bloqueos 409; fuera de horario 400 si el doctor tiene calendario; sin calendario = legacy), edicion por ADMIN o el propio doctor. âœ” `GET /doctores/:id/disponibilidad` reescrito sobre el modelo nuevo (slots = bloques DISPONIBLE âˆ’ citas âˆ’ bloqueos; gate-slots 5/5) â€” el portal 2.5b ya tiene su base. Gates: `gate-e25a.ps1`, `gate-usuario-doctor.ps1`, `gate-slots.ps1`; E2E: `calendario-atencion.spec.ts`. **Fase 2 pendiente**: plantillas de horarios y servicios por doctor. Sedes/ambientes â†’ Etapa 5.
+- âœ” **2.5b â€” Portal publico de agendamiento (tipo Calendly)** (HECHO 2026-06-11): link `/reservar/:slug` (con `?doctor=` para doctor fijo); el cliente ve los slots reales del calendario, elige horario y deja sus datos; se crea paciente (match por correo o telefono sin duplicar ni revelar existencia) y envÃ­o de correo autoamtico de gracias por tu reserva + cita PENDIENTE origen PORTAL atribuida al primer ADMIN. Endpoints `/public/:slug|/slots|/reservas` con throttle por ruta y consultorioId SIEMPRE derivado del slug; slug + toggle + link copiable en Configuracion. Gate: `gate-e25b.ps1` 8/8. Pendiente menor: badge "Portal" en la agenda y filtro min-fecha en slots pasados.
 
 ---
 
-### Etapa 3 — Automatizacion
+### Etapa 3 â€” Automatizacion
 
 **Trigger:** feedback que confirma que el recordatorio manual es el cuello de botella.
 
-> Nota: el cron NO-SHOW requiere la transicion `PENDIENTE → NO_ASISTIO` que se agrega en E2-M7.
+> Nota: el cron NO-SHOW requiere la transicion `PENDIENTE â†’ NO_ASISTIO` que se agrega en E2-M7.
 
 **Paso intermedio (sin API de WhatsApp, patron probado en produccion):**
 - **Cola de mensajes pendientes**: un cron genera los mensajes del dia (recordatorios, avisos de deuda) ya redactados; la secretaria los ve en un panel, copia y envia por wa.me, y los marca como enviados/omitidos (expiran a los 3 dias)
@@ -495,7 +496,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 
 ---
 
-### Etapa 4 — Finanzas Avanzadas
+### Etapa 4 â€” Finanzas Avanzadas
 
 - Facturacion electronica (segun normativa del pais)
 - Comisiones por doctor: porcentaje o monto fijo configurado por servicio
@@ -506,7 +507,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 
 ---
 
-### Etapa 5 — Multi-sucursal
+### Etapa 5 â€” Multi-sucursal
 
 - Un admin puede gestionar multiples consultorios (sucursales)
 - Cajas independientes por sucursal
@@ -515,16 +516,16 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 
 ---
 
-### Etapa 6 — Ecosistema del Paciente
+### Etapa 6 â€” Ecosistema del Paciente
 
 - Portal del paciente: historial propio, proximas citas
-- ~~Reserva online 24/7 via link en Instagram/WhatsApp~~ → adelantada a Etapa 2.5b (portal de agendamiento); en E6 queda el portal del paciente autenticado
+- ~~Reserva online 24/7 via link en Instagram/WhatsApp~~ â†’ adelantada a Etapa 2.5b (portal de agendamiento); en E6 queda el portal del paciente autenticado
 - Citas en estado PENDIENTE al entrar al sistema
 - Pagos en linea al reservar
 
 ---
 
-### Etapa 7 — Verticales Especializadas
+### Etapa 7 â€” Verticales Especializadas
 
 - **Odontologia:** odontograma interactivo, fichas dentales por pieza
 - **Estetica:** consentimientos digitales firmados en tablet, galeria fotos antes/despues
@@ -536,7 +537,7 @@ Ejecutada via `2026-06-09-etapa1-master-plan.md`: 5 hitos M0-M4 con gates runtim
 ## 11. Estado actual del repositorio (2026-06-10)
 
 ```
-Tag: v0.1.0-mvp — Etapa 1 completa, working tree limpio, 15 commits.
+Tag: v0.1.0-mvp â€” Etapa 1 completa, working tree limpio, 15 commits.
 
 Migraciones: init, paciente_sexo_direccion, consultorio_telefono_direccion,
              atencion_tratamiento
