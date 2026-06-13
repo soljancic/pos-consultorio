@@ -31,7 +31,8 @@ test('registrar un gasto lo muestra en la tabla y en el KPI del dashboard', asyn
   await page.getByRole('button', { name: 'Nuevo gasto' }).click()
 
   await page.getByLabel('Monto *').fill('1234')
-  await page.getByLabel('Categoría *').selectOption('INSUMOS')
+  // Catalogos dinamicos: el tipo de gasto es un FK; se elige por nombre
+  await page.getByLabel('Tipo de gasto *').selectOption({ label: 'Insumos' })
   await page.getByLabel('Descripción *').fill('material descartable')
   await page.getByRole('button', { name: 'Registrar gasto' }).click()
 
@@ -39,8 +40,8 @@ test('registrar un gasto lo muestra en la tabla y en el KPI del dashboard', asyn
   await expect(page.getByText('material descartable')).toBeVisible()
   await expect(page.getByRole('table').getByText('Insumos')).toBeVisible()
 
-  // KPI en dashboard: gastos del mes y resultado neto
-  await page.goto('/')
+  // KPI en dashboard: gastos del mes y resultado neto (Dashboard ahora en /inicio)
+  await page.goto('/inicio')
   await expect(page.getByText('Gastos del mes')).toBeVisible()
   await expect(page.getByText('Resultado neto')).toBeVisible()
   await expect(page.getByText(/1\.?234/).first()).toBeVisible()
