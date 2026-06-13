@@ -71,7 +71,10 @@ export function AgendaPage() {
     if (doctorPropio) setDoctorId(String(doctorPropio.id))
   }, [doctorPropio?.id])
 
-  // Día (lista y grilla diaria)
+  // Día (lista y grilla diaria). refetchInterval 30s = la agenda se entera sola
+  // del cambio de estado que hizo otro usuario (doctor) sin recargar la pagina:
+  // React actualiza solo la cita que cambio (key=cita.id), no parpadea porque la
+  // carga se mide con isLoading (1ra vez), no con el refetch de fondo. Igual que caja.
   const { data: citas = [], isLoading } = useQuery<Cita[]>({
     queryKey: ['citas', fechaStr, doctorId],
     queryFn: () =>
@@ -79,6 +82,7 @@ export function AgendaPage() {
         .get(`/citas?fecha=${fechaStr}${doctorId ? `&doctorId=${doctorId}` : ''}`)
         .then((r) => r.data),
     enabled: vista === 'lista' || vista === 'dia',
+    refetchInterval: 30_000,
   })
 
   // Semana (rango)
@@ -92,6 +96,7 @@ export function AgendaPage() {
         )
         .then((r) => r.data),
     enabled: vista === 'semana',
+    refetchInterval: 30_000,
   })
 
   // Mes (rango de la grilla visible: lunes de la 1ra semana al domingo de la ultima)
@@ -107,6 +112,7 @@ export function AgendaPage() {
         )
         .then((r) => r.data),
     enabled: vista === 'mes',
+    refetchInterval: 30_000,
   })
 
   const cambiarEstado = useMutation({
