@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { TiposGastoService, CreateTipoGastoDto, UpdateTipoGastoDto } from './tipos-gasto.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -37,5 +37,11 @@ export class TiposGastoController {
     @Body() dto: UpdateTipoGastoDto,
   ) {
     return this.service.update(user.consultorioId, id, dto)
+  }
+
+  @Delete(':id')
+  @Roles(Rol.ADMIN)
+  remove(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(user.consultorioId, id)
   }
 }

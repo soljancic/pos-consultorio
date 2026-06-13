@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Plus, Pencil, ClipboardList } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Pencil, Trash2, ClipboardList } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
@@ -9,6 +9,7 @@ import { ServicioModal } from './ServicioModal'
 import { DoctorModal } from './DoctorModal'
 import { TipoGastoModal } from './TipoGastoModal'
 import { TipoCuentaModal } from './TipoCuentaModal'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
@@ -22,6 +23,10 @@ export function CatalogoPage() {
   const [tgModal, setTgModal] = useState(false)
   const [tcEdit, setTcEdit] = useState<any | null>(null)
   const [tcModal, setTcModal] = useState(false)
+  const [tgBorrar, setTgBorrar] = useState<any | null>(null)
+  const [tcBorrar, setTcBorrar] = useState<any | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const qc = useQueryClient()
 
   // queryKey distinto al de la agenda (['servicios'] / ['doctores']) porque
   // el catalogo incluye inactivos; la invalidacion por prefijo cubre ambos.
@@ -46,6 +51,29 @@ export function CatalogoPage() {
     queryKey: ['tipos-cuenta', 'todos'],
     queryFn: () => api.get('/tipos-cuenta').then((r) => r.data),
     enabled: esAdmin,
+  })
+
+  // El backend borra si no esta usado; si la FK lo impide, lo desactiva y avisa
+  const borrarTipoGasto = useMutation({
+    mutationFn: (id: number) => api.delete(`/tipos-gasto/${id}`).then((r) => r.data),
+    onSuccess: (res: { eliminado: boolean }) => {
+      qc.invalidateQueries({ queryKey: ['tipos-gasto'] })
+      setTgBorrar(null)
+      if (res?.eliminado === false) {
+        setAviso('Este tipo de gasto ya tiene gastos registrados, asi que no se pudo eliminar. Se marco como inactivo para que no aparezca al cargar nuevos gastos.')
+      }
+    },
+  })
+
+  const borrarTipoCuenta = useMutation({
+    mutationFn: (id: number) => api.delete(`/tipos-cuenta/${id}`).then((r) => r.data),
+    onSuccess: (res: { eliminado: boolean }) => {
+      qc.invalidateQueries({ queryKey: ['tipos-cuenta'] })
+      setTcBorrar(null)
+      if (res?.eliminado === false) {
+        setAviso('Esta cuenta ya tiene gastos registrados, asi que no se pudo eliminar. Se marco como inactiva para que no aparezca al cargar nuevos gastos.')
+      }
+    },
   })
 
   return (
@@ -177,11 +205,18 @@ export function CatalogoPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => { setTgEdit(t); setTgModal(true) }}
-                        aria-label={`Editar ${t.nombre}`}
-                        className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
-                        <Pencil className="h-4 w-4" aria-hidden="true" />
-                      </button>
+                      <span className="inline-flex gap-1">
+                        <button onClick={() => { setTgEdit(t); setTgModal(true) }}
+                          aria-label={`Editar ${t.nombre}`}
+                          className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button onClick={() => setTgBorrar(t)}
+                          aria-label={`Eliminar ${t.nombre}`}
+                          className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}>
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -229,11 +264,18 @@ export function CatalogoPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => { setTcEdit(t); setTcModal(true) }}
-                        aria-label={`Editar ${t.nombre}`}
-                        className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
-                        <Pencil className="h-4 w-4" aria-hidden="true" />
-                      </button>
+                      <span className="inline-flex gap-1">
+                        <button onClick={() => { setTcEdit(t); setTcModal(true) }}
+                          aria-label={`Editar ${t.nombre}`}
+                          className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button onClick={() => setTcBorrar(t)}
+                          aria-label={`Eliminar ${t.nombre}`}
+                          className={cn(btnIconUI, 'text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}>
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -257,6 +299,35 @@ export function CatalogoPage() {
       )}
       {tcModal && (
         <TipoCuentaModal tipo={tcEdit} onClose={() => setTcModal(false)} />
+      )}
+      {tgBorrar && (
+        <ConfirmarModal
+          titulo="Eliminar tipo de gasto"
+          mensaje={`Se elimina "${tgBorrar.nombre}". Si ya tiene gastos registrados no se puede borrar: en ese caso se marca como inactivo y deja de aparecer al cargar nuevos gastos.`}
+          confirmLabel="Eliminar"
+          pendiente={borrarTipoGasto.isPending}
+          onConfirm={() => borrarTipoGasto.mutate(tgBorrar.id)}
+          onClose={() => setTgBorrar(null)}
+        />
+      )}
+      {tcBorrar && (
+        <ConfirmarModal
+          titulo="Eliminar tipo de cuenta"
+          mensaje={`Se elimina "${tcBorrar.nombre}". Si ya tiene gastos registrados no se puede borrar: en ese caso se marca como inactiva y deja de aparecer al cargar nuevos gastos.`}
+          confirmLabel="Eliminar"
+          pendiente={borrarTipoCuenta.isPending}
+          onConfirm={() => borrarTipoCuenta.mutate(tcBorrar.id)}
+          onClose={() => setTcBorrar(null)}
+        />
+      )}
+      {aviso && (
+        <ConfirmarModal
+          titulo="No se pudo eliminar"
+          mensaje={aviso}
+          confirmLabel="Entendido"
+          onConfirm={() => setAviso(null)}
+          onClose={() => setAviso(null)}
+        />
       )}
     </div>
   )

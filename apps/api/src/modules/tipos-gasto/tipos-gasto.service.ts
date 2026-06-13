@@ -40,4 +40,19 @@ export class TiposGastoService {
     }
     return this.prisma.tipoGasto.update({ where: { id }, data: dto })
   }
+
+  // Eliminar si no esta usado; si la FK lo impide (hay gastos, incluso
+  // borrados, que lo referencian) se desactiva en su lugar y se avisa.
+  async remove(consultorioId: number, id: number) {
+    const t = await this.prisma.tipoGasto.findFirst({ where: { id, consultorioId } })
+    if (!t) throw new NotFoundException()
+    // Cuenta TODOS los gastos (la FK es RESTRICT y el soft delete no borra filas)
+    const enUso = await this.prisma.gasto.count({ where: { tipoGastoId: id } })
+    if (enUso > 0) {
+      const tipo = await this.prisma.tipoGasto.update({ where: { id }, data: { activo: false } })
+      return { eliminado: false, enUso: true, tipo }
+    }
+    await this.prisma.tipoGasto.delete({ where: { id } })
+    return { eliminado: true }
+  }
 }

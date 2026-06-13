@@ -64,3 +64,22 @@ $hSec = @{ Authorization = "Bearer $($loginSec.accessToken)" }
 Esperar-Error { Invoke-RestMethod -Uri "$base/tipos-gasto" -Method Post -Headers $hSec -ContentType "application/json" -Body (@{ nombre = "Hack" } | ConvertTo-Json) } 403 "8a SECRETARIA CREA TIPO"
 $activos = Invoke-RestMethod -Uri "$base/tipos-gasto/activos" -Headers $hSec
 Write-Output "8b SECRETARIA LEE ACTIVOS: count=$($activos.Count) (esp 7)"
+
+# 9) Eliminar un tipo SIN uso -> se borra de verdad y desaparece de la lista
+$temp = Invoke-RestMethod -Uri "$base/tipos-gasto" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Temporal" } | ConvertTo-Json)
+$delTemp = Invoke-RestMethod -Uri "$base/tipos-gasto/$($temp.id)" -Method Delete -Headers $h
+$listaTrasDel = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
+$existeTemp = @($listaTrasDel | Where-Object { $_.id -eq $temp.id }).Count
+Write-Output "9 ELIMINAR SIN USO: eliminado=$($delTemp.eliminado) (esp True) sigueEnLista=$existeTemp (esp 0)"
+
+# 10) Eliminar un tipo EN uso (Marketing tiene el gasto del caso 4) -> no borra, desactiva
+# El DELETE devuelve { eliminado, enUso, tipo } con el registro ya desactivado
+$delMkt = Invoke-RestMethod -Uri "$base/tipos-gasto/$($nuevoTg.id)" -Method Delete -Headers $h
+Write-Output "10 ELIMINAR EN USO: eliminado=$($delMkt.eliminado) (esp False) enUso=$($delMkt.enUso) (esp True) activoAhora=$($delMkt.tipo.activo) (esp False)"
+
+# 11) Eliminar una cuenta EN uso (Mercado Pago tiene el gasto del caso 4) -> desactiva
+$delTc = Invoke-RestMethod -Uri "$base/tipos-cuenta/$($nuevaTc.id)" -Method Delete -Headers $h
+Write-Output "11 ELIMINAR CUENTA EN USO: eliminado=$($delTc.eliminado) (esp False) activoAhora=$($delTc.tipo.activo) (esp False)"
+
+# 12) SECRETARIA no puede eliminar (solo ADMIN)
+Esperar-Error { Invoke-RestMethod -Uri "$base/tipos-gasto/$($temp.id)" -Method Delete -Headers $hSec } 403 "12 SECRETARIA ELIMINA"
