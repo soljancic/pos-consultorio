@@ -71,6 +71,14 @@ ESTADOS DE CITA:
 - EstadoCita: backend importa de @prisma/client, frontend de @pos/types (valores identicos)
 - La deuda real = cobros con saldo de citas ATENDIDA/CON_DEUDA (no PENDIENTE de citas futuras)
 - Deudas ALERTAN pero NO BLOQUEAN (se puede seguir agendando a un deudor)
+
+UI / DISENO (OBLIGATORIO, decision del owner 2026-06-13):
+- TODA UI nueva o modificada usa los skills ui-ux-pro-max Y frontend-design
+  ANTES de escribir el JSX (no solo el spec UX publico; aplica a todo el proyecto)
+- Respetar el design system existente: tokens de lib/ui.ts (cardUI, inputUI,
+  btnPrimaryUI, errorUI), color primary, dark mode y responsive ya cableados
+- Checklist minimo: touch targets >=44px, focus-visible ring, color + forma
+  (no solo color), tabular-nums en horas/montos, transiciones 150-300ms
 ```
 
 ---
@@ -116,6 +124,7 @@ ESTADOS DE CITA:
 ✗ queryKey planas que pisen cache de otra vista (usar jerarquia: ['servicios','todos'])
 ✗ window.confirm / alert / prompt nativos EN TODO EL PROYECTO (usar modales del design system, patron CancelarCitaModal)
 ✗ Copy de UI sin tildes: el texto visible al usuario va en espanol correcto CON acentos (identificadores de codigo siguen sin acentos)
+✗ Escribir UI sin pasar antes por los skills ui-ux-pro-max + frontend-design (regla UI/DISENO de arriba)
 ```
 
 ---
