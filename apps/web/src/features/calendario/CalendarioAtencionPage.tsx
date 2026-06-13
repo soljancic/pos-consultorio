@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, CalendarClock, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, CalendarClock, Plus, UserRound } from 'lucide-react'
 import { TipoDisponibilidad } from '@pos/types'
 import type { Doctor } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { btnIconUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
+import { EmptyState } from '../../components/shared/EmptyState'
 import { DisponibilidadModal, LABEL_TIPO, type BloqueEditable } from './DisponibilidadModal'
 
 // Scheduler semanal: filas = doctores, columnas = dias, bloques = horarios.
@@ -100,9 +102,12 @@ export function CalendarioAtencionPage() {
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {doctores.length === 0 ? (
-          <div className="text-center text-muted-foreground/70 py-12">
-            No hay doctores activos. Cree uno en Catálogo.
-          </div>
+          <EmptyState
+            icon={UserRound}
+            title="No hay doctores activos"
+            description="Creá un profesional en el Catálogo para configurar sus horarios."
+            action={<Link to="/catalogo" className={cn(btnPrimaryUI, 'h-9')}>Ir al Catálogo</Link>}
+          />
         ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
             <div className="min-w-[900px]">

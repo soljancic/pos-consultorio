@@ -1,5 +1,7 @@
+import { UserRound } from 'lucide-react'
 import { COLORES_ESTADO, type Cita, type Doctor } from '@pos/types'
 import { formatHora } from '../../lib/utils'
+import { EmptyState } from '../../components/shared/EmptyState'
 
 // Grilla horaria del día con una columna por doctor (estilo Pabau).
 // Las citas se posicionan por hora/duracion; el color es el estado.
@@ -36,9 +38,11 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
 
   if (doctores.length === 0) {
     return (
-      <div className="text-center text-muted-foreground/70 py-12">
-        No hay doctores activos. Cree uno en Catálogo.
-      </div>
+      <EmptyState
+        icon={UserRound}
+        title="No hay doctores activos"
+        description="Creá un profesional en el Catálogo para verlo en la agenda."
+      />
     )
   }
 

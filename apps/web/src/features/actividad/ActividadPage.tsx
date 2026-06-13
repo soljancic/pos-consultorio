@@ -5,6 +5,7 @@ import { History, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatHora, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { EmptyState } from '../../components/shared/EmptyState'
 
 // E2-M3: feed de la tabla logs (solo ADMIN). Solo lectura.
 
@@ -98,8 +99,8 @@ export function ActividadPage() {
         {isLoading ? (
           <div className="text-center text-muted-foreground py-8">Cargando...</div>
         ) : items.length === 0 ? (
-          <div className={cn(cardUI, 'p-8 text-center text-muted-foreground/70 text-sm')}>
-            Sin actividad en el periodo
+          <div className={cardUI}>
+            <EmptyState icon={History} title="Sin actividad en el período" description="Las acciones del equipo van a aparecer acá." />
           </div>
         ) : (
           Array.from(porDia.entries()).map(([dia, logs]) => (

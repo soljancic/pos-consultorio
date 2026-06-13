@@ -6,6 +6,7 @@ import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
+import { EmptyState } from '../../components/shared/EmptyState'
 
 type Mensaje = {
   id: number
@@ -121,10 +122,12 @@ export function MensajesPage() {
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : visibles.length === 0 ? (
-          <div className={cn(cardUI, 'p-8 text-center text-muted-foreground/70 text-sm')}>
-            {tab === 'pendientes'
-              ? 'No hay mensajes pendientes. La cola se genera sola cada mañana, o con el botón "Generar cola".'
-              : 'Todavía no se resolvió ningún mensaje.'}
+          <div className={cardUI}>
+            {tab === 'pendientes' ? (
+              <EmptyState icon={MessageCircle} title="No hay mensajes pendientes" description='La cola se genera sola cada mañana, o con el botón "Generar cola".' />
+            ) : (
+              <EmptyState icon={Check} title="Sin mensajes resueltos" description="Todavía no se resolvió ningún mensaje." />
+            )}
           </div>
         ) : (
           visibles.map((m) => {
