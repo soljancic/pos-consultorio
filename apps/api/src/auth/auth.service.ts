@@ -39,6 +39,19 @@ export class AuthService {
             rol: Rol.ADMIN,
           },
         },
+        // Catalogos default para que Gastos funcione desde el primer dia
+        tiposGasto: {
+          create: [
+            { nombre: 'Insumos' }, { nombre: 'Sueldos' }, { nombre: 'Alquiler' },
+            { nombre: 'Servicios' }, { nombre: 'Impuestos' }, { nombre: 'Otros' },
+          ],
+        },
+        tiposCuenta: {
+          create: [
+            { nombre: 'Caja efectivo', esEfectivo: true },
+            { nombre: 'Banco' }, { nombre: 'Otro' },
+          ],
+        },
       },
       include: { usuarios: true },
     })
