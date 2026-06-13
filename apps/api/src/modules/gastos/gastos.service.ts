@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
 import { PartialType } from '@nestjs/swagger'
-import { IsNumber, Min, IsString, IsOptional, IsEnum, IsISO8601, IsNotEmpty } from 'class-validator'
-import { CategoriaGasto, CuentaGasto } from '@prisma/client'
+import { IsNumber, Min, IsString, IsOptional, IsInt, IsISO8601, IsNotEmpty } from 'class-validator'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from '../../prisma/prisma.service'
 import { diaCajaLocal } from '../caja/caja.service'
@@ -11,8 +10,8 @@ export class CreateGastoDto {
   @IsISO8601()
   fecha: string
 
-  @IsEnum(CategoriaGasto)
-  categoria: CategoriaGasto
+  @IsInt() @Min(1)
+  tipoGastoId: number
 
   @IsNumber() @Min(0.01)
   monto: number
@@ -23,8 +22,8 @@ export class CreateGastoDto {
   @IsString() @IsOptional()
   personal?: string
 
-  @IsEnum(CuentaGasto)
-  cuenta: CuentaGasto
+  @IsInt() @Min(1)
+  tipoCuentaId: number
 
   @IsString() @IsOptional()
   comprobanteUrl?: string
@@ -41,12 +40,12 @@ export class GastosService {
     return new Date(`${fecha.slice(0, 10)}T00:00:00Z`)
   }
 
-  findAll(consultorioId: number, desde?: string, hasta?: string, categoria?: CategoriaGasto) {
+  findAll(consultorioId: number, desde?: string, hasta?: string, tipoGastoId?: number) {
     return this.prisma.gasto.findMany({
       where: {
         consultorioId,
         deletedAt: null,
-        ...(categoria && { categoria }),
+        ...(tipoGastoId && { tipoGastoId }),
         ...((desde || hasta) && {
           fecha: {
             ...(desde && { gte: this.claveDia(desde) }),
@@ -54,7 +53,11 @@ export class GastosService {
           },
         }),
       },
-      include: { registradoPor: { select: { nombre: true } } },
+      include: {
+        registradoPor: { select: { nombre: true } },
+        tipoGasto: { select: { nombre: true } },
+        tipoCuenta: { select: { nombre: true, esEfectivo: true } },
+      },
       orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }],
     })
   }
@@ -71,7 +74,7 @@ export class GastosService {
           },
         }),
       },
-      select: { categoria: true, monto: true },
+      select: { monto: true, tipoGasto: { select: { nombre: true } } },
     })
 
     const porCategoria: Record<string, number> = {}
@@ -79,7 +82,8 @@ export class GastosService {
     for (const g of gastos) {
       const monto = Number(g.monto)
       total += monto
-      porCategoria[g.categoria] = (porCategoria[g.categoria] ?? 0) + monto
+      const nombre = g.tipoGasto.nombre
+      porCategoria[nombre] = (porCategoria[nombre] ?? 0) + monto
     }
     return { total, porCategoria }
   }
@@ -98,15 +102,23 @@ export class GastosService {
       throw new ConflictException('La caja de hoy ya esta cerrada: no se pueden registrar movimientos')
     }
 
+    // El tipo y la cuenta deben ser del mismo consultorio
+    const [tg, tc] = await Promise.all([
+      this.prisma.tipoGasto.findFirst({ where: { id: dto.tipoGastoId, consultorioId } }),
+      this.prisma.tipoCuenta.findFirst({ where: { id: dto.tipoCuentaId, consultorioId } }),
+    ])
+    if (!tg) throw new NotFoundException('Tipo de gasto no encontrado')
+    if (!tc) throw new NotFoundException('Tipo de cuenta no encontrado')
+
     const gasto = await this.prisma.gasto.create({
       data: {
         consultorioId,
         fecha: this.claveDia(dto.fecha),
-        categoria: dto.categoria,
+        tipoGastoId: dto.tipoGastoId,
         monto: new Decimal(dto.monto),
         descripcion: dto.descripcion,
         personal: dto.personal,
-        cuenta: dto.cuenta,
+        tipoCuentaId: dto.tipoCuentaId,
         comprobanteUrl: dto.comprobanteUrl,
         registradoPorId: usuarioId,
       },
@@ -120,9 +132,9 @@ export class GastosService {
         entidadId: gasto.id,
         accion: 'CREATE',
         payloadDespues: {
-          categoria: dto.categoria,
+          tipoGastoId: dto.tipoGastoId,
           monto: dto.monto,
-          cuenta: dto.cuenta,
+          tipoCuentaId: dto.tipoCuentaId,
           descripcion: dto.descripcion,
         },
       },
@@ -141,11 +153,11 @@ export class GastosService {
       where: { id },
       data: {
         ...(dto.fecha !== undefined && { fecha: this.claveDia(dto.fecha) }),
-        ...(dto.categoria !== undefined && { categoria: dto.categoria }),
+        ...(dto.tipoGastoId !== undefined && { tipoGastoId: dto.tipoGastoId }),
         ...(dto.monto !== undefined && { monto: new Decimal(dto.monto) }),
         ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
         ...(dto.personal !== undefined && { personal: dto.personal }),
-        ...(dto.cuenta !== undefined && { cuenta: dto.cuenta }),
+        ...(dto.tipoCuentaId !== undefined && { tipoCuentaId: dto.tipoCuentaId }),
         ...(dto.comprobanteUrl !== undefined && { comprobanteUrl: dto.comprobanteUrl }),
       },
     })
@@ -157,8 +169,8 @@ export class GastosService {
         entidad: 'Gasto',
         entidadId: id,
         accion: 'UPDATE',
-        payloadAntes: { monto: gasto.monto.toString(), categoria: gasto.categoria },
-        payloadDespues: { monto: actualizado.monto.toString(), categoria: actualizado.categoria },
+        payloadAntes: { monto: gasto.monto.toString(), tipoGastoId: gasto.tipoGastoId },
+        payloadDespues: { monto: actualizado.monto.toString(), tipoGastoId: actualizado.tipoGastoId },
       },
     })
 
@@ -183,7 +195,7 @@ export class GastosService {
         entidad: 'Gasto',
         entidadId: id,
         accion: 'DELETE',
-        payloadAntes: { monto: gasto.monto.toString(), categoria: gasto.categoria },
+        payloadAntes: { monto: gasto.monto.toString(), tipoGastoId: gasto.tipoGastoId },
       },
     })
 

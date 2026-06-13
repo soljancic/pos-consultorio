@@ -40,7 +40,7 @@ export class ReportesService {
         select: { estado: true, doctorId: true, pacienteId: true },
       }),
       this.prisma.gasto.groupBy({
-        by: ['categoria'],
+        by: ['tipoGastoId'],
         where: { consultorioId, deletedAt: null, fecha: { gte: inicio, lt: fin } },
         _sum: { monto: true },
       }),
@@ -51,6 +51,12 @@ export class ReportesService {
       select: { id: true, nombre: true, comisionPct: true },
     })
     const infoDoctor = new Map(doctores.map((d) => [d.id, d]))
+
+    const tiposGasto = await this.prisma.tipoGasto.findMany({
+      where: { consultorioId },
+      select: { id: true, nombre: true },
+    })
+    const nombreTipo = new Map(tiposGasto.map((t) => [t.id, t.nombre]))
 
     // Ingresos totales y por forma de pago
     let ingresosTotal = 0
@@ -114,7 +120,10 @@ export class ReportesService {
       ingresos: { total: ingresosTotal, porFormaPago },
       gastos: {
         total: gastosTotal,
-        porCategoria: gastos.map((g) => ({ categoria: g.categoria, total: Number(g._sum.monto ?? 0) })),
+        porCategoria: gastos.map((g) => ({
+          categoria: nombreTipo.get(g.tipoGastoId) ?? 'Otros',
+          total: Number(g._sum.monto ?? 0),
+        })),
       },
       resultadoNeto: ingresosTotal - gastosTotal,
       citas: { total: citas.length, porEstado },

@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CategoriaGasto } from '@prisma/client'
 import { GastosService, CreateGastoDto, UpdateGastoDto } from './gastos.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
@@ -24,14 +23,19 @@ export class GastosController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar gastos (filtros: desde, hasta, categoria)' })
+  @ApiOperation({ summary: 'Listar gastos (filtros: desde, hasta, tipoGastoId)' })
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
-    @Query('categoria') categoria?: CategoriaGasto,
+    @Query('tipoGastoId') tipoGastoId?: string,
   ) {
-    return this.service.findAll(user.consultorioId, desde, hasta, categoria)
+    return this.service.findAll(
+      user.consultorioId,
+      desde,
+      hasta,
+      tipoGastoId ? Number(tipoGastoId) : undefined,
+    )
   }
 
   @Post()

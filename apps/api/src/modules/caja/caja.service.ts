@@ -130,11 +130,11 @@ export class CajaService {
     const { clave: hoy } = diaCajaLocal()
     const gastos = await this.prisma.gasto.findMany({
       where: { consultorioId, fecha: hoy, deletedAt: null },
-      select: { monto: true, cuenta: true },
+      select: { monto: true, tipoCuenta: { select: { esEfectivo: true } } },
     })
     const egresosTotales = gastos.reduce((acc, g) => acc + Number(g.monto), 0)
     const egresosEfectivo = gastos
-      .filter((g) => g.cuenta === 'CAJA_EFECTIVO')
+      .filter((g) => g.tipoCuenta.esEfectivo)
       .reduce((acc, g) => acc + Number(g.monto), 0)
     return { egresosEfectivo, egresosTotales }
   }
