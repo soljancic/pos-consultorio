@@ -136,8 +136,8 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
     alcance === 'uno' ? 'este bloque' : alcance === 'serie' ? 'TODA la serie' : 'la serie desde esta fecha en adelante'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-card rounded-xl border shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
           <div>
             <h2 className="text-lg font-semibold text-foreground">

@@ -109,7 +109,7 @@ export function AppShell() {
       {/* Backdrop del drawer (solo movil) */}
       {abiertoMovil && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade z-30 lg:hidden"
           onClick={() => setAbiertoMovil(false)}
           aria-hidden="true"
         />

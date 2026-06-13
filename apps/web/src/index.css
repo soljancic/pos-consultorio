@@ -79,3 +79,17 @@
     }
   }
 }
+
+/* Entrada de modales (ui-ux-pro-max: modal-motion + blur-purpose). El scrim
+   aparece con fade y el panel con un pop sutil (scale+slide). prefers-reduced-
+   motion ya los anula via la regla global de arriba. */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.modal-fade { animation: modal-fade-in 0.18s ease-out; }
+.modal-pop { animation: modal-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }

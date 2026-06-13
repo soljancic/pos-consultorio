@@ -52,8 +52,8 @@ export function CerrarCajaModal({ onClose }: Props) {
   const diferencia = resultado ? Number(resultado.diferencia) : 0
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-card rounded-xl border shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className="bg-primary/10 text-primary rounded-md p-1.5">
