@@ -59,21 +59,6 @@ enum TipoDisponibilidad {
   BLOQUEADO
 }
 
-enum CategoriaGasto {
-  INSUMOS
-  SUELDOS
-  ALQUILER
-  SERVICIOS
-  IMPUESTOS
-  OTROS
-}
-
-enum CuentaGasto {
-  CAJA_EFECTIVO
-  BANCO
-  OTRO
-}
-
 enum AccionLog {
   CREATE
   UPDATE
@@ -115,6 +100,8 @@ model Consultorio {
   cobros     Cobro[]
   cajaDiaria CajaDiaria[]
   gastos     Gasto[]
+  tiposGasto  TipoGasto[]
+  tiposCuenta TipoCuenta[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
@@ -516,19 +503,55 @@ model MensajePendiente {
   @@map("mensajes_pendientes")
 }
 
-// Gastos administrativos (E2-M8): egresos con categoria y cuenta de origen.
-// Solo CAJA_EFECTIVO participa del arqueo; la caja diaria NO se reescribe
-// (los egresos se computan dinamicamente en /caja/hoy y al cerrar).
+// Catalogos por consultorio (reemplazan los enums CategoriaGasto/CuentaGasto).
+// TipoCuenta es generico (sirve a gastos y a futuro a cobros); esEfectivo marca
+// la cuenta que participa del arqueo de caja (0 o 1 por consultorio).
+model TipoGasto {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  gastos Gasto[]
+
+  @@index([consultorioId])
+  @@map("tipos_gasto")
+}
+
+model TipoCuenta {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  activo        Boolean  @default(true)
+  esEfectivo    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  gastos Gasto[]
+
+  @@index([consultorioId])
+  @@map("tipos_cuenta")
+}
+
+// Gastos administrativos (E2-M8): egresos con tipo y cuenta de origen.
+// Solo la cuenta con esEfectivo participa del arqueo; la caja diaria NO se
+// reescribe (los egresos se computan dinamicamente en /caja/hoy y al cerrar).
 model Gasto {
   id              Int      @id @default(autoincrement())
   consultorioId   Int
   consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
   fecha           DateTime    @db.Date
-  categoria       CategoriaGasto
+  tipoGastoId     Int
+  tipoGasto       TipoGasto   @relation(fields: [tipoGastoId], references: [id])
   monto           Decimal     @db.Decimal(10, 2)
   descripcion     String
   personal        String?     // a quien se pago (texto libre)
-  cuenta          CuentaGasto @default(CAJA_EFECTIVO)
+  tipoCuentaId    Int
+  tipoCuenta      TipoCuenta  @relation(fields: [tipoCuentaId], references: [id])
   comprobanteUrl  String?
   registradoPorId Int
   registradoPor   Usuario     @relation("GastoRegistradoPor", fields: [registradoPorId], references: [id])
