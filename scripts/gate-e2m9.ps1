@@ -52,9 +52,15 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers 
 Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
 Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgInsumos; monto = 500; descripcion = "gasas"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
+# 5b) Email de cierre configurado: el cierre debe responder OK igual (el envio
+# es fire-and-forget; con o sin Resend no rompe ni demora el cierre)
+Invoke-RestMethod -Uri "$base/consultorio" -Method Put -Headers $h -ContentType "application/json" -Body (@{ emailCierreCaja = "cierres$ts@test.com" } | ConvertTo-Json) | Out-Null
+$cfg = Invoke-RestMethod -Uri "$base/consultorio" -Headers $h
+Write-Output "5b EMAIL CIERRE CONFIG: emailCierreCaja=$($cfg.emailCierreCaja) (esp cierres$ts@test.com)"
+
 # 6) Arqueo con inicial: esperado = 100 + 2000 - 500 = 1600 -> diferencia 0
 $cierre = Invoke-RestMethod -Uri "$base/caja/cerrar" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoDeclarado = 1600 } | ConvertTo-Json)
-Write-Output "6 ARQUEO CON INICIAL: esperado=$($cierre.montoEsperado) (esp 1600) diferencia=$($cierre.diferencia) (esp 0) auto=$($null -ne $cierre.revisadaAt) (esp True)"
+Write-Output "6 ARQUEO CON INICIAL: esperado=$($cierre.montoEsperado) (esp 1600) diferencia=$($cierre.diferencia) (esp 0) auto=$($null -ne $cierre.revisadaAt) (esp True) cierreConEmail=OK"
 
 # 7) Tras el cierre: cobrar/gastar -> 409 (turno terminado)
 Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "y"; tipoCuentaId = $tcBanco } | ConvertTo-Json) } 409 "7 GASTAR TRAS CIERRE"
@@ -65,6 +71,11 @@ Write-Output "8 REABRIR: cerrada=$($re.cerrada) (esp False) declarado=$($re.mont
 Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "post-reapertura"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 Write-Output "9 GASTO TRAS REAPERTURA: OK"
 
+# 9c) Limpiar el email de cierre ('' lo desactiva): el re-cierre sigue OK
+Invoke-RestMethod -Uri "$base/consultorio" -Method Put -Headers $h -ContentType "application/json" -Body (@{ emailCierreCaja = "" } | ConvertTo-Json) | Out-Null
+$cfg2 = Invoke-RestMethod -Uri "$base/consultorio" -Headers $h
+Write-Output "9c EMAIL CIERRE LIMPIO: vacio=$([string]::IsNullOrEmpty($cfg2.emailCierreCaja)) (esp True)"
+
 # 10) Re-cierre: esperado = 1600 - 50 = 1550 -> diferencia 0
 $cierre2 = Invoke-RestMethod -Uri "$base/caja/cerrar" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoDeclarado = 1550 } | ConvertTo-Json)
-Write-Output "10 RE-CIERRE: esperado=$($cierre2.montoEsperado) (esp 1550) diferencia=$($cierre2.diferencia) (esp 0)"
+Write-Output "10 RE-CIERRE: esperado=$($cierre2.montoEsperado) (esp 1550) diferencia=$($cierre2.diferencia) (esp 0) cierreSinEmail=OK"

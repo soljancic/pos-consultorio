@@ -89,6 +89,8 @@ model Consultorio {
   msjContacto     String?
   // QR de pagos del consultorio (Cloudinary); lo ve el paciente en /qr/:slug
   qrUrl           String?
+  // Email al que se envia el resumen de cada cierre de caja (opcional)
+  emailCierreCaja String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

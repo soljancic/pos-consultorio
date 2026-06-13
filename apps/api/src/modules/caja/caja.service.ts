@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { IsNumber, Min, IsString, IsOptional } from 'class-validator'
 import { Decimal } from '@prisma/client/runtime/library'
 import { PrismaService } from '../../prisma/prisma.service'
+import { MailService } from '../mail/mail.service'
 
 export class AbrirCajaDto {
   // Caja chica con la que arranca la jornada
@@ -46,7 +47,10 @@ export function diaCajaLocal(): { clave: Date; inicioLocal: Date; finLocal: Date
 
 @Injectable()
 export class CajaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mail: MailService,
+  ) {}
 
   // Chip global del shell: sin montos, solo el estado del turno de hoy
   async getEstado(consultorioId: number) {
@@ -234,7 +238,73 @@ export class CajaService {
       }),
     ])
 
+    // Resumen del turno por email (fire-and-forget): un fallo de Resend NO
+    // rompe ni demora el cierre; queda en el log del server
+    this.enviarResumenCierre(consultorioId, caja, esperado, declarado, diferencia, egresosEfectivo, usuarioId)
+      .catch(() => {})
+
     return actualizada
+  }
+
+  // Envia el resumen del cierre al email configurado en el consultorio (si lo
+  // hay). Toda la aritmetica monetaria ya esta hecha con Decimal; aca solo se
+  // formatea para mostrar.
+  private async enviarResumenCierre(
+    consultorioId: number,
+    caja: {
+      montoInicial: Decimal; totalEfectivo: Decimal; totalTarjeta: Decimal
+      totalQr: Decimal; totalVales: Decimal; abiertaAt: Date | null; usuarioAperturaId: number
+    },
+    esperado: Decimal,
+    declarado: Decimal,
+    diferencia: Decimal,
+    egresosEfectivo: number,
+    usuarioCierreId: number,
+  ) {
+    const consultorio = await this.prisma.consultorio.findUnique({
+      where: { id: consultorioId },
+      select: { nombre: true, moneda: true, emailCierreCaja: true },
+    })
+    if (!consultorio?.emailCierreCaja) return
+
+    const { inicioLocal, finLocal } = diaCajaLocal()
+    const [abrioUser, cerroUser, cantidadCobros] = await Promise.all([
+      this.prisma.usuario.findUnique({ where: { id: caja.usuarioAperturaId }, select: { nombre: true } }),
+      this.prisma.usuario.findUnique({ where: { id: usuarioCierreId }, select: { nombre: true } }),
+      this.prisma.pago.count({
+        where: { cobro: { consultorioId }, createdAt: { gte: inicioLocal, lt: finLocal } },
+      }),
+    ])
+
+    const monto = (v: Decimal | number) => Number(v).toFixed(2)
+    const hora = (d: Date) => d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const fechaTurno = inicioLocal.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+    const html = this.mail.htmlCierreCaja({
+      consultorio: consultorio.nombre,
+      fecha: fechaTurno,
+      abrioPor: abrioUser?.nombre ?? '—',
+      cerroPor: cerroUser?.nombre ?? '—',
+      horaApertura: caja.abiertaAt ? hora(caja.abiertaAt) : '—',
+      horaCierre: hora(new Date()),
+      moneda: consultorio.moneda,
+      montoInicial: monto(caja.montoInicial),
+      efectivo: monto(caja.totalEfectivo),
+      tarjeta: monto(caja.totalTarjeta),
+      qr: monto(caja.totalQr),
+      vales: monto(caja.totalVales),
+      gastos: monto(egresosEfectivo),
+      esperado: monto(esperado),
+      contado: monto(declarado),
+      diferencia: monto(diferencia),
+      hayDiferencia: !diferencia.isZero(),
+      cantidadCobros,
+    })
+    await this.mail.enviar(
+      consultorio.emailCierreCaja,
+      `Cierre de caja · ${fechaTurno} · ${consultorio.nombre}`,
+      html,
+    )
   }
 
   // Reabrir el turno de HOY ya cerrado (solo ADMIN): vuelve a aceptar

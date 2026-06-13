@@ -1,5 +1,5 @@
 import { Injectable, ConflictException, BadRequestException } from '@nestjs/common'
-import { IsString, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator'
+import { IsString, IsOptional, IsBoolean, IsEmail, Matches, MaxLength, ValidateIf } from 'class-validator'
 import { v2 as cloudinary } from 'cloudinary'
 import { PrismaService } from '../../prisma/prisma.service'
 
@@ -44,6 +44,12 @@ export class UpdateConsultorioDto {
   // pero tambien se acepta una URL pegada a mano
   @IsString() @IsOptional() @MaxLength(500)
   qrUrl?: string
+
+  // Email para el resumen de cierre de caja. '' limpia el campo (no se envia);
+  // ValidateIf deja pasar el vacio y solo valida formato cuando hay texto
+  @ValidateIf((o) => o.emailCierreCaja !== '')
+  @IsEmail() @IsOptional()
+  emailCierreCaja?: string
 }
 
 const CONSULTORIO_SELECT = {
@@ -61,6 +67,7 @@ const CONSULTORIO_SELECT = {
   msjDeuda: true,
   msjContacto: true,
   qrUrl: true,
+  emailCierreCaja: true,
 } as const
 
 // QR de pagos: solo imagenes chicas; Cloudinary lo normaliza a jpg

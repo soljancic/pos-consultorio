@@ -29,6 +29,7 @@ type Consultorio = {
   slug: string | null; portalActivo: boolean
   msjRecordatorio: string | null; msjDeuda: string | null; msjContacto: string | null
   qrUrl: string | null
+  emailCierreCaja: string | null
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
@@ -43,6 +44,7 @@ export function ConfiguracionPage() {
     moneda: 'ARS', timezone: 'America/Argentina/Buenos_Aires',
     slug: '', portalActivo: false,
     msjRecordatorio: '', msjDeuda: '', msjContacto: '',
+    emailCierreCaja: '',
   })
   const [linkCopiado, setLinkCopiado] = useState(false)
 
@@ -70,6 +72,7 @@ export function ConfiguracionPage() {
         msjRecordatorio: consultorio.msjRecordatorio ?? '',
         msjDeuda: consultorio.msjDeuda ?? '',
         msjContacto: consultorio.msjContacto ?? '',
+        emailCierreCaja: consultorio.emailCierreCaja ?? '',
       })
     }
   }, [consultorio])
@@ -107,6 +110,9 @@ export function ConfiguracionPage() {
         msjRecordatorio: data.msjRecordatorio,
         msjDeuda: data.msjDeuda,
         msjContacto: data.msjContacto,
+        // El backend acepta '' para limpiar el campo (ValidateIf); con email
+        // valido envia el resumen, vacio lo desactiva
+        emailCierreCaja: data.emailCierreCaja,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
@@ -260,6 +266,18 @@ export function ConfiguracionPage() {
                   {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
                 </select>
               </div>
+            </div>
+            <div>
+              <label htmlFor="cons-email-cierre" className="block text-sm font-medium text-foreground mb-1.5">
+                Email para cierres de caja <span className="text-muted-foreground/70 font-normal">(opcional)</span>
+              </label>
+              <input id="cons-email-cierre" type="email" value={consForm.emailCierreCaja}
+                placeholder="administracion@consultorio.com"
+                onChange={(e) => setConsForm((f) => ({ ...f, emailCierreCaja: e.target.value }))}
+                className={inputUI} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Cada cierre de caja envía a esta dirección un resumen del turno (ingresos, gastos y arqueo).
+              </p>
             </div>
             {/* Portal publico de reservas (E2.5b) */}
             <div className="border-t pt-4 space-y-3">

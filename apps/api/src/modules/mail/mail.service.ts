@@ -88,6 +88,66 @@ export class MailService {
 </div>`
   }
 
+  // Feature 3 (spec UX publico): resumen del turno al cerrar caja. Montos ya
+  // formateados por el caller (Decimal de Prisma, nunca float).
+  htmlCierreCaja(d: {
+    consultorio: string
+    fecha: string
+    abrioPor: string
+    cerroPor: string
+    horaApertura: string
+    horaCierre: string
+    moneda: string
+    montoInicial: string
+    efectivo: string
+    tarjeta: string
+    qr: string
+    vales: string
+    gastos: string
+    esperado: string
+    contado: string
+    diferencia: string
+    hayDiferencia: boolean
+    cantidadCobros: number
+  }) {
+    const fila = (label: string, valor: string, fuerte = false) =>
+      `<tr><td style="color:#64748b;padding:4px 12px 4px 0">${label}</td><td style="text-align:right${fuerte ? ';font-weight:bold' : ''}">${valor}</td></tr>`
+    const dinero = (v: string) => `${d.moneda} ${v}`
+    return `
+<div style="font-family:Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1e293b">
+  <h2 style="color:#0e7490;margin-bottom:2px">Cierre de caja</h2>
+  <p style="font-size:14px;color:#64748b;margin-top:0">${d.consultorio} · ${d.fecha}</p>
+
+  <table style="font-size:14px;line-height:1.5;border-collapse:collapse;width:100%;margin-top:8px">
+    ${fila('Abrió', `${d.abrioPor} · ${d.horaApertura}`)}
+    ${fila('Cerró', `${d.cerroPor} · ${d.horaCierre}`)}
+    ${fila('Monto inicial (caja chica)', dinero(d.montoInicial))}
+  </table>
+
+  <h3 style="font-size:14px;color:#0e7490;margin:20px 0 4px">Ingresos por forma de pago</h3>
+  <table style="font-size:14px;line-height:1.5;border-collapse:collapse;width:100%">
+    ${fila('Efectivo', dinero(d.efectivo))}
+    ${fila('Tarjeta', dinero(d.tarjeta))}
+    ${fila('QR', dinero(d.qr))}
+    ${fila('Vales', dinero(d.vales))}
+    ${fila('Gastos del turno (efectivo)', `- ${dinero(d.gastos)}`)}
+  </table>
+
+  <h3 style="font-size:14px;color:#0e7490;margin:20px 0 4px">Arqueo de efectivo</h3>
+  <table style="font-size:14px;line-height:1.5;border-collapse:collapse;width:100%">
+    ${fila('Esperado', dinero(d.esperado))}
+    ${fila('Contado', dinero(d.contado), true)}
+    <tr>
+      <td style="color:#64748b;padding:4px 12px 4px 0">Diferencia</td>
+      <td style="text-align:right;font-weight:bold;color:${d.hayDiferencia ? '#dc2626' : '#16a34a'}">${dinero(d.diferencia)}</td>
+    </tr>
+  </table>
+
+  <p style="font-size:13px;color:#64748b;margin-top:18px">Cobros registrados en el turno: <strong>${d.cantidadCobros}</strong></p>
+  ${d.hayDiferencia ? '<p style="font-size:13px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px">El arqueo tiene diferencia: queda pendiente de revisión del administrador.</p>' : ''}
+</div>`
+  }
+
   htmlReset(nombre: string, link: string) {
     return this.layout(
       'Restablecer contraseña',
