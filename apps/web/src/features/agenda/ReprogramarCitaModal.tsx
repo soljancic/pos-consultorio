@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { X, AlertCircle } from 'lucide-react'
+import { AlertCircle, CalendarClock } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 import type { Cita, Doctor, Servicio } from '@pos/types'
 
 interface Props {
@@ -59,22 +60,12 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Reprogramar cita</h2>
-            <p className="text-sm text-muted-foreground">
-              {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; hoy{' '}
-              {formatHora(cita.fechaHora)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={CalendarClock}
+          title="Reprogramar cita"
+          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; hoy {formatHora(cita.fechaHora)}</>}
+          onClose={onClose}
+        />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">

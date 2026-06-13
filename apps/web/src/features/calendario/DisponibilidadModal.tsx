@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, Trash2, BookmarkPlus } from 'lucide-react'
+import { AlertCircle, Trash2, BookmarkPlus, CalendarClock } from 'lucide-react'
 import { TipoDisponibilidad } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 export const LABEL_TIPO: Record<TipoDisponibilidad, string> = {
   [TipoDisponibilidad.DISPONIBLE]: 'Disponible',
@@ -138,23 +139,12 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              {editando ? 'Editar horario' : 'Nuevo horario'}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {doctorNombre} &bull; {formatFecha(`${fecha}T00:00:00`)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={CalendarClock}
+          title={editando ? 'Editar horario' : 'Nuevo horario'}
+          subtitle={<>{doctorNombre} &bull; {formatFecha(`${fecha}T00:00:00`)}</>}
+          onClose={onClose}
+        />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {!editando && (

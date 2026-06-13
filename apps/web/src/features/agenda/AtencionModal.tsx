@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
+import { AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
 import { EstadoCita, type Cita, type Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { abrirAdjunto, abrirRecetaPdf, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 import { RecetaModal } from './RecetaModal'
 
 interface Props {
@@ -128,22 +129,12 @@ export function AtencionModal({ cita, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Atención</h2>
-            <p className="text-sm text-muted-foreground">
-              {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre} &bull;{' '}
-              {formatHora(cita.fechaHora)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={FileText}
+          title="Atención"
+          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre} &bull; {formatHora(cita.fechaHora)}</>}
+          onClose={onClose}
+        />
 
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">Cargando...</div>

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, FileSignature } from 'lucide-react'
+import { AlertCircle, FileSignature } from 'lucide-react'
 import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
-import { textareaUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 interface Props {
   cita: Cita
@@ -44,26 +45,12 @@ export function RecetaModal({ cita, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-card">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <span className="bg-primary/10 text-primary rounded-md p-1.5">
-                <FileSignature className="h-4 w-4" aria-hidden="true" />
-              </span>
-              Nueva receta
-            </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {formatHora(cita.fechaHora)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={FileSignature}
+          title="Nueva receta"
+          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {formatHora(cita.fechaHora)}</>}
+          onClose={onClose}
+        />
 
         <div className="p-6 space-y-4">
           <div>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, ShieldCheck } from 'lucide-react'
+import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 export interface CajaRevisable {
   id: number
@@ -41,21 +42,11 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <span className="bg-primary/10 text-primary rounded-md p-1.5">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            </span>
-            Revisar cierre del {formatDia(caja.fecha)}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={ShieldCheck}
+          title={`Revisar cierre del ${formatDia(caja.fecha)}`}
+          onClose={onClose}
+        />
 
         <div className="p-6 space-y-4">
           <div className="space-y-2 text-sm">

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, AlertCircle, AlertTriangle, UserX } from 'lucide-react'
+import { AlertCircle, AlertTriangle, UserX } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, formatHora, cn } from '../../lib/utils'
-import { inputUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 type Modo = 'cancelar' | 'no-asistió'
 
@@ -67,21 +68,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <span className="bg-destructive/10 text-destructive rounded-md p-1.5">
-              <Icono className="h-4 w-4" aria-hidden="true" />
-            </span>
-            {t.titulo}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader icon={Icono} title={t.titulo} tone="destructive" onClose={onClose} />
 
         <div className="p-6 space-y-4">
           <p className="text-sm text-foreground">

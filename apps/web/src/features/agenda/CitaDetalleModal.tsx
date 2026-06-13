@@ -1,7 +1,7 @@
-import { X } from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import type { Cita, EstadoCita } from '@pos/types'
-import { formatFecha, cn } from '../../lib/utils'
-import { btnIconUI } from '../../lib/ui'
+import { formatFecha } from '../../lib/utils'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 import { CitaCard } from './CitaCard'
 
 // Detalle de una cita desde las vistas de grilla: reutiliza la CitaCard
@@ -22,18 +22,11 @@ export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, 
   return (
     <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold text-foreground capitalize">
-            {formatFecha(cita.fechaHora, "EEEE d 'de' MMMM")}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        <ModalHeader
+          icon={CalendarDays}
+          title={formatFecha(cita.fechaHora, "EEEE d 'de' MMMM")}
+          onClose={onClose}
+        />
         <div className="p-4">
           <CitaCard
             cita={cita}
