@@ -19,11 +19,6 @@ const LABEL_FORMA: Record<string, string> = {
   EFECTIVO: 'Efectivo', QR: 'QR / Transferencia', TARJETA: 'Tarjeta', VALES: 'Vales',
 }
 
-const LABEL_CATEGORIA: Record<string, string> = {
-  INSUMOS: 'Insumos', SUELDOS: 'Sueldos', ALQUILER: 'Alquiler',
-  SERVICIOS: 'Servicios', IMPUESTOS: 'Impuestos', OTROS: 'Otros',
-}
-
 type Reporte = {
   mes: string
   ingresos: { total: number; porFormaPago: Record<string, number> }
@@ -66,7 +61,7 @@ export function ReportesPage() {
       ),
       ['Gastos', reporte.gastos.total],
       ...reporte.gastos.porCategoria.map(
-        (g): Array<string | number> => [`  ${LABEL_CATEGORIA[g.categoria] ?? g.categoria}`, g.total],
+        (g): Array<string | number> => [`  ${g.categoria}`, g.total],
       ),
       ['Resultado neto', reporte.resultadoNeto],
       ['Citas del mes', reporte.citas.total],
@@ -181,7 +176,7 @@ export function ReportesPage() {
                   <ul className="space-y-2 text-sm">
                     {reporte.gastos.porCategoria.map((g) => (
                       <li key={g.categoria} className="flex justify-between">
-                        <span className="text-muted-foreground">{LABEL_CATEGORIA[g.categoria] ?? g.categoria}</span>
+                        <span className="text-muted-foreground">{g.categoria}</span>
                         <span className="font-medium tabular-nums">{formatMoneda(g.total)}</span>
                       </li>
                     ))}

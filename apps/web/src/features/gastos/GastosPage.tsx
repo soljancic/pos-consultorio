@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
-import { CategoriaGasto } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
-import { GastoModal, LABEL_CATEGORIA, LABEL_CUENTA, type GastoEditable } from './GastoModal'
+import { GastoModal, type GastoEditable } from './GastoModal'
+
+interface TipoGasto { id: number; nombre: string }
 
 export function GastosPage() {
   const user = useAuthStore((s) => s.user)
@@ -19,16 +20,21 @@ export function GastosPage() {
   // amplia con los filtros de fecha
   const [desde, setDesde] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [categoria, setCategoria] = useState('')
+  const [tipoGastoId, setTipoGastoId] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [gastoEdit, setGastoEdit] = useState<GastoEditable | null>(null)
   const [gastoBorrar, setGastoBorrar] = useState<any | null>(null)
 
+  const { data: tiposGasto = [] } = useQuery<TipoGasto[]>({
+    queryKey: ['tipos-gasto', 'activos'],
+    queryFn: () => api.get('/tipos-gasto/activos').then((r) => r.data),
+  })
+
   const { data: gastos = [], isLoading } = useQuery<any[]>({
-    queryKey: ['gastos', desde, hasta, categoria],
+    queryKey: ['gastos', desde, hasta, tipoGastoId],
     queryFn: () =>
       api
-        .get(`/gastos?desde=${desde}&hasta=${hasta}${categoria ? `&categoria=${categoria}` : ''}`)
+        .get(`/gastos?desde=${desde}&hasta=${hasta}${tipoGastoId ? `&tipoGastoId=${tipoGastoId}` : ''}`)
         .then((r) => r.data),
   })
 
@@ -68,11 +74,11 @@ export function GastosPage() {
           <label htmlFor="gastos-hasta" className="sr-only">Hasta</label>
           <input id="gastos-hasta" type="date" value={hasta}
             onChange={(e) => setHasta(e.target.value)} className={cn(inputUI, 'w-auto')} />
-          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
-            aria-label="Filtrar por categoría" className={cn(inputUI, 'w-auto')}>
-            <option value="">Todas las categorias</option>
-            {Object.values(CategoriaGasto).map((c) => (
-              <option key={c} value={c}>{LABEL_CATEGORIA[c]}</option>
+          <select value={tipoGastoId} onChange={(e) => setTipoGastoId(e.target.value)}
+            aria-label="Filtrar por tipo de gasto" className={cn(inputUI, 'w-auto')}>
+            <option value="">Todos los tipos</option>
+            {tiposGasto.map((t) => (
+              <option key={t.id} value={t.id}>{t.nombre}</option>
             ))}
           </select>
         </div>
@@ -99,12 +105,12 @@ export function GastosPage() {
                     <td className="px-4 py-3 tabular-nums">{formatDia(g.fecha)}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
-                        {LABEL_CATEGORIA[g.categoria as CategoriaGasto] ?? g.categoria}
+                        {g.tipoGasto?.nombre ?? '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-foreground">{g.descripcion}</td>
                     <td className="px-4 py-3 text-muted-foreground">{g.personal || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{LABEL_CUENTA[g.cuenta as keyof typeof LABEL_CUENTA] ?? g.cuenta}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{g.tipoCuenta?.nombre ?? '-'}</td>
                     <td className="px-4 py-3 text-right font-medium text-destructive tabular-nums">
                       {formatMoneda(Number(g.monto))}
                     </td>

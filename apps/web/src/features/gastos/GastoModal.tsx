@@ -1,35 +1,22 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { X, AlertCircle } from 'lucide-react'
-import { CategoriaGasto, CuentaGasto } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 
-export const LABEL_CATEGORIA: Record<CategoriaGasto, string> = {
-  [CategoriaGasto.INSUMOS]: 'Insumos',
-  [CategoriaGasto.SUELDOS]: 'Sueldos',
-  [CategoriaGasto.ALQUILER]: 'Alquiler',
-  [CategoriaGasto.SERVICIOS]: 'Servicios',
-  [CategoriaGasto.IMPUESTOS]: 'Impuestos',
-  [CategoriaGasto.OTROS]: 'Otros',
-}
-
-export const LABEL_CUENTA: Record<CuentaGasto, string> = {
-  [CuentaGasto.CAJA_EFECTIVO]: 'Caja (efectivo)',
-  [CuentaGasto.BANCO]: 'Banco',
-  [CuentaGasto.OTRO]: 'Otro',
-}
+interface TipoGasto { id: number; nombre: string }
+interface TipoCuenta { id: number; nombre: string; esEfectivo: boolean }
 
 export interface GastoEditable {
   id: number
   fecha: string
-  categoria: CategoriaGasto
+  tipoGastoId: number
   monto: string | number
   descripcion: string
   personal: string | null
-  cuenta: CuentaGasto
+  tipoCuentaId: number
 }
 
 interface Props {
@@ -41,24 +28,50 @@ export function GastoModal({ gasto, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!gasto?.id
   const [error, setError] = useState('')
+
+  const { data: tiposGasto = [] } = useQuery<TipoGasto[]>({
+    queryKey: ['tipos-gasto', 'activos'],
+    queryFn: () => api.get('/tipos-gasto/activos').then((r) => r.data),
+  })
+  const { data: tiposCuenta = [] } = useQuery<TipoCuenta[]>({
+    queryKey: ['tipos-cuenta', 'activos'],
+    queryFn: () => api.get('/tipos-cuenta/activos').then((r) => r.data),
+  })
+
   const [form, setForm] = useState({
     fecha: gasto ? gasto.fecha.slice(0, 10) : format(new Date(), 'yyyy-MM-dd'),
-    categoria: gasto?.categoria ?? CategoriaGasto.INSUMOS,
+    tipoGastoId: gasto?.tipoGastoId ?? 0,
     monto: gasto ? String(Number(gasto.monto)) : '',
     descripcion: gasto?.descripcion ?? '',
     personal: gasto?.personal ?? '',
-    cuenta: gasto?.cuenta ?? CuentaGasto.CAJA_EFECTIVO,
+    tipoCuentaId: gasto?.tipoCuentaId ?? 0,
   })
+
+  // En alta, default al primer tipo de gasto y a la cuenta de efectivo (o la primera)
+  useEffect(() => {
+    if (form.tipoGastoId === 0 && tiposGasto.length > 0) {
+      setForm((f) => ({ ...f, tipoGastoId: tiposGasto[0].id }))
+    }
+  }, [tiposGasto, form.tipoGastoId])
+  useEffect(() => {
+    if (form.tipoCuentaId === 0 && tiposCuenta.length > 0) {
+      const efectivo = tiposCuenta.find((c) => c.esEfectivo)
+      setForm((f) => ({ ...f, tipoCuentaId: (efectivo ?? tiposCuenta[0]).id }))
+    }
+  }, [tiposCuenta, form.tipoCuentaId])
+
+  const sinTipos = tiposGasto.length === 0 || tiposCuenta.length === 0
+  const cuentaSel = tiposCuenta.find((c) => c.id === form.tipoCuentaId)
 
   const mutation = useMutation({
     mutationFn: () => {
       const payload = {
         fecha: form.fecha,
-        categoria: form.categoria,
+        tipoGastoId: form.tipoGastoId,
         monto: parseFloat(form.monto),
         descripcion: form.descripcion,
         personal: form.personal || undefined,
-        cuenta: form.cuenta,
+        tipoCuentaId: form.tipoCuentaId,
       }
       return editando ? api.put(`/gastos/${gasto!.id}`, payload) : api.post('/gastos', payload)
     },
@@ -98,6 +111,12 @@ export function GastoModal({ gasto, onClose }: Props) {
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate() }}
           className="p-6 space-y-4"
         >
+          {sinTipos && (
+            <p role="alert" className={errorUI}>
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Configure tipos de gasto y de cuenta en Catálogo antes de registrar.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="gasto-fecha" className="block text-sm font-medium text-foreground mb-1.5">Fecha *</label>
@@ -105,12 +124,12 @@ export function GastoModal({ gasto, onClose }: Props) {
                 onChange={(e) => set('fecha', e.target.value)} className={inputUI} />
             </div>
             <div>
-              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Categoría *</label>
-              <select id="gasto-categoria" value={form.categoria}
-                onChange={(e) => set('categoria', e.target.value as CategoriaGasto)}
+              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Tipo de gasto *</label>
+              <select id="gasto-categoria" value={form.tipoGastoId}
+                onChange={(e) => set('tipoGastoId', Number(e.target.value))}
                 className={inputUI}>
-                {Object.values(CategoriaGasto).map((c) => (
-                  <option key={c} value={c}>{LABEL_CATEGORIA[c]}</option>
+                {tiposGasto.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
                 ))}
               </select>
             </div>
@@ -125,17 +144,17 @@ export function GastoModal({ gasto, onClose }: Props) {
             </div>
             <div>
               <label htmlFor="gasto-cuenta" className="block text-sm font-medium text-foreground mb-1.5">Cuenta *</label>
-              <select id="gasto-cuenta" value={form.cuenta}
-                onChange={(e) => set('cuenta', e.target.value as CuentaGasto)}
+              <select id="gasto-cuenta" value={form.tipoCuentaId}
+                onChange={(e) => set('tipoCuentaId', Number(e.target.value))}
                 className={inputUI}>
-                {Object.values(CuentaGasto).map((c) => (
-                  <option key={c} value={c}>{LABEL_CUENTA[c]}</option>
+                {tiposCuenta.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {form.cuenta === CuentaGasto.CAJA_EFECTIVO && (
+          {cuentaSel?.esEfectivo && (
             <p className="text-xs text-muted-foreground">
               Los gastos en efectivo descuentan del arqueo de la caja del día.
             </p>
@@ -167,7 +186,7 @@ export function GastoModal({ gasto, onClose }: Props) {
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>
-            <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
+            <button type="submit" disabled={mutation.isPending || sinTipos} className={cn(btnPrimaryUI, 'flex-1')}>
               {mutation.isPending ? 'Guardando...' : editando ? 'Guardar' : 'Registrar gasto'}
             </button>
           </div>
