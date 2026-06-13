@@ -1,11 +1,12 @@
 import { Fragment, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MessageCircle, DollarSign, ChevronDown, ChevronRight, CircleDollarSign } from 'lucide-react'
+import { MessageCircle, DollarSign, ChevronDown, ChevronRight, CircleDollarSign, CheckCircle2, Search } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderDeuda } from '../../lib/whatsapp'
 import { inputUI, cardUI, chipIconUI } from '../../lib/ui'
 import { CobroModal } from '../agenda/CobroModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 import type { Cita } from '@pos/types'
 
 type CobroDeudor = {
@@ -82,9 +83,11 @@ export function DeudoresPage() {
         {isLoading ? (
           <div className="text-center text-muted-foreground py-12">Cargando...</div>
         ) : filtrados.length === 0 ? (
-          <div className="text-center text-muted-foreground/70 py-12">
-            {search ? 'No se encontraron deudores' : 'No hay deudas pendientes'}
-          </div>
+          search ? (
+            <EmptyState icon={Search} title="No se encontraron deudores" description="Probá con otro nombre o teléfono." />
+          ) : (
+            <EmptyState icon={CheckCircle2} title="No hay deudas pendientes" description="Todos los pacientes están al día." />
+          )
         ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
             <table className="w-full text-sm">

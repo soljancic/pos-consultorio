@@ -8,6 +8,7 @@ import { inputUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { GastoModal, type GastoEditable } from './GastoModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 
 interface TipoGasto { id: number; nombre: string }
 
@@ -138,8 +139,8 @@ export function GastosPage() {
                 ))}
                 {gastos.length === 0 && (
                   <tr>
-                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground/70">
-                      Sin gastos en el periodo
+                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-2">
+                      <EmptyState icon={Receipt} title="Sin gastos en el período" description="Los gastos que registres en este rango van a aparecer acá." className="py-8" />
                     </td>
                   </tr>
                 )}

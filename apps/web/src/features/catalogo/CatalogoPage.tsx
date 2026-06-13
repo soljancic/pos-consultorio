@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, ClipboardList } from 'lucide-react'
+import { Plus, Pencil, Trash2, ClipboardList, Stethoscope, UserRound, Tag, Landmark } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
@@ -10,6 +10,7 @@ import { DoctorModal } from './DoctorModal'
 import { TipoGastoModal } from './TipoGastoModal'
 import { TipoCuentaModal } from './TipoCuentaModal'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 
 export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
@@ -158,7 +159,7 @@ export function CatalogoPage() {
                 </tr>
               ))}
               {(servicios as any[]).length === 0 && (
-                <tr><td colSpan={esAdmin ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground/70">Sin servicios</td></tr>
+                <tr><td colSpan={esAdmin ? 5 : 4} className="px-4 py-2"><EmptyState icon={Stethoscope} title="Sin servicios" description="Agregá tu primer servicio con “Nuevo servicio”." className="py-8" /></td></tr>
               )}
             </tbody>
           </table>
@@ -199,7 +200,7 @@ export function CatalogoPage() {
             </div>
           ))}
           {(doctores as any[]).length === 0 && (
-            <div className="text-sm text-muted-foreground/70 py-4">Sin doctores</div>
+            <EmptyState icon={UserRound} title="Sin doctores" description="Agregá tu primer profesional con “Nuevo doctor”." className="py-8 col-span-full" />
           )}
         </div>
       </section>
@@ -254,7 +255,7 @@ export function CatalogoPage() {
                   </tr>
                 ))}
                 {(tiposGasto as any[]).length === 0 && (
-                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground/70">Sin tipos de gasto</td></tr>
+                  <tr><td colSpan={3} className="px-4 py-2"><EmptyState icon={Tag} title="Sin tipos de gasto" description="Creá las categorías con las que vas a clasificar los gastos." className="py-8" /></td></tr>
                 )}
               </tbody>
             </table>
@@ -313,7 +314,7 @@ export function CatalogoPage() {
                   </tr>
                 ))}
                 {(tiposCuenta as any[]).length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground/70">Sin tipos de cuenta</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-2"><EmptyState icon={Landmark} title="Sin tipos de cuenta" description="Definí las cuentas/formas de pago para los gastos." className="py-8" /></td></tr>
                 )}
               </tbody>
             </table>

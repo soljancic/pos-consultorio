@@ -17,6 +17,7 @@ import { AgendaDiaGrid } from './AgendaDiaGrid'
 import { AgendaSemanaGrid } from './AgendaSemanaGrid'
 import { AgendaMesGrid } from './AgendaMesGrid'
 import { CitaDetalleModal } from './CitaDetalleModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 import type { Cita, Doctor } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 
@@ -274,9 +275,11 @@ export function AgendaPage() {
           (isLoading ? (
             <div className="text-center text-muted-foreground py-12">Cargando agenda...</div>
           ) : citasOrdenadas.length === 0 ? (
-            <div className="text-center text-muted-foreground/70 py-12">
-              No hay citas para este dia
-            </div>
+            <EmptyState
+              icon={CalendarDays}
+              title="No hay citas para este día"
+              description="Cuando agendes una cita va a aparecer acá. Usá “Nueva cita” para empezar."
+            />
           ) : (
             <div className="max-w-3xl mx-auto">
               {/* Orden de la lista: "Hora" evita que la tarjeta salte al cambiar de estado */}

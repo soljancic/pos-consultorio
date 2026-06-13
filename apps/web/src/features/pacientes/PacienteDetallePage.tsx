@@ -12,6 +12,7 @@ import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
 import { CobroModal } from '../agenda/CobroModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 import { NuevaCitaModal } from '../agenda/NuevaCitaModal'
 import { PacienteModal } from './PacienteModal'
 import { HistoriaClinicaTimeline } from './HistoriaClinicaTimeline'
@@ -176,8 +177,8 @@ export function PacienteDetallePage() {
           {tab === 'historia' ? (
             <HistoriaClinicaTimeline pacienteId={paciente.id} onAgendarControl={setFechaControl} />
           ) : citasOrdenadas.length === 0 ? (
-            <div className={cn(cardUI, 'p-8 text-center text-muted-foreground/70 text-sm')}>
-              Sin citas registradas
+            <div className={cardUI}>
+              <EmptyState icon={CalendarPlus} title="Sin citas registradas" description="Cuando el paciente tenga citas van a listarse acá." />
             </div>
           ) : (
             <div className={cn(cardUI, 'overflow-x-auto')}>

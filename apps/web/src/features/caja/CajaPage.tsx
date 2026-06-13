@@ -10,6 +10,7 @@ import { AnularPagoModal, type PagoAnulable } from './AnularPagoModal'
 import { AbrirCajaModal } from './AbrirCajaModal'
 import { CerrarCajaModal } from './CerrarCajaModal'
 import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export function CajaPage() {
@@ -239,8 +240,8 @@ export function CajaPage() {
                 })}
                 {pagos.length === 0 && (
                   <tr>
-                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground/70">
-                      No hay movimientos hoy
+                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-2">
+                      <EmptyState icon={Wallet} title="No hay movimientos hoy" description="Los cobros del día van a aparecer acá." className="py-8" />
                     </td>
                   </tr>
                 )}
@@ -321,7 +322,7 @@ export function CajaPage() {
                   )
                 })}
                 {historial.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground/70">Sin cajas en el periodo</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-2"><EmptyState icon={Wallet} title="Sin cajas en el período" description="Los cierres de caja del rango van a aparecer acá." className="py-8" /></td></tr>
                 )}
               </tbody>
               <tfoot className="bg-muted/50 border-t">

@@ -7,6 +7,7 @@ import { formatMoneda, cn } from '../../lib/utils'
 import { telefonoIntl } from '../../lib/paises'
 import { inputUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { PacienteModal } from './PacienteModal'
+import { EmptyState } from '../../components/shared/EmptyState'
 import type { Paciente } from '@pos/types'
 
 export function PacientesPage() {
@@ -95,8 +96,12 @@ export function PacientesPage() {
                 ))}
                 {pacientes.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground/70">
-                      {debouncedSearch ? 'No se encontraron pacientes' : 'No hay pacientes registrados'}
+                    <td colSpan={4} className="px-4 py-2">
+                      {debouncedSearch ? (
+                        <EmptyState icon={Search} title="No se encontraron pacientes" description="Probá con otro nombre, CI o teléfono." className="py-8" />
+                      ) : (
+                        <EmptyState icon={Users} title="No hay pacientes registrados" description="Cargá tu primer paciente con “Nuevo paciente”." className="py-8" />
+                      )}
                     </td>
                   </tr>
                 )}
