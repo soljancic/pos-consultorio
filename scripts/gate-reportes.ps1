@@ -1,4 +1,4 @@
-# Gate item 29: reporte mensual + desglose por doctor (API :3000)
+﻿# Gate item 29: reporte mensual + desglose por doctor (API :3000)
 $ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmssff"
@@ -45,7 +45,13 @@ $c2 = Nueva-Cita 14 $docB.id
 Invoke-RestMethod -Uri "$base/citas/$($c2.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = "CANCELADA"; motivo = "gate" } | ConvertTo-Json) | Out-Null
 
 # Gasto en efectivo 150
-Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = (Get-Date -Format "yyyy-MM-dd"); categoria = "INSUMOS"; monto = 150; descripcion = "gasa"; cuenta = "CAJA_EFECTIVO" } | ConvertTo-Json) | Out-Null
+$tiposGasto = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h
+$tgInsumos = ($tiposGasto | Where-Object { $_.nombre -eq 'Insumos' }).id
+$tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
+$tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
+$tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
+Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = (Get-Date -Format "yyyy-MM-dd"); tipoGastoId = $tgInsumos; monto = 150; descripcion = "gasa"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 # 1) Reporte del mes
 $r = Invoke-RestMethod -Uri "$base/reportes/mensual?mes=$mes" -Headers $h

@@ -1,4 +1,4 @@
-# Gate E2-M3: actividad reciente sobre logs (API :3000)
+﻿# Gate E2-M3: actividad reciente sobre logs (API :3000)
 $ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmssff"
@@ -32,7 +32,13 @@ foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
 }
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
 Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 1000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
-Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 50; descripcion = "varios"; cuenta = "BANCO" } | ConvertTo-Json) | Out-Null
+$tiposGasto = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h
+$tgInsumos = ($tiposGasto | Where-Object { $_.nombre -eq 'Insumos' }).id
+$tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
+$tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
+$tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
+Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "varios"; tipoCuentaId = $tcBanco } | ConvertTo-Json) | Out-Null
 
 # 1) Feed completo del dia: deben existir STATE_CHANGE, PAYMENT y CREATE de Gasto
 $todo = Invoke-RestMethod -Uri "$base/logs?desde=$hoy&hasta=$hoy" -Headers $h

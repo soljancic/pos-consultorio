@@ -1,4 +1,4 @@
-# Gate E2-M9: apertura de turno con caja chica + bloqueo sin caja abierta (API :3000)
+﻿# Gate E2-M9: apertura de turno con caja chica + bloqueo sin caja abierta (API :3000)
 $ErrorActionPreference = 'Stop'
 $base = "http://localhost:3000/api/v1"
 $ts = Get-Date -Format "HHmmssff"
@@ -20,6 +20,14 @@ $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "ap
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
 $hoy = Get-Date -Format "yyyy-MM-dd"
 
+# Catalogos default sembrados al registrar; mapear nombre -> id
+$tiposGasto = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h
+$tgInsumos = ($tiposGasto | Where-Object { $_.nombre -eq 'Insumos' }).id
+$tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
+$tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
+$tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
+
 # Catalogo + cita atendida (las citas no requieren caja; el dinero si)
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 2000 } | ConvertTo-Json)
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. T" } | ConvertTo-Json)
@@ -33,7 +41,7 @@ $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
 
 # 1) Sin caja abierta: cobrar -> 409; gastar -> 409
 Esperar-Error { Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 500; formaPago = "EFECTIVO" } | ConvertTo-Json) } 409 "1 COBRAR SIN CAJA"
-Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 100; descripcion = "x"; cuenta = "CAJA_EFECTIVO" } | ConvertTo-Json) } 409 "2 GASTAR SIN CAJA"
+Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 100; descripcion = "x"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) } 409 "2 GASTAR SIN CAJA"
 
 # 3) Abrir con caja chica 100; re-abrir -> 400
 $ap = Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 100; notasApertura = "gate" } | ConvertTo-Json)
@@ -42,19 +50,19 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers 
 
 # 5) Con caja abierta: cobrar 2000 efectivo + gasto 500 efectivo
 Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
-Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "INSUMOS"; monto = 500; descripcion = "gasas"; cuenta = "CAJA_EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgInsumos; monto = 500; descripcion = "gasas"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 # 6) Arqueo con inicial: esperado = 100 + 2000 - 500 = 1600 -> diferencia 0
 $cierre = Invoke-RestMethod -Uri "$base/caja/cerrar" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoDeclarado = 1600 } | ConvertTo-Json)
 Write-Output "6 ARQUEO CON INICIAL: esperado=$($cierre.montoEsperado) (esp 1600) diferencia=$($cierre.diferencia) (esp 0) auto=$($null -ne $cierre.revisadaAt) (esp True)"
 
 # 7) Tras el cierre: cobrar/gastar -> 409 (turno terminado)
-Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 50; descripcion = "y"; cuenta = "BANCO" } | ConvertTo-Json) } 409 "7 GASTAR TRAS CIERRE"
+Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "y"; tipoCuentaId = $tcBanco } | ConvertTo-Json) } 409 "7 GASTAR TRAS CIERRE"
 
 # 8) Reabrir (ADMIN): el arqueo se descarta y la caja vuelve a aceptar dinero
 $re = Invoke-RestMethod -Uri "$base/caja/reabrir" -Method Post -Headers $h
 Write-Output "8 REABRIR: cerrada=$($re.cerrada) (esp False) declarado=$($re.montoDeclarado) (esp vacio)"
-Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; categoria = "OTROS"; monto = 50; descripcion = "post-reapertura"; cuenta = "CAJA_EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "post-reapertura"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 Write-Output "9 GASTO TRAS REAPERTURA: OK"
 
 # 10) Re-cierre: esperado = 1600 - 50 = 1550 -> diferencia 0
