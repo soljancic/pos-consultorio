@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { format, addDays, startOfWeek } from 'date-fns'
+import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
@@ -15,17 +15,19 @@ import { CancelarCitaModal } from './CancelarCitaModal'
 import { AtencionModal } from './AtencionModal'
 import { AgendaDiaGrid } from './AgendaDiaGrid'
 import { AgendaSemanaGrid } from './AgendaSemanaGrid'
+import { AgendaMesGrid } from './AgendaMesGrid'
 import { CitaDetalleModal } from './CitaDetalleModal'
 import type { Cita, Doctor } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 
-type Vista = 'lista' | 'dia' | 'semana'
+type Vista = 'lista' | 'dia' | 'semana' | 'mes'
 const VISTA_KEY = 'pos-agenda-vista'
 
 const VISTAS: Array<{ id: Vista; label: string; icon: typeof List }> = [
   { id: 'lista', label: 'Lista', icon: List },
   { id: 'dia', label: 'Día', icon: Columns3 },
   { id: 'semana', label: 'Semana', icon: CalendarRange },
+  { id: 'mes', label: 'Mes', icon: CalendarDays },
 ]
 
 export function AgendaPage() {
@@ -76,7 +78,7 @@ export function AgendaPage() {
       api
         .get(`/citas?fecha=${fechaStr}${doctorId ? `&doctorId=${doctorId}` : ''}`)
         .then((r) => r.data),
-    enabled: vista !== 'semana',
+    enabled: vista === 'lista' || vista === 'dia',
   })
 
   // Semana (rango)
@@ -92,6 +94,21 @@ export function AgendaPage() {
     enabled: vista === 'semana',
   })
 
+  // Mes (rango de la grilla visible: lunes de la 1ra semana al domingo de la ultima)
+  const mesStr = format(fecha, 'yyyy-MM')
+  const inicioGrillaMes = startOfWeek(startOfMonth(fecha), { weekStartsOn: 1 })
+  const finGrillaMes = endOfWeek(endOfMonth(fecha), { weekStartsOn: 1 })
+  const { data: citasMes = [], isLoading: cargandoMes } = useQuery<Cita[]>({
+    queryKey: ['citas', 'mes', mesStr, doctorId],
+    queryFn: () =>
+      api
+        .get(
+          `/citas?fecha=${format(inicioGrillaMes, 'yyyy-MM-dd')}&hasta=${format(finGrillaMes, 'yyyy-MM-dd')}${doctorId ? `&doctorId=${doctorId}` : ''}`,
+        )
+        .then((r) => r.data),
+    enabled: vista === 'mes',
+  })
+
   const cambiarEstado = useMutation({
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
@@ -104,6 +121,10 @@ export function AgendaPage() {
   })
 
   function navegar(direccion: number) {
+    if (vista === 'mes') {
+      setFecha(addMonths(fecha, direccion))
+      return
+    }
     const dias = vista === 'semana' ? 7 * direccion : direccion
     const d = new Date(fecha)
     d.setDate(d.getDate() + dias)
@@ -146,7 +167,9 @@ export function AgendaPage() {
     : doctores
 
   const tituloFecha =
-    vista === 'semana'
+    vista === 'mes'
+      ? format(fecha, 'MMMM yyyy', { locale: es })
+      : vista === 'semana'
       ? `${format(inicioSemana, 'd MMM', { locale: es })} – ${format(finSemana, 'd MMM', { locale: es })}`
       : format(fecha, "EEEE d 'de' MMMM", { locale: es })
 
@@ -160,7 +183,7 @@ export function AgendaPage() {
           </button>
           <div>
             <h2 className="text-lg font-semibold text-foreground capitalize">{tituloFecha}</h2>
-            {vista !== 'semana' && (
+            {(vista === 'lista' || vista === 'dia') && (
               <p className="text-xs text-muted-foreground">{citas.length} citas</p>
             )}
           </div>
@@ -267,6 +290,21 @@ export function AgendaPage() {
             <AgendaSemanaGrid
               inicioSemana={inicioSemana}
               citas={citasSemana}
+              onCitaClick={setCitaDetalle}
+              onDiaClick={(dia) => {
+                setFecha(dia)
+                cambiarVista('dia')
+              }}
+            />
+          ))}
+
+        {vista === 'mes' &&
+          (cargandoMes ? (
+            <div className="text-center text-muted-foreground py-12">Cargando mes...</div>
+          ) : (
+            <AgendaMesGrid
+              mes={fecha}
+              citas={citasMes}
               onCitaClick={setCitaDetalle}
               onDiaClick={(dia) => {
                 setFecha(dia)

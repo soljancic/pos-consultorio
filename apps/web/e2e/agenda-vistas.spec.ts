@@ -59,6 +59,10 @@ test('vista Día muestra columnas por doctor y la cita en la grilla', async ({ p
   await page.getByRole('button', { name: 'Semana' }).click()
   await expect(page.getByText(/Grid/).first()).toBeVisible()
 
+  // Vista Mes: grilla mensual con la cita en la celda de hoy
+  await page.getByRole('button', { name: 'Mes' }).click()
+  await expect(page.getByText(/Grid/).first()).toBeVisible()
+
   // Volver a Lista para no alterar el resto de la suite
   await page.getByRole('button', { name: 'Lista' }).click()
   await expect(page.getByText(/Grid, Gema/)).toBeVisible()
