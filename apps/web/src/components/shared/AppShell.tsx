@@ -29,7 +29,7 @@ import { cn } from '../../lib/utils'
 import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
 
 const NAV_ITEMS = [
-  { to: '/', icon: LayoutDashboard, label: 'Inicio', end: true },
+  { to: '/inicio', icon: LayoutDashboard, label: 'Inicio', end: true },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
