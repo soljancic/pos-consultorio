@@ -38,6 +38,11 @@ Write-Output "2 INFO PUBLICA: consultorio=$($info.consultorio.nombre -ne $null) 
 $slots = Invoke-RestMethod -Uri "$base/public/$slug/slots?doctorId=$($doc.id)&servicioId=$($srv.id)&fecha=$hoy"
 Write-Output "3 SLOTS: count=$(@($slots.slots).Count) (esp 6) primero=$($slots.slots[0]) (esp 09:00)"
 
+# 3b) Calendario Calendly: dias del mes con al menos un horario libre
+$mes = (Get-Date).AddDays(1).ToString("yyyy-MM")
+$dias = Invoke-RestMethod -Uri "$base/public/$slug/dias?doctorId=$($doc.id)&servicioId=$($srv.id)&mes=$mes"
+Write-Output "3b DIAS DEL MES: contiene dia sembrado=$(@($dias.dias) -contains $hoy) (esp True) total=$(@($dias.dias).Count)"
+
 # 4) Reservar 09:30 -> paciente nuevo (con pais) + cita SOLICITADA origen PORTAL
 $res = Invoke-RestMethod -Uri "$base/public/$slug/reservas" -Method Post -ContentType "application/json" -Body (@{ doctorId = $doc.id; servicioId = $srv.id; fecha = $hoy; hora = "09:30"; nombre = "Pia"; apellido = "Portal"; telefono = "+59170000001"; pais = "AR"; email = "pia@inicial.bo"; notas = "Vengo por dolor de muela" } | ConvertTo-Json)
 Write-Output "4 RESERVA: reservada=$($res.reservada) hora=$($res.hora) (esp 09:30) doctor=$($res.doctor)"
@@ -92,3 +97,10 @@ Write-Output "8 SLOTS PASADOS: count=$(@($slotsAyer.slots).Count) (esp 0)"
 
 # 9) Slug inexistente -> 404
 Esperar-Error { Invoke-RestMethod -Uri "$base/public/no-existe-$ts" } 404 "9 SLUG INEXISTENTE"
+
+# 9b) Calendario: doctor que no atiende el servicio -> sin dias
+$srv2 = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Otro $ts"; duracionMin = 30; precioBase = 500 } | ConvertTo-Json)
+# JSON manual: ConvertTo-Json colapsa arrays de 1 elemento (gotcha PS 5.1)
+Invoke-RestMethod -Uri "$base/doctores/$($doc.id)/servicios" -Method Put -Headers $h -ContentType "application/json" -Body "{ ""servicioIds"": [$($srv2.id)] }" | Out-Null
+$diasNo = Invoke-RestMethod -Uri "$base/public/$slug/dias?doctorId=$($doc.id)&servicioId=$($srv.id)&mes=$mes"
+Write-Output "9b DIAS NO ATIENDE: count=$(@($diasNo.dias).Count) (esp 0)"

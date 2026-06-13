@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
-import { PortalService, ReservaPortalDto } from './portal.service'
+import { PortalService, ReservaPortalDto, DiasDisponiblesQueryDto } from './portal.service'
 import { Public } from '../../common/decorators/public.decorator'
 
 // Superficie PUBLICA (sin auth): rate limit estricto y cero enumeracion.
@@ -32,6 +32,14 @@ export class PortalController {
   @ApiOperation({ summary: 'QR de pagos del consultorio (para ver y descargar)' })
   qr(@Param('slug') slug: string) {
     return this.service.qr(slug)
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
+  @Get(':slug/dias')
+  @ApiOperation({ summary: 'Dias del mes con al menos un horario libre (calendario Calendly)' })
+  dias(@Param('slug') slug: string, @Query() q: DiasDisponiblesQueryDto) {
+    return this.service.dias(slug, q.doctorId, q.servicioId, q.mes)
   }
 
   @Public()

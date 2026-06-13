@@ -51,6 +51,18 @@ export class ReservaPortalDto {
   actualizarDatos?: boolean
 }
 
+// Query del calendario Calendly: dias del mes con horarios libres
+export class DiasDisponiblesQueryDto {
+  @IsInt()
+  doctorId: number
+
+  @IsInt()
+  servicioId: number
+
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'mes debe ser YYYY-MM' })
+  mes: string
+}
+
 // Portal publico de reservas (E2.5b). REGLA CRITICA: el consultorioId se
 // deriva SIEMPRE del slug en el server; las respuestas no exponen datos de
 // pacientes ni de la agenda (solo horas libres).
@@ -129,6 +141,20 @@ export class PortalService {
     const c = await this.prisma.consultorio.findUnique({ where: { slug } })
     if (!c || !c.activo || !c.qrUrl) throw new NotFoundException('QR no disponible')
     return { consultorio: c.nombre, logoUrl: c.logoUrl, qrUrl: c.qrUrl }
+  }
+
+  // Dias del mes con al menos un horario libre (calendario Calendly del portal)
+  async dias(slug: string, doctorId: number, servicioId: number, mes: string) {
+    const c = await this.consultorioPorSlug(slug)
+    const servicio = await this.prisma.servicio.findFirst({
+      where: { id: servicioId, consultorioId: c.id, activo: true },
+    })
+    if (!servicio) throw new NotFoundException('Servicio no encontrado')
+    // Mismo guard que /slots: si el doctor no atiende el servicio → sin dias
+    if (!(await this.doctores.atiendeServicio(doctorId, servicioId))) {
+      return { dias: [] as string[] }
+    }
+    return this.doctores.getDiasDisponibles(c.id, doctorId, mes, servicio.duracionMin)
   }
 
   async slots(slug: string, doctorId: number, servicioId: number, fecha: string) {

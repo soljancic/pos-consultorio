@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { format } from 'date-fns'
-import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths } from 'date-fns'
+import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatDia, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
@@ -29,8 +29,10 @@ export function ReservarPage() {
 
   const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
   const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
-  const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [mesCal, setMesCal] = useState(format(new Date(), 'yyyy-MM'))
+  const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -75,6 +77,18 @@ export function ReservarPage() {
     email !== (prefill.email ?? '') ||
     (PAISES.some((p) => p.codigo === prefill.pais) && pais !== prefill.pais)
   )
+
+  // Calendario Calendly: dias del mes con al menos un horario libre
+  const puedeVerCalendario = !!(servicioId && doctorId)
+  const { data: diasData, isFetching: cargandoDias } = useQuery<{ dias: string[] }>({
+    queryKey: ['portal-dias', slug, doctorId, servicioId, mesCal],
+    queryFn: () =>
+      api
+        .get(`/public/${slug}/dias?doctorId=${doctorId}&servicioId=${servicioId}&mes=${mesCal}`)
+        .then((r) => r.data),
+    enabled: puedeVerCalendario,
+  })
+  const diasSet = new Set(diasData?.dias ?? [])
 
   const puedeBuscarSlots = !!(servicioId && doctorId && fecha)
   const { data: slotsData, isFetching: cargandoSlots } = useQuery<{ slots: string[]; modo: string }>({
@@ -136,6 +150,15 @@ export function ReservarPage() {
     (d) => !servicioId || d.servicioIds.length === 0 || d.servicioIds.includes(Number(servicioId)),
   )
 
+  // Grilla del mini calendario (lunes primero), mes controlado por mesCal
+  const primeroMes = new Date(Number(mesCal.slice(0, 4)), Number(mesCal.slice(5, 7)) - 1, 1)
+  const diasGrilla = eachDayOfInterval({
+    start: startOfWeek(primeroMes, { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(primeroMes), { weekStartsOn: 1 }),
+  })
+  const prevDeshabilitado = mesCal <= format(new Date(), 'yyyy-MM')
+  const irMes = (delta: number) => setMesCal(format(addMonths(primeroMes, delta), 'yyyy-MM'))
+
   return (
     <div className="min-h-dvh bg-background">
       <header className="bg-primary text-primary-foreground px-6 py-5">
@@ -175,7 +198,8 @@ export function ReservarPage() {
               <select id="res-servicio" required value={servicioId}
                 onChange={(e) => {
                   setServicioId(e.target.value)
-                  setHora('')
+                  setFecha(''); setHora(''); setMostrarForm(false)
+                  setMesCal(format(new Date(), 'yyyy-MM'))
                   // El doctor elegido podria no atender el nuevo servicio
                   if (!doctorFijo) setDoctorId('')
                 }} className={inputUI}>
@@ -189,7 +213,11 @@ export function ReservarPage() {
             <div>
               <label htmlFor="res-doctor" className="block text-sm font-medium text-foreground mb-1.5">Profesional *</label>
               <select id="res-doctor" required value={doctorId} disabled={!!doctorFijo}
-                onChange={(e) => { setDoctorId(e.target.value); setHora('') }} className={inputUI}>
+                onChange={(e) => {
+                  setDoctorId(e.target.value)
+                  setFecha(''); setHora(''); setMostrarForm(false)
+                  setMesCal(format(new Date(), 'yyyy-MM'))
+                }} className={inputUI}>
                 <option value="">Elegí el profesional...</option>
                 {doctores.map((d) => (
                   <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` — ${d.especialidad}` : ''}</option>
@@ -197,46 +225,120 @@ export function ReservarPage() {
               </select>
             </div>
 
-            <div>
-              <label htmlFor="res-fecha" className="block text-sm font-medium text-foreground mb-1.5">Fecha *</label>
-              <input id="res-fecha" type="date" required value={fecha}
-                min={format(new Date(), 'yyyy-MM-dd')}
-                onChange={(e) => { setFecha(e.target.value); setHora('') }} className={inputUI} />
-            </div>
-
-            {puedeBuscarSlots && (
-              <div>
-                <span className="block text-sm font-medium text-foreground mb-1.5">Horarios disponibles *</span>
-                {cargandoSlots ? (
-                  <p className="text-sm text-muted-foreground py-2">Buscando horarios...</p>
-                ) : !slotsData?.slots?.length ? (
-                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2.5">
-                    No hay horarios libres ese día. Probá con otra fecha.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-4 gap-2" role="group" aria-label="Horarios disponibles">
-                    {slotsData.slots.map((s) => (
+            {puedeVerCalendario && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+                {/* Mini calendario mensual estilo Calendly: solo dias con disponibilidad */}
+                <div>
+                  <span className="block text-sm font-medium text-foreground mb-2">Elegí el día *</span>
+                  <div className="rounded-lg border border-input bg-card p-3">
+                    <div className="flex items-center justify-between mb-2">
                       <button
-                        key={s}
                         type="button"
-                        onClick={() => setHora(s)}
-                        aria-pressed={hora === s}
-                        className={cn(
-                          'h-10 rounded-md text-sm font-medium tabular-nums border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
-                          hora === s
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-card text-foreground border-input hover:border-primary/60',
-                        )}
+                        onClick={() => irMes(-1)}
+                        disabled={prevDeshabilitado}
+                        aria-label="Mes anterior"
+                        className="h-8 w-8 flex items-center justify-center rounded-md text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
                       >
-                        {s}
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                       </button>
-                    ))}
+                      <span className="text-sm font-semibold text-foreground capitalize">
+                        {formatDia(`${mesCal}-01`, 'MMMM yyyy')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => irMes(1)}
+                        aria-label="Mes siguiente"
+                        className="h-8 w-8 flex items-center justify-center rounded-md text-foreground hover:bg-muted cursor-pointer transition-colors"
+                      >
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5 mb-1">
+                      {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+                        <span key={d} className="text-[11px] text-center text-muted-foreground font-medium py-1">{d}</span>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0.5">
+                      {diasGrilla.map((d) => {
+                        const ds = format(d, 'yyyy-MM-dd')
+                        if (!isSameMonth(d, primeroMes)) return <span key={ds} aria-hidden="true" />
+                        const disponible = diasSet.has(ds)
+                        const seleccionado = ds === fecha
+                        return (
+                          <button
+                            key={ds}
+                            type="button"
+                            disabled={!disponible}
+                            onClick={() => { setFecha(ds); setHora(''); setMostrarForm(false) }}
+                            aria-pressed={seleccionado}
+                            aria-label={formatDia(ds, "EEEE d 'de' MMMM")}
+                            className={cn(
+                              'aspect-square w-full flex items-center justify-center rounded-full text-sm tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                              seleccionado
+                                ? 'bg-primary text-primary-foreground font-semibold'
+                                : disponible
+                                ? 'bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer'
+                                : 'text-muted-foreground/40 cursor-not-allowed',
+                              isToday(d) && !seleccionado && 'ring-1 ring-inset ring-primary/40',
+                            )}
+                          >
+                            {d.getDate()}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {cargandoDias && <p className="text-[11px] text-muted-foreground mt-2">Cargando disponibilidad...</p>}
                   </div>
-                )}
+                </div>
+
+                {/* Horarios del dia elegido: al tocar uno, el boton se parte en [hora | Siguiente] */}
+                <div>
+                  <span className="block text-sm font-medium text-foreground mb-2">
+                    {fecha ? 'Horarios disponibles *' : 'Horarios'}
+                  </span>
+                  {!fecha ? (
+                    <p className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2.5">
+                      Elegí un día con disponibilidad para ver los horarios.
+                    </p>
+                  ) : cargandoSlots ? (
+                    <p className="text-sm text-muted-foreground py-2">Buscando horarios...</p>
+                  ) : !slotsData?.slots?.length ? (
+                    <p className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2.5">
+                      No hay horarios libres ese día. Probá con otra fecha.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Horarios disponibles">
+                      {slotsData.slots.map((s) =>
+                        s === hora ? (
+                          <div key={s} className="flex rounded-md overflow-hidden border border-primary shadow-sm">
+                            <span className="h-10 px-3 flex items-center bg-primary/10 text-primary text-sm font-semibold tabular-nums">{s}</span>
+                            <button
+                              type="button"
+                              onClick={() => setMostrarForm(true)}
+                              className="h-10 px-3 bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
+                            >
+                              Siguiente
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setHora(s)}
+                            aria-pressed={false}
+                            className="h-10 w-[4.75rem] rounded-md text-sm font-medium tabular-nums border border-input bg-card text-foreground hover:border-primary/60 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
+                          >
+                            {s}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {hora && (
+            {mostrarForm && hora && (
               <div className="space-y-4 border-t pt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -294,14 +396,16 @@ export function ReservarPage() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={!hora || reservar.isPending}
-              className={cn(btnPrimaryUI, 'w-full h-11')}
-            >
-              <CalendarCheck className="h-4 w-4" aria-hidden="true" />
-              {reservar.isPending ? 'Reservando...' : hora ? `Reservar ${formatDia(fecha, 'dd/MM')} a las ${hora}` : 'Elegí un horario'}
-            </button>
+            {mostrarForm && hora && (
+              <button
+                type="submit"
+                disabled={reservar.isPending}
+                className={cn(btnPrimaryUI, 'w-full h-11')}
+              >
+                <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+                {reservar.isPending ? 'Reservando...' : `Reservar ${formatDia(fecha, 'dd/MM')} a las ${hora}`}
+              </button>
+            )}
           </form>
         )}
       </main>

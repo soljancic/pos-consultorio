@@ -174,4 +174,96 @@ export class DoctoresService {
 
     return { disponible: slots.length > 0, slots, duracionMin, modo: 'calendario' }
   }
+
+  // Portal Calendly: dias del mes con al menos un horario libre. NO itera
+  // getDisponibilidad por dia (serian ~60 queries): 2 queries (bloques del
+  // mes + citas del mes) y la misma aritmetica de intervalos en memoria.
+  async getDiasDisponibles(
+    consultorioId: number,
+    doctorId: number,
+    mes: string, // YYYY-MM
+    duracionMin = 30,
+  ) {
+    const doctor = await this.prisma.doctor.findFirst({ where: { id: doctorId, consultorioId } })
+    if (!doctor) throw new NotFoundException('Doctor no encontrado')
+
+    // Rango del mes: disponibilidades por fecha @db.Date (UTC midnight),
+    // citas por timestamp (dia LOCAL del negocio) — igual que getDisponibilidad
+    const mesInicioUTC = new Date(`${mes}-01T00:00:00Z`)
+    const mesFinUTC = new Date(Date.UTC(mesInicioUTC.getUTCFullYear(), mesInicioUTC.getUTCMonth() + 1, 1))
+    const mesInicioLocal = new Date(`${mes}-01T00:00:00`)
+    const mesFinLocal = new Date(mesInicioLocal.getFullYear(), mesInicioLocal.getMonth() + 1, 1)
+
+    const [bloques, citas] = await Promise.all([
+      this.prisma.disponibilidad.findMany({
+        where: { consultorioId, doctorId, deletedAt: null, fecha: { gte: mesInicioUTC, lt: mesFinUTC } },
+        orderBy: { horaInicio: 'asc' },
+      }),
+      this.prisma.cita.findMany({
+        where: {
+          consultorioId,
+          doctorId,
+          deletedAt: null,
+          estado: { notIn: [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO] },
+          fechaHora: { gte: mesInicioLocal, lt: mesFinLocal },
+        },
+        select: { fechaHora: true, duracionMin: true },
+      }),
+    ])
+
+    const aMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+    const aHHMM = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    const diaLocal = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    // Bloques por dia (clave UTC del @db.Date)
+    const porDia = new Map<string, { disponibles: typeof bloques; bloqueos: typeof bloques }>()
+    for (const b of bloques) {
+      const dia = b.fecha.toISOString().slice(0, 10)
+      const g = porDia.get(dia) ?? { disponibles: [], bloqueos: [] }
+      if (b.tipo === TipoDisponibilidad.DISPONIBLE) g.disponibles.push(b)
+      else g.bloqueos.push(b)
+      porDia.set(dia, g)
+    }
+
+    // Citas ocupando por dia LOCAL
+    const citasPorDia = new Map<string, Array<[number, number]>>()
+    for (const c of citas) {
+      const dia = diaLocal(c.fechaHora)
+      const ini = c.fechaHora.getHours() * 60 + c.fechaHora.getMinutes()
+      const arr = citasPorDia.get(dia) ?? []
+      arr.push([ini, ini + c.duracionMin])
+      citasPorDia.set(dia, arr)
+    }
+
+    // Hoy / hora actual en TZ del server (= TZ del consultorio): dias pasados
+    // se excluyen y hoy solo cuenta si le quedan slots futuros
+    const ahora = new Date()
+    const hoy = diaLocal(ahora)
+    const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`
+
+    const dias: string[] = []
+    for (const [dia, { disponibles, bloqueos }] of porDia) {
+      if (disponibles.length === 0 || dia < hoy) continue
+      const ocupados: Array<[number, number]> = [
+        ...(citasPorDia.get(dia) ?? []),
+        ...bloqueos.map((b): [number, number] => [aMin(b.horaInicio), aMin(b.horaFin)]),
+      ]
+      let hayLibre = false
+      for (const b of disponibles) {
+        for (let t = aMin(b.horaInicio); t + duracionMin <= aMin(b.horaFin); t += duracionMin) {
+          const fin = t + duracionMin
+          if (ocupados.some(([oIni, oFin]) => t < oFin && fin > oIni)) continue
+          if (dia === hoy && aHHMM(t) <= horaActual) continue // hoy: solo futuros
+          hayLibre = true
+          break
+        }
+        if (hayLibre) break
+      }
+      if (hayLibre) dias.push(dia)
+    }
+
+    return { dias: dias.sort() }
+  }
 }
