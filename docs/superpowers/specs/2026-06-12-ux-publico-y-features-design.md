@@ -1,6 +1,9 @@
 # Spec: UX publico y features (calendario Calendly, vista Mes, email de cierre, landing)
 
-> Fecha: 2026-06-12 · Estado: aprobado por el owner
+> Fecha: 2026-06-12 · Estado: IMPLEMENTADO 2026-06-13 (las 4 features, un commit
+> cada una: portal Calendly 0796302, vista Mes a023f47, email de cierre 4e421a2,
+> landing 4ea7969). tsc api/web limpios; gates extendidos (e25b 3b/9b, e2m9 5b/9c)
+> y E2E (agenda-vistas vista Mes, landing.spec).
 > Cuatro features independientes, un commit cada una, en este orden:
 > 1) calendario Calendly en el portal, 2) vista Mes en Agenda,
 > 3) email de cierre de caja, 4) landing Consultech en `/`.
