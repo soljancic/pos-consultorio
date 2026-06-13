@@ -22,6 +22,7 @@ import {
   History,
   BarChart3,
   MessageCircle,
+  HelpCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: '/reportes', icon: BarChart3, label: 'Reportes', soloAdmin: true },
   { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
   { to: '/configuracion', icon: Cog, label: 'Configuración', soloAdmin: true },
+  { to: '/ayuda', icon: HelpCircle, label: 'Ayuda' },
 ]
 
 const COLAPSADO_KEY = 'pos-sidebar-colapsado'

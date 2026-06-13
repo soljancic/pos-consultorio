@@ -18,6 +18,7 @@ import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
 import { ReportesPage } from './features/reportes/ReportesPage'
 import { MensajesPage } from './features/mensajes/MensajesPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
+import { AyudaPage } from './features/ayuda/AyudaPage'
 import { LandingPage } from './features/landing/LandingPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="deudores" element={<DeudoresPage />} />
         <Route path="mensajes" element={<MensajesPage />} />
         <Route path="catalogo" element={<CatalogoPage />} />
+        <Route path="ayuda" element={<AyudaPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
         <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />
         <Route path="actividad" element={<AdminRoute><ActividadPage /></AdminRoute>} />
