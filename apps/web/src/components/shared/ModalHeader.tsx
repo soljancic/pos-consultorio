@@ -39,7 +39,7 @@ export function ModalHeader({ icon: Icon, title, subtitle, onClose, tone = 'prim
       </span>
       <div className="min-w-0 flex-1">
         <h2 className="font-semibold text-foreground leading-tight">{title}</h2>
-        {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-muted-foreground leading-snug line-clamp-2">{subtitle}</p>}
       </div>
       {onClose && (
         <button
