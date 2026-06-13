@@ -30,11 +30,23 @@ const VISTAS: Array<{ id: Vista; label: string; icon: typeof List }> = [
   { id: 'mes', label: 'Mes', icon: CalendarDays },
 ]
 
+// Orden de la vista Lista. "Hora" mantiene la tarjeta en su lugar al cambiar de
+// estado (no salta); "Estado" agrupa por etapa (solicitadas/activas arriba).
+type Orden = 'estado' | 'hora'
+const ORDEN_KEY = 'pos-agenda-orden'
+const ORDENES: Array<{ id: Orden; label: string }> = [
+  { id: 'estado', label: 'Estado' },
+  { id: 'hora', label: 'Hora' },
+]
+
 export function AgendaPage() {
   const user = useAuthStore((s) => s.user)
   const [fecha, setFecha] = useState(new Date())
   const [vista, setVista] = useState<Vista>(
     () => (localStorage.getItem(VISTA_KEY) as Vista) || 'lista',
+  )
+  const [orden, setOrden] = useState<Orden>(
+    () => (localStorage.getItem(ORDEN_KEY) as Orden) || 'estado',
   )
   const [doctorId, setDoctorId] = useState('')
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null)
@@ -55,6 +67,11 @@ export function AgendaPage() {
   function cambiarVista(v: Vista) {
     setVista(v)
     localStorage.setItem(VISTA_KEY, v)
+  }
+
+  function cambiarOrden(o: Orden) {
+    setOrden(o)
+    localStorage.setItem(ORDEN_KEY, o)
   }
 
   const { data: doctores = [] } = useQuery<Doctor[]>({
@@ -162,6 +179,11 @@ export function AgendaPage() {
   ]
 
   const citasOrdenadas = [...citas].sort((a, b) => {
+    // "Hora": la tarjeta no se mueve al cambiar de estado (solo cambia el color),
+    // asi el usuario no pierde de vista la cita que estaba por cobrar/atender
+    if (orden === 'hora') {
+      return new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime()
+    }
     const ai = estadosOrden.indexOf(a.estado)
     const bi = estadosOrden.indexOf(b.estado)
     if (ai !== bi) return ai - bi
@@ -256,21 +278,44 @@ export function AgendaPage() {
               No hay citas para este dia
             </div>
           ) : (
-            <div className="space-y-3 max-w-3xl mx-auto">
-              {citasOrdenadas.map((cita) => (
-                <CitaCard
-                  key={cita.id}
-                  cita={cita}
-                  onCambiarEstado={(estado) =>
-                    cambiarEstado.mutate({ citaId: cita.id, estado })
-                  }
-                  onCobrar={() => abrirCobro(cita)}
-                  onAtencion={() => abrirAtencion(cita)}
-                  onReprogramar={() => setCitaReprogramar(cita)}
-                  onCancelar={() => setCitaCancelar(cita)}
-                  onNoAsistio={() => setCitaNoAsistio(cita)}
-                />
-              ))}
+            <div className="max-w-3xl mx-auto">
+              {/* Orden de la lista: "Hora" evita que la tarjeta salte al cambiar de estado */}
+              <div className="flex items-center justify-end gap-2 mb-3">
+                <span className="text-xs text-muted-foreground">Ordenar por</span>
+                <div className="flex rounded-md border overflow-hidden">
+                  {ORDENES.map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => cambiarOrden(id)}
+                      aria-pressed={orden === id}
+                      className={cn(
+                        'px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                        orden === id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-3">
+                {citasOrdenadas.map((cita) => (
+                  <CitaCard
+                    key={cita.id}
+                    cita={cita}
+                    onCambiarEstado={(estado) =>
+                      cambiarEstado.mutate({ citaId: cita.id, estado })
+                    }
+                    onCobrar={() => abrirCobro(cita)}
+                    onAtencion={() => abrirAtencion(cita)}
+                    onReprogramar={() => setCitaReprogramar(cita)}
+                    onCancelar={() => setCitaCancelar(cita)}
+                    onNoAsistio={() => setCitaNoAsistio(cita)}
+                  />
+                ))}
+              </div>
             </div>
           ))}
 

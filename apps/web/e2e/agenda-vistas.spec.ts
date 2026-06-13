@@ -44,6 +44,10 @@ test('vista Día muestra columnas por doctor y la cita en la grilla', async ({ p
   await page.getByRole('button', { name: /ingresar/i }).click()
   await page.waitForURL(/\/agenda$/)
 
+  // Vista Lista (default): el control de orden permite ordenar por Hora
+  await page.getByRole('button', { name: 'Hora' }).click()
+  await expect(page.getByRole('button', { name: 'Hora' })).toHaveAttribute('aria-pressed', 'true')
+
   // Cambiar a vista Día: columna del doctor + cita posicionada
   await page.getByRole('button', { name: 'Día' }).click()
   // .last(): el nombre tambien aparece como opcion del filtro de doctores
