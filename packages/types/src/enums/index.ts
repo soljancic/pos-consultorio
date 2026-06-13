@@ -55,23 +55,6 @@ export enum TipoDisponibilidad {
   BLOQUEADO = 'BLOQUEADO',
 }
 
-// Gastos administrativos (E2-M8)
-export enum CategoriaGasto {
-  INSUMOS = 'INSUMOS',
-  SUELDOS = 'SUELDOS',
-  ALQUILER = 'ALQUILER',
-  SERVICIOS = 'SERVICIOS',
-  IMPUESTOS = 'IMPUESTOS',
-  OTROS = 'OTROS',
-}
-
-// De donde sale el dinero: solo CAJA_EFECTIVO impacta el arqueo
-export enum CuentaGasto {
-  CAJA_EFECTIVO = 'CAJA_EFECTIVO',
-  BANCO = 'BANCO',
-  OTRO = 'OTRO',
-}
-
 // Cola de mensajes pendientes (E3 item 41a, canal manual asistido):
 // el sistema encola, el staff envia con wa.me y marca el resultado
 export enum TipoMensaje {
