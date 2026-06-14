@@ -41,6 +41,17 @@ const PASOS = [
 
 const CAPACIDADES = ['Agenda', 'Reservas online', 'Caja', 'Deudores', 'WhatsApp', 'Recetas', 'Reportes', 'Multi-consultorio']
 
+const INCLUYE = [
+  'Agenda día, semana y mes',
+  'Reservas online (portal propio)',
+  'Caja con arqueo ciego',
+  'Deudores y recordatorios por WhatsApp',
+  'Historia clínica y recetas en PDF',
+  'Reportes, comisiones y export a Excel',
+  'Multi-consultorio',
+  'App instalable (PWA)',
+]
+
 export function LandingPage() {
   return (
     <div className="min-h-dvh bg-[#070d18] overflow-x-hidden antialiased selection:bg-cyan-400/30" style={{ color: '#cbd5e1' }}>
@@ -59,13 +70,21 @@ export function LandingPage() {
               Consul<span className="text-cyan-400">Tech</span>
             </span>
           </div>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
-          >
-            Iniciar sesión
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          <nav className="flex items-center gap-1">
+            <a
+              href="#precios"
+              className="hidden sm:inline-flex items-center h-9 px-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              Precios
+            </a>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+            >
+              Iniciar sesión
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -228,6 +247,50 @@ export function LandingPage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ── PRECIOS ─────────────────────────────────────────── */}
+      <section id="precios" className="max-w-5xl mx-auto px-5 sm:px-8 py-20 sm:py-28 scroll-mt-16">
+        <div className="max-w-2xl mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance">
+            Un precio, todo incluido
+          </h2>
+          <p className="mt-3 text-slate-400">Sin módulos pagos aparte ni sorpresas. Todas las funciones, desde el primer día.</p>
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr_1.15fr] rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+          {/* precio */}
+          <div className="p-8 sm:p-10">
+            <p className="text-sm font-medium text-cyan-400">Plan único</p>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-5xl sm:text-6xl font-bold tabular-nums text-white">$50</span>
+              <span className="text-slate-400">USD / mes</span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Por consultorio, con tu equipo y profesionales incluidos.
+            </p>
+            <Link
+              to="/login"
+              className="group mt-7 inline-flex w-full items-center justify-center gap-2 h-12 px-7 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
+            >
+              Empezar
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </Link>
+            <p className="mt-3 text-center text-xs text-slate-500">Multi-tenant · datos aislados por consultorio</p>
+          </div>
+          {/* incluye */}
+          <div className="p-8 sm:p-10 border-t lg:border-t-0 lg:border-l border-white/10 bg-white/[0.015]">
+            <p className="text-sm font-medium text-white">Todo lo que incluye</p>
+            <ul className="mt-5 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm text-slate-300">
+              {INCLUYE.map((x) => (
+                <li key={x} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
