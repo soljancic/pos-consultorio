@@ -11,6 +11,7 @@ import { AbrirCajaModal } from './AbrirCajaModal'
 import { CerrarCajaModal } from './CerrarCajaModal'
 import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export function CajaPage() {
@@ -26,13 +27,13 @@ export function CajaPage() {
   const [desde, setDesde] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ['caja-hoy'],
     queryFn: () => api.get('/caja/hoy').then((r) => r.data),
     refetchInterval: 30_000,
   })
 
-  const { data: historial = [] } = useQuery<any[]>({
+  const { data: historial = [], isError: errorHistorial, refetch: refetchHistorial } = useQuery<any[]>({
     queryKey: ['caja-historial', desde, hasta],
     queryFn: () => api.get(`/caja/historial?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
     enabled: tab === 'historial',
@@ -109,6 +110,10 @@ export function CajaPage() {
 
       {tab === 'hoy' && (
         <div className="p-4 sm:p-6 flex-1 overflow-auto space-y-6">
+          {isError ? (
+            <ErrorState description="No se pudo cargar la caja de hoy." onRetry={() => refetch()} />
+          ) : (
+          <>
           {data && !caja && (
             <p className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-3 py-2.5">
               <Unlock className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -249,6 +254,8 @@ export function CajaPage() {
               </tbody>
             </table>
           </div>
+          </>
+          )}
         </div>
       )}
 
@@ -263,6 +270,9 @@ export function CajaPage() {
             <input id="caja-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
               className={cn(inputUI, 'w-auto')} />
           </div>
+          {errorHistorial ? (
+            <ErrorState description="No se pudo cargar el historial de caja." onRetry={() => refetchHistorial()} />
+          ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
@@ -331,6 +341,7 @@ export function CajaPage() {
               </tfoot>
             </table>
           </div>
+          )}
         </div>
       )}
 

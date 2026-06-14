@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnIconUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnIconUI, errorUI } from '../../lib/ui'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
@@ -18,6 +18,8 @@ import { AgendaSemanaGrid } from './AgendaSemanaGrid'
 import { AgendaMesGrid } from './AgendaMesGrid'
 import { CitaDetalleModal } from './CitaDetalleModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { Skeleton, CardListSkeleton } from '../../components/shared/Skeleton'
 import type { Cita, Doctor } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 
@@ -59,6 +61,7 @@ export function AgendaPage() {
   const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
   const [citaNoAsistio, setCitaNoAsistio] = useState<Cita | null>(null)
   const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
+  const [accionError, setAccionError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const fechaStr = format(fecha, 'yyyy-MM-dd')
@@ -93,7 +96,7 @@ export function AgendaPage() {
   // del cambio de estado que hizo otro usuario (doctor) sin recargar la pagina:
   // React actualiza solo la cita que cambio (key=cita.id), no parpadea porque la
   // carga se mide con isLoading (1ra vez), no con el refetch de fondo. Igual que caja.
-  const { data: citas = [], isLoading } = useQuery<Cita[]>({
+  const { data: citas = [], isLoading, isError, refetch } = useQuery<Cita[]>({
     queryKey: ['citas', fechaStr, doctorId],
     queryFn: () =>
       api
@@ -105,7 +108,7 @@ export function AgendaPage() {
 
   // Semana (rango)
   const inicioSemanaStr = format(inicioSemana, 'yyyy-MM-dd')
-  const { data: citasSemana = [], isLoading: cargandoSemana } = useQuery<Cita[]>({
+  const { data: citasSemana = [], isLoading: cargandoSemana, isError: errorSemana, refetch: refetchSemana } = useQuery<Cita[]>({
     queryKey: ['citas', 'semana', inicioSemanaStr, doctorId],
     queryFn: () =>
       api
@@ -121,7 +124,7 @@ export function AgendaPage() {
   const mesStr = format(fecha, 'yyyy-MM')
   const inicioGrillaMes = startOfWeek(startOfMonth(fecha), { weekStartsOn: 1 })
   const finGrillaMes = endOfWeek(endOfMonth(fecha), { weekStartsOn: 1 })
-  const { data: citasMes = [], isLoading: cargandoMes } = useQuery<Cita[]>({
+  const { data: citasMes = [], isLoading: cargandoMes, isError: errorMes, refetch: refetchMes } = useQuery<Cita[]>({
     queryKey: ['citas', 'mes', mesStr, doctorId],
     queryFn: () =>
       api
@@ -137,10 +140,18 @@ export function AgendaPage() {
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
     onSuccess: () => {
+      setAccionError(null)
       // ATENDIDA genera deuda: refrescar tambien deudores, ficha y caja
       for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
         queryClient.invalidateQueries({ queryKey: [key] })
       }
+    },
+    // Un cambio de estado caido (p.ej. sin conexion en la PWA) no puede pasar
+    // en silencio: ATENDIDA genera deuda y el usuario debe saber si fallo.
+    onError: (err: any) => {
+      setAccionError(
+        err?.response?.data?.message || 'No se pudo actualizar la cita. Revisá la conexión y reintentá.',
+      )
     },
   })
 
@@ -269,11 +280,33 @@ export function AgendaPage() {
         </div>
       </div>
 
+      {/* Aviso de accion fallida (cambio de estado) */}
+      {accionError && (
+        <div className="px-4 sm:px-6 pt-3">
+          <div className={cn(errorUI, 'justify-between')} role="alert">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {accionError}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAccionError(null)}
+              aria-label="Cerrar aviso"
+              className="shrink-0 rounded p-0.5 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Contenido segun vista */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {vista === 'lista' &&
           (isLoading ? (
-            <div className="text-center text-muted-foreground py-12">Cargando agenda...</div>
+            <div className="max-w-3xl mx-auto"><CardListSkeleton count={5} /></div>
+          ) : isError ? (
+            <ErrorState description="No se pudo cargar la agenda." onRetry={() => refetch()} />
           ) : citasOrdenadas.length === 0 ? (
             <EmptyState
               icon={CalendarDays}
@@ -324,7 +357,9 @@ export function AgendaPage() {
 
         {vista === 'dia' &&
           (isLoading ? (
-            <div className="text-center text-muted-foreground py-12">Cargando agenda...</div>
+            <Skeleton className="h-[480px] w-full rounded-xl" />
+          ) : isError ? (
+            <ErrorState description="No se pudo cargar la agenda." onRetry={() => refetch()} />
           ) : (
             <AgendaDiaGrid
               citas={citas}
@@ -339,7 +374,9 @@ export function AgendaPage() {
 
         {vista === 'semana' &&
           (cargandoSemana ? (
-            <div className="text-center text-muted-foreground py-12">Cargando semana...</div>
+            <Skeleton className="h-[480px] w-full rounded-xl" />
+          ) : errorSemana ? (
+            <ErrorState description="No se pudo cargar la semana." onRetry={() => refetchSemana()} />
           ) : (
             <AgendaSemanaGrid
               inicioSemana={inicioSemana}
@@ -354,7 +391,9 @@ export function AgendaPage() {
 
         {vista === 'mes' &&
           (cargandoMes ? (
-            <div className="text-center text-muted-foreground py-12">Cargando mes...</div>
+            <Skeleton className="h-[480px] w-full rounded-xl" />
+          ) : errorMes ? (
+            <ErrorState description="No se pudo cargar el mes." onRetry={() => refetchMes()} />
           ) : (
             <AgendaMesGrid
               mes={fecha}

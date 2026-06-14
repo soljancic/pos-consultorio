@@ -9,6 +9,8 @@ import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { GastoModal, type GastoEditable } from './GastoModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { TableSkeleton } from '../../components/shared/Skeleton'
 
 interface TipoGasto { id: number; nombre: string }
 
@@ -31,7 +33,7 @@ export function GastosPage() {
     queryFn: () => api.get('/tipos-gasto/activos').then((r) => r.data),
   })
 
-  const { data: gastos = [], isLoading } = useQuery<any[]>({
+  const { data: gastos = [], isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ['gastos', desde, hasta, tipoGastoId],
     queryFn: () =>
       api
@@ -85,7 +87,9 @@ export function GastosPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-8">Cargando...</div>
+          <TableSkeleton cols={6} />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
             <table className="w-full text-sm">

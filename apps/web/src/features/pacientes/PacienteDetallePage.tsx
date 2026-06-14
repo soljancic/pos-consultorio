@@ -13,6 +13,8 @@ import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
 import { CobroModal } from '../agenda/CobroModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { Skeleton, TableSkeleton } from '../../components/shared/Skeleton'
 import { NuevaCitaModal } from '../agenda/NuevaCitaModal'
 import { PacienteModal } from './PacienteModal'
 import { HistoriaClinicaTimeline } from './HistoriaClinicaTimeline'
@@ -54,13 +56,21 @@ export function PacienteDetallePage() {
   const [tab, setTab] = useState<'citas' | 'historia'>('citas')
   const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
 
-  const { data: paciente, isLoading } = useQuery<PacienteDetalle>({
+  const { data: paciente, isLoading, isError, refetch } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
     queryFn: () => api.get(`/pacientes/${id}`).then((r) => r.data),
     enabled: !!id,
   })
 
-  if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>
+  if (isLoading)
+    return (
+      <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <TableSkeleton cols={6} />
+      </div>
+    )
+  if (isError) return <ErrorState className="py-16" description="No se pudo cargar la ficha del paciente." onRetry={() => refetch()} />
   if (!paciente) return <div className="p-6 text-muted-foreground">Paciente no encontrado</div>
 
   const edad = paciente.fechaNacimiento

@@ -6,6 +6,8 @@ import { api } from '../../lib/api-client'
 import { formatHora, formatDia, cn } from '../../lib/utils'
 import { inputUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { TableSkeleton } from '../../components/shared/Skeleton'
 
 // E2-M3: feed de la tabla logs (solo ADMIN). Solo lectura.
 
@@ -35,7 +37,7 @@ export function ActividadPage() {
   const [accion, setAccion] = useState('')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['actividad', desde, hasta, entidad, accion, page],
     queryFn: () =>
       api
@@ -97,7 +99,11 @@ export function ActividadPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-8">Cargando...</div>
+          <TableSkeleton cols={4} />
+        ) : isError ? (
+          <div className={cardUI}>
+            <ErrorState onRetry={() => refetch()} />
+          </div>
         ) : items.length === 0 ? (
           <div className={cardUI}>
             <EmptyState icon={History} title="Sin actividad en el período" description="Las acciones del equipo van a aparecer acá." />

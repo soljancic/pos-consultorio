@@ -11,6 +11,7 @@ import { TipoGastoModal } from './TipoGastoModal'
 import { TipoCuentaModal } from './TipoCuentaModal'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 
 export function CatalogoPage() {
@@ -39,24 +40,24 @@ export function CatalogoPage() {
 
   // queryKey distinto al de la agenda (['servicios'] / ['doctores']) porque
   // el catalogo incluye inactivos; la invalidacion por prefijo cubre ambos.
-  const { data: servicios = [] } = useQuery({
+  const { data: servicios = [], isError: errSrv, refetch: refSrv } = useQuery({
     queryKey: ['servicios', 'todos'],
     queryFn: () => api.get('/servicios?todos=true').then((r) => r.data),
   })
 
-  const { data: doctores = [] } = useQuery({
+  const { data: doctores = [], isError: errDoc, refetch: refDoc } = useQuery({
     queryKey: ['doctores', 'todos'],
     queryFn: () => api.get('/doctores?todos=true').then((r) => r.data),
   })
 
   // Catalogos de tipos (solo ADMIN los administra)
-  const { data: tiposGasto = [] } = useQuery({
+  const { data: tiposGasto = [], isError: errTG, refetch: refTG } = useQuery({
     queryKey: ['tipos-gasto', 'todos'],
     queryFn: () => api.get('/tipos-gasto').then((r) => r.data),
     enabled: esAdmin,
   })
 
-  const { data: tiposCuenta = [] } = useQuery({
+  const { data: tiposCuenta = [], isError: errTC, refetch: refTC } = useQuery({
     queryKey: ['tipos-cuenta', 'todos'],
     queryFn: () => api.get('/tipos-cuenta').then((r) => r.data),
     enabled: esAdmin,
@@ -112,7 +113,9 @@ export function CatalogoPage() {
         </div>
       </div>
 
-      {tab === 'prestaciones' && (
+      {tab === 'prestaciones' && (errSrv || errDoc ? (
+        <ErrorState onRetry={() => { refSrv(); refDoc() }} />
+      ) : (
         <div className="space-y-8">
 
       {/* Servicios */}
@@ -206,9 +209,11 @@ export function CatalogoPage() {
         </div>
       </section>
         </div>
-      )}
+      ))}
 
-      {tab === 'finanzas' && esAdmin && (
+      {tab === 'finanzas' && esAdmin && (errTG || errTC ? (
+        <ErrorState onRetry={() => { refTG(); refTC() }} />
+      ) : (
         <div className="space-y-8">
 
       {/* Tipos de gasto (solo ADMIN) */}
@@ -323,7 +328,7 @@ export function CatalogoPage() {
         </section>
       )}
         </div>
-      )}
+      ))}
 
       {servicioModal && (
         <ServicioModal servicio={servicioEdit} onClose={() => setServicioModal(false)} />

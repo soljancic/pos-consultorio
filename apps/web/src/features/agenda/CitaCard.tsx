@@ -3,7 +3,7 @@ import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, Cal
 import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
-import { btnIconUI } from '../../lib/ui'
+import { btnIconUI, cardUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 
 const ESTADOS_CON_ATENCION = [
@@ -55,8 +55,15 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
         setMenuAbierto(false)
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuAbierto(false)
+    }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [menuAbierto])
 
   const puedeReprogramar = ESTADOS_REPROGRAMABLES.includes(cita.estado)
@@ -100,7 +107,15 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   }
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm p-4 flex items-start gap-3">
+    <div className={cn(cardUI, 'relative p-4 flex items-start gap-3')}>
+      {/* Acento de color por estado en el borde izquierdo (pedido del owner): barra
+          de alto completo con esquinas que siguen el radio de la tarjeta, en vez de
+          un border-left plano. El codigo de color refuerza el badge de un vistazo. */}
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl"
+        style={{ backgroundColor: color }}
+      />
       {/* Hora */}
       <div className="text-center min-w-[48px]">
         <div className="text-lg font-bold text-foreground tabular-nums">{formatHora(cita.fechaHora)}</div>

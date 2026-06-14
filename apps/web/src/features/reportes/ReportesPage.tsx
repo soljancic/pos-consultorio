@@ -6,6 +6,8 @@ import * as XLSX from 'xlsx'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { inputUI, cardUI, btnOutlineUI } from '../../lib/ui'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { Skeleton, TableSkeleton } from '../../components/shared/Skeleton'
 
 const LABEL_ESTADO: Record<string, string> = {
   SOLICITADA: 'Solicitada',
@@ -40,7 +42,7 @@ type Reporte = {
 export function ReportesPage() {
   const [mes, setMes] = useState(format(new Date(), 'yyyy-MM'))
 
-  const { data: reporte, isLoading } = useQuery<Reporte>({
+  const { data: reporte, isLoading, isError, refetch } = useQuery<Reporte>({
     queryKey: ['reporte-mensual', mes],
     queryFn: () => api.get('/reportes/mensual', { params: { mes } }).then((r) => r.data),
   })
@@ -109,8 +111,20 @@ export function ReportesPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6 max-w-5xl mx-auto w-full">
-        {isLoading || !reporte ? (
-          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+        {isError ? (
+          <ErrorState description="No se pudo cargar el reporte del mes." onRetry={() => refetch()} />
+        ) : isLoading || !reporte ? (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={cn(cardUI, 'p-4 space-y-2')}>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              ))}
+            </div>
+            <TableSkeleton cols={5} />
+          </>
         ) : (
           <>
             {/* KPIs */}

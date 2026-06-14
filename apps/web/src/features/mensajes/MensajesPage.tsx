@@ -7,6 +7,8 @@ import { formatMoneda, formatHora, buildWhatsAppUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { CardListSkeleton } from '../../components/shared/Skeleton'
 
 type Mensaje = {
   id: number
@@ -38,7 +40,7 @@ export function MensajesPage() {
   const [tab, setTab] = useState<'pendientes' | 'resueltos'>('pendientes')
   const { plantillas, consultorioNombre, linkQRBase } = usePlantillasWhatsApp()
 
-  const { data: mensajes = [], isLoading } = useQuery<Mensaje[]>({
+  const { data: mensajes = [], isLoading, isError, refetch } = useQuery<Mensaje[]>({
     queryKey: ['mensajes', tab],
     queryFn: () =>
       api
@@ -120,7 +122,11 @@ export function MensajesPage() {
           </p>
         )}
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+          <CardListSkeleton count={4} />
+        ) : isError ? (
+          <div className={cardUI}>
+            <ErrorState onRetry={() => refetch()} />
+          </div>
         ) : visibles.length === 0 ? (
           <div className={cardUI}>
             {tab === 'pendientes' ? (

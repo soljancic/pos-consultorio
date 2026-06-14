@@ -8,6 +8,8 @@ import { telefonoIntl } from '../../lib/paises'
 import { inputUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { PacienteModal } from './PacienteModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { TableSkeleton } from '../../components/shared/Skeleton'
 import type { Paciente } from '@pos/types'
 
 export function PacientesPage() {
@@ -22,7 +24,7 @@ export function PacientesPage() {
     ;(window as any).__searchTimer = setTimeout(() => setDebouncedSearch(value), 300)
   }
 
-  const { data: pacientes = [], isLoading } = useQuery<Paciente[]>({
+  const { data: pacientes = [], isLoading, isError, refetch } = useQuery<Paciente[]>({
     queryKey: ['pacientes', debouncedSearch],
     queryFn: () =>
       api.get(`/pacientes${debouncedSearch ? `?search=${debouncedSearch}` : ''}`).then((r) => r.data),
@@ -59,7 +61,9 @@ export function PacientesPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-8">Buscando...</div>
+          <TableSkeleton cols={4} />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : (
           <div className={cn(cardUI, 'overflow-x-auto')}>
             <table className="w-full text-sm">
@@ -75,8 +79,17 @@ export function PacientesPage() {
                 {pacientes.map((p) => (
                   <tr
                     key={p.id}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Ver ficha de ${p.apellido}, ${p.nombre}`}
                     onClick={() => navigate(`/pacientes/${p.id}`)}
-                    className="border-b last:border-0 hover:bg-muted/60 cursor-pointer transition-colors duration-150"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        navigate(`/pacientes/${p.id}`)
+                      }
+                    }}
+                    className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
                       {p.apellido}, {p.nombre}

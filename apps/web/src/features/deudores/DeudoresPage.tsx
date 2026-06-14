@@ -7,6 +7,8 @@ import { usePlantillasWhatsApp, renderDeuda } from '../../lib/whatsapp'
 import { inputUI, cardUI, chipIconUI } from '../../lib/ui'
 import { CobroModal } from '../agenda/CobroModal'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
+import { TableSkeleton } from '../../components/shared/Skeleton'
 import type { Cita } from '@pos/types'
 
 type CobroDeudor = {
@@ -36,7 +38,7 @@ export function DeudoresPage() {
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
   const [expandido, setExpandido] = useState<number | null>(null)
 
-  const { data: deudores = [], isLoading } = useQuery<Deudor[]>({
+  const { data: deudores = [], isLoading, isError, refetch } = useQuery<Deudor[]>({
     queryKey: ['deudores'],
     queryFn: () => api.get('/cobros/deudores').then((r) => r.data),
   })
@@ -81,7 +83,9 @@ export function DeudoresPage() {
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-12">Cargando...</div>
+          <TableSkeleton cols={6} />
+        ) : isError ? (
+          <ErrorState onRetry={() => refetch()} />
         ) : filtrados.length === 0 ? (
           search ? (
             <EmptyState icon={Search} title="No se encontraron deudores" description="Probá con otro nombre o teléfono." />

@@ -22,7 +22,7 @@ export default defineConfig({
         description: 'Gestion de consultorio: agenda, caja, pacientes y reportes.',
         lang: 'es',
         dir: 'ltr',
-        theme_color: '#2563eb',
+        theme_color: '#0891B2',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',

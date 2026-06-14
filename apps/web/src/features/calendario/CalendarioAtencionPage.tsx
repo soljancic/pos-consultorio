@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils'
 import { btnIconUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { EmptyState } from '../../components/shared/EmptyState'
+import { ErrorState } from '../../components/shared/ErrorState'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 import { DisponibilidadModal, LABEL_TIPO, type BloqueEditable } from './DisponibilidadModal'
 
@@ -45,12 +46,12 @@ export function CalendarioAtencionPage() {
   const hasta = format(addDays(inicioSemana, 6), 'yyyy-MM-dd')
   const hoy = new Date()
 
-  const { data: doctores = [] } = useQuery<Doctor[]>({
+  const { data: doctores = [], isError: errDoctores, refetch: refDoctores } = useQuery<Doctor[]>({
     queryKey: ['doctores'],
     queryFn: () => api.get('/doctores').then((r) => r.data),
   })
 
-  const { data: bloques = [] } = useQuery<Bloque[]>({
+  const { data: bloques = [], isError: errBloques, refetch: refBloques } = useQuery<Bloque[]>({
     queryKey: ['disponibilidades', desde, hasta],
     queryFn: () => api.get(`/disponibilidades?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
   })
@@ -102,7 +103,9 @@ export function CalendarioAtencionPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {doctores.length === 0 ? (
+        {errDoctores || errBloques ? (
+          <ErrorState onRetry={() => { refDoctores(); refBloques() }} />
+        ) : doctores.length === 0 ? (
           <EmptyState
             icon={UserRound}
             title="No hay doctores activos"
