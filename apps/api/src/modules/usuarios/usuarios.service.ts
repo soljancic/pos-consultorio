@@ -81,8 +81,9 @@ export class UsuariosService {
   }
 
   async create(consultorioId: number, dto: CreateUsuarioDto) {
+    const email = dto.email.trim().toLowerCase()
     const exists = await this.prisma.usuario.findUnique({
-      where: { email_consultorioId: { email: dto.email, consultorioId } },
+      where: { email_consultorioId: { email, consultorioId } },
     })
     if (exists) throw new ConflictException('Ya existe un usuario con ese email')
     if (dto.doctorId && dto.rol !== Rol.DOCTOR) {
@@ -90,6 +91,7 @@ export class UsuariosService {
     }
 
     const { password, doctorId, ...rest } = dto
+    rest.email = email // email normalizado a minusculas (case-insensitive login)
     // Sin password la cuenta nace inaccesible (hash de bytes aleatorios) y el
     // usuario la habilita con el link del email de invitacion (E2-M10)
     const passwordHash = await argon2.hash(password ?? randomBytes(32).toString('hex'))
@@ -110,7 +112,7 @@ export class UsuariosService {
       })
       const token = await this.auth.crearTokenPassword(usuario.id)
       void this.mail.enviar(
-        dto.email,
+        email,
         `Tu cuenta en ${consultorio?.nombre ?? 'el consultorio'}`,
         this.mail.htmlInvitacion(dto.nombre, consultorio?.nombre ?? 'el consultorio', this.mail.linkEstablecerPassword(token)),
       )
@@ -129,6 +131,7 @@ export class UsuariosService {
     }
 
     const { password, doctorId, ...rest } = dto
+    if (rest.email) rest.email = rest.email.trim().toLowerCase()
     const data: Record<string, unknown> = { ...rest }
     if (password) data.passwordHash = await argon2.hash(password)
 

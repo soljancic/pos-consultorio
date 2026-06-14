@@ -34,7 +34,7 @@ export class AuthService {
         usuarios: {
           create: {
             nombre: dto.adminNombre,
-            email: dto.email,
+            email: dto.email.trim().toLowerCase(),
             passwordHash,
             rol: Rol.ADMIN,
           },
@@ -65,7 +65,8 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const usuario = await this.prisma.usuario.findFirst({
-      where: { email: dto.email, activo: true },
+      // Email case-insensitive: el correo no distingue mayus/minus al loguear
+      where: { email: { equals: dto.email.trim(), mode: 'insensitive' }, activo: true },
       include: { consultorio: { select: { nombre: true } } },
     })
 
@@ -108,14 +109,14 @@ export class AuthService {
       const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId })
       const payload = ticket.getPayload()
       if (!payload?.email) throw new Error('Payload invalido')
-      email = payload.email
+      email = payload.email.toLowerCase()
       nombre = payload.name ?? payload.email
     } catch {
       throw new UnauthorizedException('Token de Google invalido')
     }
 
     const usuario = await this.prisma.usuario.findFirst({
-      where: { email, activo: true },
+      where: { email: { equals: email, mode: 'insensitive' }, activo: true },
       include: { consultorio: { select: { nombre: true } } },
     })
 
@@ -175,7 +176,7 @@ export class AuthService {
   // Respuesta IDENTICA exista o no el email (cero enumeracion de cuentas)
   async solicitarPassword(email: string) {
     const usuario = await this.prisma.usuario.findFirst({
-      where: { email, activo: true },
+      where: { email: { equals: email.trim(), mode: 'insensitive' }, activo: true },
       include: { consultorio: { select: { nombre: true } } },
     })
     if (!usuario) return { ok: true }
