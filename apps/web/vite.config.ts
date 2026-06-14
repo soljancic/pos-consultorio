@@ -7,21 +7,28 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // El SW se registra solo (inyectado en index.html) y se auto-actualiza en
-      // cada deploy nuevo, asi el usuario no queda con una version vieja cacheada.
+      // autoUpdate: ante un deploy nuevo el SW se actualiza y la app se recarga
+      // sola (no queda pegada a archivos viejos cacheados). En main.tsx forzamos
+      // un chequeo de updates cada 60s (API nativa) para que una pestaña abierta
+      // mucho rato tambien tome los cambios.
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      manifestFilename: 'manifest.json',
       includeAssets: ['brand/favicon.ico', 'brand/apple-touch-icon.png'],
       manifest: {
+        id: '/',
         name: 'ConsulTech',
         short_name: 'ConsulTech',
         description: 'Gestion de consultorio: agenda, caja, pacientes y reportes.',
         lang: 'es',
+        dir: 'ltr',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
+        orientation: 'portrait-primary',
         start_url: '/',
         scope: '/',
+        categories: ['medical', 'productivity', 'business'],
         icons: [
           { src: '/brand/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/brand/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -29,10 +36,42 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Solo precachea el app-shell (js/css/html). La API esta en otro origen,
-        // asi que el SW nunca cachea respuestas de la API; offline cae a index.html.
+        // App-shell precacheado (js/css/html). Offline, cualquier navegacion cae
+        // a index.html (la SPA arranca desde cache).
         globPatterns: ['**/*.{js,css,html}'],
         navigateFallback: '/index.html',
+        // Listeners de push para el futuro (showNotification / notificationclick)
+        importScripts: ['/sw-push.js'],
+        // Limpia caches viejos de versiones anteriores del SW
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            // API (otro origen): NetworkFirst en GET. Online siempre trae fresco
+            // (timeout 5s); offline sirve la ultima respuesta cacheada → la
+            // agenda/caja se pueden consultar sin red. POST/PUT NO se cachean.
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' && /\/api\/v1\//.test(url.href),
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'consultech-api',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // Imagenes (QR/fotos en Cloudinary, capturas de ayuda): se sirven de
+            // cache y se revalidan en segundo plano.
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'consultech-img',
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
       devOptions: { enabled: false },
     }),
