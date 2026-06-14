@@ -55,7 +55,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
                       key={cita.id}
                       onClick={() => onCitaClick(cita)}
                       className="w-full rounded px-1.5 py-1 text-left text-xs overflow-hidden hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
-                      style={{ backgroundColor: color + '26', borderLeft: `3px solid ${color}` }}
+                      style={{ backgroundColor: color + '26', border: `1px solid ${color}66` }}
                       title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.apellido}, ${cita.paciente?.nombre}`}
                     >
                       <span className="font-semibold tabular-nums text-foreground">

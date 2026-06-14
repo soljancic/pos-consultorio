@@ -33,7 +33,7 @@ export function LoginPage() {
       setUser(data.user)
       navigate('/agenda')
     } catch {
-      setError('Email o contrasena incorrectos')
+      setError('Email o contraseña incorrectos')
     } finally {
       setLoading(false)
     }
@@ -52,14 +52,14 @@ export function LoginPage() {
       setUser(data.user)
       navigate('/agenda')
     } catch {
-      setError('No se pudo iniciar sesion con Google. Verificar que tu cuenta este registrada.')
+      setError('No se pudo iniciar sesión con Google. Verificá que tu cuenta esté registrada.')
     } finally {
       setLoading(false)
     }
   }
 
   function handleGoogleError() {
-    setError('No se pudo iniciar sesion con Google')
+    setError('No se pudo iniciar sesión con Google')
   }
 
   return (
@@ -184,9 +184,9 @@ export function LoginPage() {
             </form>
           </div>
 
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-s text-muted-foreground">
+          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             by
-            <img src="/brand/toptech.png" alt="Toptech" className="h-14 w-auto" />
+            <img src="/brand/toptech.png" alt="Toptech" className="h-5 w-auto" />
           </p>
         </div>
       </div>

@@ -113,7 +113,7 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
                         top: offsetTop(inicio),
                         height: alto,
                         backgroundColor: color + '26',
-                        borderLeft: `3px solid ${color}`,
+                        border: `1px solid ${color}66`,
                       }}
                       title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.apellido}, ${cita.paciente?.nombre} (${cita.servicio?.nombre})`}
                     >

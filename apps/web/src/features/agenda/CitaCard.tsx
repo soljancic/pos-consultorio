@@ -100,10 +100,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   }
 
   return (
-    <div
-      className="bg-card rounded-xl border shadow-sm p-4 flex items-start gap-3"
-      style={{ borderLeftWidth: 4, borderLeftColor: color }}
-    >
+    <div className="bg-card rounded-xl border shadow-sm p-4 flex items-start gap-3">
       {/* Hora */}
       <div className="text-center min-w-[48px]">
         <div className="text-lg font-bold text-foreground tabular-nums">{formatHora(cita.fechaHora)}</div>
