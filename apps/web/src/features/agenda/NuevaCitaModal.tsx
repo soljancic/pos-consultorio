@@ -121,6 +121,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre ?? ''
     const msg = `Hola ${pacienteSeleccionado.nombre}! Reservá tu cita de ${servicio}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${link}`
     window.open(buildWhatsAppUrl(pacienteSeleccionado.telefono, msg, pacienteSeleccionado.pais), '_blank')
+    onClose()
   }
 
   function handleSubmit(e: React.FormEvent) {
