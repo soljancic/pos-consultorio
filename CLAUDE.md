@@ -17,7 +17,9 @@
 - **NUNCA correr `railway up` / redeploy ni tocar config de Railway por iniciativa
   propia.** Hay desarrollo y cambios continuos; el deploy se ejecuta SOLO cuando el
   owner lo pide explicitamente. Tras un cambio: implementar, verificar (tsc),
-  commitear si corresponde, y AVISAR que queda listo para deploy — sin deployar.
+  commitear si corresponde, y AVISAR que queda listo para deploy.
+- **NO deployar y TAMPOCO preguntar si hay que deployar.** El owner decide e inicia
+  el deploy por su cuenta; no ofrecer ni preguntar "lo deployo?". Solo avisar "listo".
 
 ---
 
