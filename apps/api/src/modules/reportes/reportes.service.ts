@@ -8,6 +8,39 @@ import { PrismaService } from '../../prisma/prisma.service'
 export class ReportesService {
   constructor(private prisma: PrismaService) {}
 
+  // Rango por dia calendario LOCAL (igual que caja/agenda y mensual()):
+  // [desde 00:00, hasta+1dia 00:00)
+  private rango(desde: string, hasta: string) {
+    const ini = new Date(`${desde}T00:00:00`)
+    const fin = new Date(`${hasta}T00:00:00`)
+    fin.setDate(fin.getDate() + 1)
+    return { ini, fin }
+  }
+
+  // DOCTOR ve solo lo suyo: devuelve el doctorId forzado (o undefined para ADMIN).
+  // Si el usuario DOCTOR no tiene Doctor vinculado, fuerza -1 (resultado vacio).
+  private async doctorIdForzado(
+    consultorioId: number,
+    rol: string,
+    usuarioId: number,
+    doctorIdFiltro?: number,
+  ): Promise<number | undefined> {
+    if (rol !== 'DOCTOR') return doctorIdFiltro
+    const propio = await this.prisma.doctor.findFirst({
+      where: { consultorioId, usuarioId },
+      select: { id: true },
+    })
+    return propio?.id ?? -1
+  }
+
+  // export='1' devuelve todas las filas (para Excel); si no, pagina.
+  private paginar<T>(rows: T[], f: { page?: number; pageSize?: number; export?: string }) {
+    if (f.export === '1') return { slice: rows, total: rows.length }
+    const page = f.page ?? 1, pageSize = f.pageSize ?? 25
+    const start = (page - 1) * pageSize
+    return { slice: rows.slice(start, start + pageSize), total: rows.length }
+  }
+
   async mensual(consultorioId: number, mes?: string) {
     const hoy = new Date()
     const mesNorm = mes ?? `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
