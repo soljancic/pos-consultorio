@@ -43,8 +43,10 @@ test.beforeAll(async ({ request }) => {
     await request.put(`${API}/citas/${citaCobrada.id}/estado`, { headers: h, data: { estado } })
   }
   const cobro = await (await request.get(`${API}/cobros/cita/${citaCobrada.id}`, { headers: h })).json()
+  const tcs = (await (await request.get(`${API}/tipos-cuenta`, { headers: h })).json()) as Array<{ id: number; esEfectivo: boolean }>
+  const tcEfectivo = tcs.find((t) => t.esEfectivo)!.id
   await request.post(`${API}/cobros/${cobro.id}/pagos`, {
-    headers: h, data: { monto: 1000, formaPago: 'EFECTIVO' },
+    headers: h, data: { monto: 1000, tipoCuentaId: tcEfectivo },
   })
   void cita
 })

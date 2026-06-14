@@ -29,7 +29,7 @@ $tgServicios = ($tiposGasto | Where-Object { $_.nombre -eq 'Servicios' }).id
 $tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
 $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
 $tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
-$tcOtro = ($tiposCuenta | Where-Object { $_.nombre -eq 'Otro' }).id
+$tcOtro = ($tiposCuenta | Where-Object { $_.nombre -eq 'Vales' }).id
 
 # Ingreso de 2000 en efectivo (cita atendida + pago)
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 2000 } | ConvertTo-Json)
@@ -41,7 +41,7 @@ foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
   Invoke-RestMethod -Uri "$base/citas/$($cita.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $e } | ConvertTo-Json) | Out-Null
 }
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 # 1) Crear gasto en efectivo + uno bancario; lista y resumen
 $g1 = Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgInsumos; monto = 500; descripcion = "guantes"; tipoCuentaId = $tcEfectivo; personal = "farmacia" } | ConvertTo-Json)

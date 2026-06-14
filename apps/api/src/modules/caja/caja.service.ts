@@ -77,7 +77,8 @@ export class CajaService {
     // este abierto, quien no es ADMIN no ve los agregados de efectivo (con
     // ellos se deduce el esperado y el conteo deja de ser ciego). Los pagos
     // individuales siguen visibles: son la operacion del dia.
-    if (caja && !caja.cerrada && rol !== 'ADMIN') {
+    const ocultarEfectivo = !!caja && !caja.cerrada && rol !== 'ADMIN'
+    if (ocultarEfectivo) {
       caja = { ...caja, montoInicial: null, totalEfectivo: null, totalGeneral: null }
     }
 
@@ -87,6 +88,7 @@ export class CajaService {
         createdAt: { gte: inicioLocal, lt: finLocal },
       },
       include: {
+        tipoCuenta: { select: { id: true, nombre: true, esEfectivo: true } },
         cobro: {
           include: {
             cita: {
@@ -101,6 +103,20 @@ export class CajaService {
       },
       orderBy: { createdAt: 'asc' },
     })
+
+    // Desglose por forma de pago (cuenta): reemplaza las columnas fijas. Neto
+    // de reversas (pagos negativos). El efectivo se enmascara igual que el total.
+    const porCuenta = new Map<number, { id: number; nombre: string; esEfectivo: boolean; total: number }>()
+    for (const p of pagos) {
+      const tc = p.tipoCuenta
+      const acc = porCuenta.get(tc.id) ?? { id: tc.id, nombre: tc.nombre, esEfectivo: tc.esEfectivo, total: 0 }
+      acc.total += Number(p.monto)
+      porCuenta.set(tc.id, acc)
+    }
+    const desglosePagos = Array.from(porCuenta.values()).map((c) => ({
+      ...c,
+      total: ocultarEfectivo && c.esEfectivo ? null : c.total,
+    }))
 
     // MVP: "Total del dia. Total por forma de pago. Nuevas deudas. Pagos de deuda"
     // Pago cuya cita es de un dia local anterior a hoy = cobro de deuda vieja
@@ -127,7 +143,7 @@ export class CajaService {
     // el resto (banco/otro) se informa pero no toca el efectivo fisico
     const { egresosEfectivo, egresosTotales } = await this.egresosDelDia(consultorioId)
 
-    return { caja, pagos, pagosDeudaAnterior, nuevasDeudas, egresosEfectivo, egresosTotales }
+    return { caja, pagos, desglosePagos, pagosDeudaAnterior, nuevasDeudas, egresosEfectivo, egresosTotales }
   }
 
   private async egresosDelDia(consultorioId: number) {
@@ -252,8 +268,8 @@ export class CajaService {
   private async enviarResumenCierre(
     consultorioId: number,
     caja: {
-      montoInicial: Decimal; totalEfectivo: Decimal; totalTarjeta: Decimal
-      totalQr: Decimal; totalVales: Decimal; abiertaAt: Date | null; usuarioAperturaId: number
+      montoInicial: Decimal; totalEfectivo: Decimal
+      abiertaAt: Date | null; usuarioAperturaId: number
     },
     esperado: Decimal,
     declarado: Decimal,
@@ -268,15 +284,23 @@ export class CajaService {
     if (!consultorio?.emailCierreCaja) return
 
     const { inicioLocal, finLocal } = diaCajaLocal()
-    const [abrioUser, cerroUser, cantidadCobros] = await Promise.all([
+    const [abrioUser, cerroUser, pagosTurno] = await Promise.all([
       this.prisma.usuario.findUnique({ where: { id: caja.usuarioAperturaId }, select: { nombre: true } }),
       this.prisma.usuario.findUnique({ where: { id: usuarioCierreId }, select: { nombre: true } }),
-      this.prisma.pago.count({
+      this.prisma.pago.findMany({
         where: { cobro: { consultorioId }, createdAt: { gte: inicioLocal, lt: finLocal } },
+        select: { monto: true, tipoCuenta: { select: { nombre: true } } },
       }),
     ])
 
     const monto = (v: Decimal | number) => Number(v).toFixed(2)
+    // Ingresos por forma de pago (cuenta), neto de reversas
+    const porCuenta = new Map<string, number>()
+    for (const p of pagosTurno) {
+      porCuenta.set(p.tipoCuenta.nombre, (porCuenta.get(p.tipoCuenta.nombre) ?? 0) + Number(p.monto))
+    }
+    const cuentas = Array.from(porCuenta.entries()).map(([nombre, total]) => ({ nombre, total: total.toFixed(2) }))
+    const cantidadCobros = pagosTurno.length
     const hora = (d: Date) => d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })
     const fechaTurno = inicioLocal.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -289,10 +313,7 @@ export class CajaService {
       horaCierre: hora(new Date()),
       moneda: consultorio.moneda,
       montoInicial: monto(caja.montoInicial),
-      efectivo: monto(caja.totalEfectivo),
-      tarjeta: monto(caja.totalTarjeta),
-      qr: monto(caja.totalQr),
-      vales: monto(caja.totalVales),
+      cuentas,
       gastos: monto(egresosEfectivo),
       esperado: monto(esperado),
       contado: monto(declarado),

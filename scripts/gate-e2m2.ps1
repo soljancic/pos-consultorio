@@ -19,6 +19,7 @@ function Nuevo-Tenant($sufijo) {
   Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "E2M2 $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
   $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
   $h = @{ Authorization = "Bearer $($login.accessToken)" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
   $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 2000 } | ConvertTo-Json)
   $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. A" } | ConvertTo-Json)
@@ -29,7 +30,7 @@ Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType 
     Invoke-RestMethod -Uri "$base/citas/$($cita.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $e } | ConvertTo-Json) | Out-Null
   }
   $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
-  Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+  Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
   return $h
 }
 

@@ -116,15 +116,16 @@ export function CajaPage() {
             </p>
           )}
           {/* Totales */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-            {[
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {([
               { label: 'Caja inicial', value: caja?.montoInicial },
-              { label: 'Efectivo', value: caja?.totalEfectivo },
-              { label: 'QR / Transferencia', value: caja?.totalQr },
-              { label: 'Tarjeta', value: caja?.totalTarjeta },
-              { label: 'Vales', value: caja?.totalVales },
+              // Desglose dinamico por forma de pago (cuenta); el efectivo viene
+              // null cuando el arqueo ciego lo oculta
+              ...((data?.desglosePagos ?? []) as Array<{ nombre: string; total: number | null }>).map(
+                (c) => ({ label: c.nombre, value: c.total, highlight: false }),
+              ),
               { label: 'TOTAL', value: caja?.totalGeneral, highlight: true },
-            ].map((item) => {
+            ] as Array<{ label: string; value: number | null; highlight?: boolean }>).map((item) => {
               // Arqueo ciego estricto: el backend manda null en los montos de
               // efectivo para quien no es ADMIN mientras el turno este abierto
               const oculto = caja && item.value === null
@@ -210,7 +211,7 @@ export function CajaPage() {
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.servicio.nombre}</td>
                       <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.doctor.nombre}</td>
-                      <td className="px-4 py-2 text-muted-foreground">{p.formaPago}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{p.tipoCuenta?.nombre}</td>
                       <td className={cn('px-4 py-2 text-right font-medium tabular-nums', esReversa ? 'text-destructive' : 'text-accent', p.anuladoAt && 'line-through opacity-60')}>
                         {formatMoneda(Number(p.monto))}
                       </td>
@@ -222,7 +223,7 @@ export function CajaPage() {
                                 setPagoAnular({
                                   id: p.id,
                                   monto: Number(p.monto),
-                                  formaPago: p.formaPago,
+                                  cuenta: p.tipoCuenta?.nombre ?? '',
                                   descripcion: `${p.cobro.cita.paciente.apellido}, ${p.cobro.cita.paciente.nombre} - ${p.cobro.cita.servicio.nombre}`,
                                 })
                               }
@@ -268,9 +269,6 @@ export function CajaPage() {
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Efectivo</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">QR</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Vales</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Tarjeta</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Diferencia</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
@@ -284,9 +282,6 @@ export function CajaPage() {
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                     <td className="px-4 py-3 font-medium tabular-nums">{formatDia(c.fecha)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalEfectivo))}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalQr))}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalVales))}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatMoneda(Number(c.totalTarjeta))}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{formatMoneda(Number(c.totalGeneral))}</td>
                     <td className={cn('px-4 py-3 text-right tabular-nums font-medium', tieneDiferencia ? 'text-destructive' : 'text-muted-foreground')} title={c.notasRevision ?? undefined}>
                       {c.diferencia != null ? formatMoneda(Number(c.diferencia)) : '-'}
@@ -322,12 +317,12 @@ export function CajaPage() {
                   )
                 })}
                 {historial.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-2"><EmptyState icon={Wallet} title="Sin cajas en el período" description="Los cierres de caja del rango van a aparecer acá." className="py-8" /></td></tr>
+                  <tr><td colSpan={5} className="px-4 py-2"><EmptyState icon={Wallet} title="Sin cajas en el período" description="Los cierres de caja del rango van a aparecer acá." className="py-8" /></td></tr>
                 )}
               </tbody>
               <tfoot className="bg-muted/50 border-t">
                 <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm text-muted-foreground">Total del periodo</td>
+                  <td colSpan={2} className="px-4 py-3 text-sm text-muted-foreground">Total del periodo</td>
                   <td className="px-4 py-3 text-right font-bold tabular-nums">
                     {formatMoneda(historial.reduce((acc, c) => acc + Number(c.totalGeneral), 0))}
                   </td>

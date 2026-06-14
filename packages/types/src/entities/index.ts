@@ -1,4 +1,4 @@
-﻿import { EstadoCita, EstadoCobro, FormaPago, OrigenCita, Rol } from '../enums'
+﻿import { EstadoCita, EstadoCobro, OrigenCita, Rol } from '../enums'
 
 export interface Consultorio {
   id: number
@@ -106,7 +106,9 @@ export interface Cobro {
 export interface Pago {
   id: number
   cobroId: number
-  formaPago: FormaPago
+  tipoCuentaId: number
+  // relacion poblada al incluirla (nombre de la cuenta / forma de pago)
+  tipoCuenta?: { id: number; nombre: string; esEfectivo: boolean }
   monto: number
   referencia?: string
   createdById: number
@@ -118,9 +120,6 @@ export interface CajaDiaria {
   consultorioId: number
   fecha: Date
   totalEfectivo: number
-  totalQr: number
-  totalVales: number
-  totalTarjeta: number
   totalGeneral: number
   cerrada: boolean
   cierreAt?: Date

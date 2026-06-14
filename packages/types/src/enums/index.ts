@@ -35,15 +35,6 @@ export enum EstadoCobro {
   ANULADO = 'ANULADO',
 }
 
-// QR cubre tambien transferencias (mismo canal en la practica); VALES para
-// ordenes de empresas/obras sociales
-export enum FormaPago {
-  EFECTIVO = 'EFECTIVO',
-  QR = 'QR',
-  TARJETA = 'TARJETA',
-  VALES = 'VALES',
-}
-
 // Calendario de Atencion (E2.5a): tipo de bloque del horario del doctor.
 // Solo DISPONIBLE acepta citas; el resto son bloqueos.
 export enum TipoDisponibilidad {

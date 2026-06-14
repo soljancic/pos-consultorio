@@ -7,6 +7,7 @@ $email = "ae$ts@test.com"
 Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "AE $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 100 } | ConvertTo-Json) | Out-Null
 
 # Cobro en efectivo para que haya monto que ocultar
@@ -19,7 +20,7 @@ foreach ($estado in @("CONFIRMADA", "LLEGO", "EN_ATENCION", "ATENDIDA")) {
   Invoke-RestMethod -Uri "$base/citas/$($cita.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $estado } | ConvertTo-Json) | Out-Null
 }
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 500; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 500; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 $secEmail = "sec$ts@test.com"
 Invoke-RestMethod -Uri "$base/usuarios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Sec"; email = $secEmail; password = "Password123!"; rol = "SECRETARIA" } | ConvertTo-Json) | Out-Null

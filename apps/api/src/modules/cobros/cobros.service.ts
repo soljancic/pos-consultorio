@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common'
-import { IsNumber, Min, IsEnum, IsString, IsOptional } from 'class-validator'
+import { IsNumber, Min, IsInt, IsString, IsOptional } from 'class-validator'
 import { PrismaService } from '../../prisma/prisma.service'
-import { EstadoCobro, EstadoCita, FormaPago } from '@pos/types'
+import { EstadoCobro, EstadoCita } from '@pos/types'
 import { Decimal } from '@prisma/client/runtime/library'
 import { diaCajaLocal } from '../caja/caja.service'
 
@@ -9,8 +9,9 @@ export class RegistrarPagoDto {
   @IsNumber() @Min(0.01)
   monto: number
 
-  @IsEnum(FormaPago)
-  formaPago: FormaPago
+  // Forma de pago = cuenta del catalogo (tipos de cuenta)
+  @IsInt()
+  tipoCuentaId: number
 
   @IsString() @IsOptional()
   referencia?: string
@@ -27,14 +28,6 @@ export class AjustarTotalDto {
 export class AnularPagoDto {
   @IsString() @IsOptional()
   motivo?: string
-}
-
-// Campo de CajaDiaria que acumula cada forma de pago
-const CAMPO_CAJA: Record<FormaPago, string> = {
-  [FormaPago.EFECTIVO]: 'totalEfectivo',
-  [FormaPago.QR]: 'totalQr',
-  [FormaPago.TARJETA]: 'totalTarjeta',
-  [FormaPago.VALES]: 'totalVales',
 }
 
 @Injectable()
@@ -59,7 +52,12 @@ export class CobrosService {
   async findByCita(consultorioId: number, citaId: number) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { citaId, consultorioId },
-      include: { pagos: { orderBy: { createdAt: 'asc' } } },
+      include: {
+        pagos: {
+          orderBy: { createdAt: 'asc' },
+          include: { tipoCuenta: { select: { nombre: true } } },
+        },
+      },
     })
     if (!cobro) throw new NotFoundException('Cobro no encontrado')
     return cobro
@@ -92,6 +90,13 @@ export class CobrosService {
       )
     }
 
+    // Forma de pago = cuenta del catalogo; esEfectivo define si va al arqueo
+    const tipoCuenta = await this.prisma.tipoCuenta.findFirst({
+      where: { id: dto.tipoCuentaId, consultorioId, activo: true },
+      select: { id: true, esEfectivo: true },
+    })
+    if (!tipoCuenta) throw new BadRequestException('Forma de pago no valida')
+
     const nuevoSaldo = cobro.saldoPendiente.minus(monto)
     const cobrado = nuevoSaldo.lte(0)
     const nuevoEstadoCobro = cobrado ? EstadoCobro.COMPLETO : EstadoCobro.PARCIAL
@@ -102,7 +107,7 @@ export class CobrosService {
       await tx.pago.create({
         data: {
           cobroId,
-          formaPago: dto.formaPago,
+          tipoCuentaId: tipoCuenta.id,
           monto,
           referencia: dto.referencia,
           createdById: usuarioId,
@@ -127,21 +132,20 @@ export class CobrosService {
         data: { deudaTotal: { decrement: monto } },
       })
 
-      // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC)
+      // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC). Solo el
+      // efectivo participa del arqueo; totalGeneral suma todo.
       const { clave: hoy } = diaCajaLocal()
-      const campoMonto = CAMPO_CAJA[dto.formaPago]
-
       await tx.cajaDiaria.upsert({
         where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
         create: {
           consultorioId,
           fecha: hoy,
           usuarioAperturaId: usuarioId,
-          [campoMonto]: monto,
+          ...(tipoCuenta.esEfectivo && { totalEfectivo: monto }),
           totalGeneral: monto,
         },
         update: {
-          [campoMonto]: { increment: monto },
+          ...(tipoCuenta.esEfectivo && { totalEfectivo: { increment: monto } }),
           totalGeneral: { increment: monto },
         },
       })
@@ -155,7 +159,7 @@ export class CobrosService {
           entidadId: cobroId,
           accion: 'PAYMENT',
           payloadAntes: { saldoPendiente: cobro.saldoPendiente.toString() },
-          payloadDespues: { saldoPendiente: nuevoSaldo.toString(), monto: monto.toString(), formaPago: dto.formaPago },
+          payloadDespues: { saldoPendiente: nuevoSaldo.toString(), monto: monto.toString(), tipoCuentaId: tipoCuenta.id },
         },
       })
     })
@@ -174,6 +178,7 @@ export class CobrosService {
     const pago = await this.prisma.pago.findFirst({
       where: { id: pagoId, cobro: { consultorioId } },
       include: {
+        tipoCuenta: { select: { esEfectivo: true } },
         cobro: {
           include: { cita: { select: { id: true, pacienteId: true, estado: true } } },
         },
@@ -197,13 +202,12 @@ export class CobrosService {
     const revierteCita = cobro.cita.estado === EstadoCita.COBRADO
 
     const { clave: hoy } = diaCajaLocal()
-    const campoMonto = CAMPO_CAJA[pago.formaPago]
 
     await this.prisma.$transaction(async (tx) => {
       const reversa = await tx.pago.create({
         data: {
           cobroId: cobro.id,
-          formaPago: pago.formaPago,
+          tipoCuentaId: pago.tipoCuentaId,
           monto: pago.monto.negated(),
           referencia: pago.referencia,
           createdById: usuarioId,
@@ -238,18 +242,19 @@ export class CobrosService {
         data: { deudaTotal: { increment: pago.monto } },
       })
 
-      // La reversa descuenta de la caja de HOY (la historica no se reescribe)
+      // La reversa descuenta de la caja de HOY (la historica no se reescribe).
+      // Solo el efectivo afecta el arqueo.
       await tx.cajaDiaria.upsert({
         where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
         create: {
           consultorioId,
           fecha: hoy,
           usuarioAperturaId: usuarioId,
-          [campoMonto]: pago.monto.negated(),
+          ...(pago.tipoCuenta.esEfectivo && { totalEfectivo: pago.monto.negated() }),
           totalGeneral: pago.monto.negated(),
         },
         update: {
-          [campoMonto]: { decrement: pago.monto },
+          ...(pago.tipoCuenta.esEfectivo && { totalEfectivo: { decrement: pago.monto } }),
           totalGeneral: { decrement: pago.monto },
         },
       })
@@ -263,7 +268,7 @@ export class CobrosService {
           accion: 'PAYMENT',
           payloadAntes: {
             monto: pago.monto.toString(),
-            formaPago: pago.formaPago,
+            tipoCuentaId: pago.tipoCuentaId,
             saldoPendiente: cobro.saldoPendiente.toString(),
           },
           payloadDespues: {

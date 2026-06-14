@@ -73,6 +73,6 @@ export interface CambiarEstadoCitaRequest {
 // Cobros
 export interface RegistrarPagoRequest {
   monto: number
-  formaPago: string
+  tipoCuentaId: number
   referencia?: string
 }

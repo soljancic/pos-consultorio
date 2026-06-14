@@ -21,6 +21,13 @@ $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "ap
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null
 
+# Catalogos default sembrados al registrar; mapear nombre -> id
+$tiposGasto = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h
+$tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
+$tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
+$tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
+
 # Generar actividad: cita con estados + pago + gasto
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 1000 } | ConvertTo-Json)
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. L" } | ConvertTo-Json)
@@ -31,13 +38,7 @@ foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
   Invoke-RestMethod -Uri "$base/citas/$($cita.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $e } | ConvertTo-Json) | Out-Null
 }
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 1000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
-$tiposGasto = Invoke-RestMethod -Uri "$base/tipos-gasto" -Headers $h
-$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h
-$tgInsumos = ($tiposGasto | Where-Object { $_.nombre -eq 'Insumos' }).id
-$tgOtros = ($tiposGasto | Where-Object { $_.nombre -eq 'Otros' }).id
-$tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id
-$tcBanco = ($tiposCuenta | Where-Object { $_.nombre -eq 'Banco' }).id
+Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 1000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 50; descripcion = "varios"; tipoCuentaId = $tcBanco } | ConvertTo-Json) | Out-Null
 
 # 1) Feed completo del dia: deben existir STATE_CHANGE, PAYMENT y CREATE de Gasto

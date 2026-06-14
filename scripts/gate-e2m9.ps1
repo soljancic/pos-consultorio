@@ -40,7 +40,7 @@ foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
 
 # 1) Sin caja abierta: cobrar -> 409; gastar -> 409
-Esperar-Error { Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 500; formaPago = "EFECTIVO" } | ConvertTo-Json) } 409 "1 COBRAR SIN CAJA"
+Esperar-Error { Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 500; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) } 409 "1 COBRAR SIN CAJA"
 Esperar-Error { Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgOtros; monto = 100; descripcion = "x"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) } 409 "2 GASTAR SIN CAJA"
 
 # 3) Abrir con caja chica 100; re-abrir -> 400
@@ -49,7 +49,7 @@ Write-Output "3 ABRIR: inicial=$($ap.montoInicial) (esp 100) abierta=$($null -ne
 Esperar-Error { Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) } 400 "4 RE-ABRIR"
 
 # 5) Con caja abierta: cobrar 2000 efectivo + gasto 500 efectivo
-Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 Invoke-RestMethod -Uri "$base/gastos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fecha = $hoy; tipoGastoId = $tgInsumos; monto = 500; descripcion = "gasas"; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 # 5b) Email de cierre configurado: el cierre debe responder OK igual (el envio

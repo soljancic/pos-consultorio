@@ -19,6 +19,7 @@ Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "applicat
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $token = $login.accessToken; if (-not $token) { $token = $login.access_token }
 $h = @{ Authorization = "Bearer $token" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
 
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 1000 } | ConvertTo-Json)
@@ -47,7 +48,7 @@ $cobro2 = Invoke-RestMethod -Uri "$base/cobros/cita/$($c2.id)" -Headers $h
 Write-Output "3 CANCELAR: cobro=$($cobro2.estado) (esperado ANULADO)"
 
 # 4) Pagar un cobro anulado -> 400
-Esperar-Error { Invoke-RestMethod -Uri "$base/cobros/$($cobro2.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 100; formaPago = "EFECTIVO" } | ConvertTo-Json) } 400 "4 PAGO SOBRE ANULADO"
+Esperar-Error { Invoke-RestMethod -Uri "$base/cobros/$($cobro2.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 100; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) } 400 "4 PAGO SOBRE ANULADO"
 
 # 5) Reabrir CANCELADA -> PENDIENTE revive el cobro
 Invoke-RestMethod -Uri "$base/citas/$($c2.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = "PENDIENTE" } | ConvertTo-Json) | Out-Null
@@ -56,7 +57,7 @@ Write-Output "5 REABRIR: cobro=$($cobro2b.estado) (esperado PENDIENTE)"
 
 # 6) Una cita con pagos no se puede cancelar (el pago la mueve a CON_DEUDA y
 #    la maquina bloquea la transicion; el guard de pagos es defensa extra)
-Invoke-RestMethod -Uri "$base/cobros/$($cobro2b.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 100; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro2b.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 100; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 Esperar-Error { Invoke-RestMethod -Uri "$base/citas/$($c2.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = "CANCELADA" } | ConvertTo-Json) } 400 "6 CANCELAR CON PAGOS"
 
 # 7) PENDIENTE -> NO_ASISTIO directo (transicion nueva) y cobro ANULADO

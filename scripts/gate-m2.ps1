@@ -6,6 +6,7 @@ Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "applicat
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $token = $login.accessToken; if (-not $token) { $token = $login.access_token }
 $h = @{ Authorization = "Bearer $token" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 5000 } | ConvertTo-Json)
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. G" } | ConvertTo-Json)
@@ -18,7 +19,7 @@ foreach ($e in @('CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA')) {
   Invoke-RestMethod -Uri "$base/citas/$($citaA.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $e } | ConvertTo-Json) | Out-Null
 }
 $cobroA = Invoke-RestMethod -Uri "$base/cobros/cita/$($citaA.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 
 # Paciente B: cita FUTURA (manana) -> NO debe ser deudor
 $pacB = Invoke-RestMethod -Uri "$base/pacientes" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Beto"; apellido = "Futuro" } | ConvertTo-Json)
@@ -36,7 +37,7 @@ Write-Output "RESUMEN: total=$($resumen.totalDeuda) (esperado 3000) pacientes=$(
 
 # Pagar saldo desde el cobro del deudor -> desaparece
 $cobroId = $deudores[0].cobros[0].id
-Invoke-RestMethod -Uri "$base/cobros/$cobroId/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 3000; formaPago = "QR" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$cobroId/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 3000; tipoCuentaId = $tcQr } | ConvertTo-Json) | Out-Null
 # Gotcha PS 5.1: envolver el cmdlet directo en @() cuenta 1 con '[]' (el array
 # vacio entra al pipeline como UN objeto). Asignar primero y recien envolver.
 $deudores2Raw = ConvertFrom-Json -InputObject (Invoke-WebRequest -Uri "$base/cobros/deudores" -Headers $h -UseBasicParsing).Content

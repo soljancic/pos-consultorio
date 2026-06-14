@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Pencil, Check, Undo2, Wallet } from 'lucide-react'
-import { FormaPago, type Cita } from '@pos/types'
+import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
@@ -14,12 +14,7 @@ interface CobroModalProps {
   onClose: () => void
 }
 
-const FORMAS_PAGO = [
-  { value: FormaPago.EFECTIVO, label: 'Efectivo' },
-  { value: FormaPago.QR, label: 'QR / Transferencia' },
-  { value: FormaPago.TARJETA, label: 'Tarjeta' },
-  { value: FormaPago.VALES, label: 'Vales' },
-]
+interface TipoCuenta { id: number; nombre: string; esEfectivo: boolean }
 
 export function CobroModal({ cita, onClose }: CobroModalProps) {
   const qc = useQueryClient()
@@ -27,7 +22,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const esAdmin = user?.rol === 'ADMIN'
   const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
   const [monto, setMonto] = useState('')
-  const [formaPago, setFormaPago] = useState<FormaPago>(FormaPago.EFECTIVO)
+  const [tipoCuentaId, setTipoCuentaId] = useState(0)
   const [referencia, setReferencia] = useState('')
   const [editandoPrecio, setEditandoPrecio] = useState(false)
   const [nuevoPrecio, setNuevoPrecio] = useState('')
@@ -38,6 +33,19 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     queryKey: ['cobro-cita', cita.id],
     queryFn: () => api.get(`/cobros/cita/${cita.id}`).then((r) => r.data),
   })
+
+  // Formas de pago = cuentas del catalogo (tipos de cuenta activos)
+  const { data: tiposCuenta = [] } = useQuery<TipoCuenta[]>({
+    queryKey: ['tipos-cuenta', 'activos'],
+    queryFn: () => api.get('/tipos-cuenta').then((r) => r.data),
+  })
+  // Default: la cuenta de efectivo, si no la primera
+  useEffect(() => {
+    if (tipoCuentaId === 0 && tiposCuenta.length > 0) {
+      setTipoCuentaId((tiposCuenta.find((c) => c.esEfectivo) ?? tiposCuenta[0]).id)
+    }
+  }, [tiposCuenta, tipoCuentaId])
+  const cuentaSel = tiposCuenta.find((c) => c.id === tipoCuentaId)
 
   // Un pago toca citas, deudores, caja, dashboard y la ficha del paciente:
   // se invalida todo aca para que cualquier pantalla quede fresca.
@@ -57,7 +65,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   }
 
   const registrarPago = useMutation({
-    mutationFn: (data: { monto: number; formaPago: FormaPago; referencia?: string }) =>
+    mutationFn: (data: { monto: number; tipoCuentaId: number; referencia?: string }) =>
       api.post(`/cobros/${cobro.id}/pagos`, data),
     onSuccess: () => {
       invalidarFinanzas()
@@ -101,7 +109,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     if (montoNum <= 0 || montoNum > saldo) return
     registrarPago.mutate({
       monto: montoNum,
-      formaPago,
+      tipoCuentaId,
       referencia: referencia || undefined,
     })
   }
@@ -213,7 +221,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                   return (
                     <div key={p.id} className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground tabular-nums">
-                        {formatFecha(p.createdAt, 'dd/MM HH:mm')} &bull; {p.formaPago}
+                        {formatFecha(p.createdAt, 'dd/MM HH:mm')} &bull; {p.tipoCuenta?.nombre}
                         {esReversa && (
                           <span className="ml-1.5 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Reversa</span>
                         )}
@@ -229,7 +237,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                           <button
                             type="button"
                             onClick={() =>
-                              setPagoAnular({ id: p.id, monto: Number(p.monto), formaPago: p.formaPago })
+                              setPagoAnular({ id: p.id, monto: Number(p.monto), cuenta: p.tipoCuenta?.nombre ?? '' })
                             }
                             title="Anular pago"
                             aria-label={`Anular pago de ${formatMoneda(Number(p.monto))}`}
@@ -276,26 +284,26 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                 Forma de pago
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {FORMAS_PAGO.map((fp) => (
+                {tiposCuenta.map((tc) => (
                   <button
-                    key={fp.value}
+                    key={tc.id}
                     type="button"
-                    onClick={() => setFormaPago(fp.value)}
-                    aria-pressed={formaPago === fp.value}
+                    onClick={() => setTipoCuentaId(tc.id)}
+                    aria-pressed={tipoCuentaId === tc.id}
                     className={cn(
                       'h-10 px-3 rounded-md text-sm font-medium border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
-                      formaPago === fp.value
+                      tipoCuentaId === tc.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-card text-foreground border-input hover:border-primary/60',
                     )}
                   >
-                    {fp.label}
+                    {tc.nombre}
                   </button>
                 ))}
               </div>
             </div>
 
-            {(formaPago === FormaPago.QR || formaPago === FormaPago.VALES) && (
+            {cuentaSel && !cuentaSel.esEfectivo && (
               <div>
                 <label htmlFor="cobro-referencia" className="block text-sm font-medium text-foreground mb-1.5">
                   Referencia (opcional)

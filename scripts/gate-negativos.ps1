@@ -14,6 +14,9 @@ function New-Consultorio($nombre) {
 }
 
 $hA = New-Consultorio "TenantA"
+# PS 5.1: asignar a variable primero; Invoke-RestMethod piped directo no enumera el array
+$tiposCuentaA = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $hA
+$tcEfectivo = ($tiposCuentaA | Where-Object { $_.esEfectivo }).id
 $hB = New-Consultorio "TenantB"
 
 # Setup en A
@@ -87,12 +90,12 @@ try {
 } catch { Write-Output "COBRADO MANUAL: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 $cobroA = Invoke-RestMethod -Uri "$base/cobros/cita/$($citaA.id)" -Headers $hA
 try {
-  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 99999; formaPago = "EFECTIVO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 99999; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) -ErrorAction Stop | Out-Null
   Write-Output "PAGO EXCEDIDO: FALLO (acepto monto mayor al saldo)"
 } catch { Write-Output "PAGO EXCEDIDO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 
 # Ajuste de precio (descuento): 5000 -> 4000 con pago parcial de 1000
-Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 $ajustado = Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/total" -Method Put -Headers $hA -ContentType "application/json" -Body (@{ nuevoTotal = 4000; motivo = "descuento prueba" } | ConvertTo-Json)
 Write-Output "AJUSTE PRECIO: total=$($ajustado.total) (esp 4000) saldo=$($ajustado.saldoPendiente) (esp 3000)"
 
@@ -103,9 +106,9 @@ try {
 } catch { Write-Output "AJUSTE BAJO PAGADO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 
 # Pago sobre cobro COMPLETO -> 400 (saldar el resto: 3000)
-Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 3000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 3000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 try {
-  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1; formaPago = "EFECTIVO" } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+  Invoke-RestMethod -Uri "$base/cobros/$($cobroA.id)/pagos" -Method Post -Headers $hA -ContentType "application/json" -Body (@{ monto = 1; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) -ErrorAction Stop | Out-Null
   Write-Output "PAGO SOBRE COMPLETO: FALLO"
 } catch { Write-Output "PAGO SOBRE COMPLETO: OK ($($_.Exception.Response.StatusCode.value__) esp 400)" }
 

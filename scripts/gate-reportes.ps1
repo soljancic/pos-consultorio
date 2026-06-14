@@ -19,6 +19,7 @@ function Esperar-Error($accion, $codigoEsperado, $etiqueta) {
 Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "REP $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null
 
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 1000 } | ConvertTo-Json)
@@ -37,8 +38,8 @@ foreach ($estado in @("CONFIRMADA", "LLEGO", "EN_ATENCION", "ATENDIDA")) {
   Invoke-RestMethod -Uri "$base/citas/$($c1.id)/estado" -Method Put -Headers $h -ContentType "application/json" -Body (@{ estado = $estado } | ConvertTo-Json) | Out-Null
 }
 $cobro1 = Invoke-RestMethod -Uri "$base/cobros/cita/$($c1.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobro1.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 600; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
-Invoke-RestMethod -Uri "$base/cobros/$($cobro1.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 400; formaPago = "QR" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro1.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 600; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro1.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 400; tipoCuentaId = $tcQr } | ConvertTo-Json) | Out-Null
 
 # Cita de Beta: cancelada
 $c2 = Nueva-Cita 14 $docB.id
@@ -79,7 +80,7 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/mensual?mes=2026-13" -Hea
 
 # 8) Una anulacion descuenta del reporte (reversa negativa)
 $cobroFull = Invoke-RestMethod -Uri "$base/cobros/cita/$($c1.id)" -Headers $h
-$pagoQr = @($cobroFull.pagos) | Where-Object { $_.formaPago -eq 'QR' -and [decimal]$_.monto -gt 0 } | Select-Object -First 1
+$pagoQr = @($cobroFull.pagos) | Where-Object { $_.tipoCuenta.nombre -eq 'QR' -and [decimal]$_.monto -gt 0 } | Select-Object -First 1
 if ($pagoQr) {
   Invoke-RestMethod -Uri "$base/cobros/pagos/$($pagoQr.id)/anular" -Method Post -Headers $h -ContentType "application/json" -Body (@{ motivo = "gate reporte" } | ConvertTo-Json) | Out-Null
   $r2 = Invoke-RestMethod -Uri "$base/reportes/mensual?mes=$mes" -Headers $h

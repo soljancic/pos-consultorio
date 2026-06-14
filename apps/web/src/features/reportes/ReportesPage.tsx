@@ -15,9 +15,6 @@ const LABEL_ESTADO: Record<string, string> = {
   REPROGRAMADA: 'Reprogramada',
 }
 
-const LABEL_FORMA: Record<string, string> = {
-  EFECTIVO: 'Efectivo', QR: 'QR / Transferencia', TARJETA: 'Tarjeta', VALES: 'Vales',
-}
 
 type Reporte = {
   mes: string
@@ -57,7 +54,7 @@ export function ReportesPage() {
       [],
       ['Ingresos', reporte.ingresos.total],
       ...Object.entries(reporte.ingresos.porFormaPago).map(
-        ([f, t]): Array<string | number> => [`  ${LABEL_FORMA[f] ?? f}`, t],
+        ([f, t]): Array<string | number> => [`  ${f}`, t],
       ),
       ['Gastos', reporte.gastos.total],
       ...reporte.gastos.porCategoria.map(
@@ -161,7 +158,7 @@ export function ReportesPage() {
                   <ul className="space-y-2 text-sm">
                     {Object.entries(reporte.ingresos.porFormaPago).map(([forma, total]) => (
                       <li key={forma} className="flex justify-between">
-                        <span className="text-muted-foreground">{LABEL_FORMA[forma] ?? forma}</span>
+                        <span className="text-muted-foreground">{forma}</span>
                         <span className="font-medium tabular-nums">{formatMoneda(total)}</span>
                       </li>
                     ))}

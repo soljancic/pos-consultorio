@@ -51,7 +51,9 @@ test('generar capturas del manual', async ({ page, request }) => {
     await request.put(`${API}/citas/${citaDeuda.id}/estado`, { headers: auth, data: { estado: e } })
   }
   const cobroDeuda = await (await request.get(`${API}/cobros/cita/${citaDeuda.id}`, { headers: auth })).json()
-  await request.post(`${API}/cobros/${cobroDeuda.id}/pagos`, { headers: auth, data: { monto: 20, formaPago: 'EFECTIVO' } })
+  const tcs = (await (await request.get(`${API}/tipos-cuenta`, { headers: auth })).json()) as Array<{ id: number; esEfectivo: boolean }>
+  const tcEfectivo = tcs.find((t) => t.esEfectivo)!.id
+  await request.post(`${API}/cobros/${cobroDeuda.id}/pagos`, { headers: auth, data: { monto: 20, tipoCuentaId: tcEfectivo } })
   // una cita pendiente para la agenda
   await request.post(`${API}/citas`, { headers: auth, data: { pacienteId: pac.id, doctorId: doc.id, servicioId: srv.id, fechaHora: `${hoy}T11:00:00` } })
 

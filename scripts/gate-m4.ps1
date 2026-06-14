@@ -6,6 +6,7 @@ Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "applicat
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $token = $login.accessToken; if (-not $token) { $token = $login.access_token }
 $h = @{ Authorization = "Bearer $token" }
+$tiposCuenta = Invoke-RestMethod -Uri "$base/tipos-cuenta" -Headers $h; $tcEfectivo = ($tiposCuenta | Where-Object { $_.esEfectivo }).id; $tcQr = ($tiposCuenta | Where-Object { $_.nombre -eq "QR" }).id
 Invoke-RestMethod -Uri "$base/caja/abrir" -Method Post -Headers $h -ContentType "application/json" -Body (@{ montoInicial = 0 } | ConvertTo-Json) | Out-Null # E2-M9: turno abierto
 $srv = Invoke-RestMethod -Uri "$base/servicios" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Consulta"; duracionMin = 30; precioBase = 5000 } | ConvertTo-Json)
 $doc = Invoke-RestMethod -Uri "$base/doctores" -Method Post -Headers $h -ContentType "application/json" -Body (@{ nombre = "Dr. M4" } | ConvertTo-Json)
@@ -49,7 +50,7 @@ Write-Output "FILTRO DOCTOR: doc1=$($citasDoc1.Count) (esp 1) doc2=$($citasDoc2.
 
 # 7. Desglose caja: pagar la cita de hoy y verificar campos nuevos
 $cobro = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita.id)" -Headers $h
-Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; formaPago = "EFECTIVO" } | ConvertTo-Json) | Out-Null
+Invoke-RestMethod -Uri "$base/cobros/$($cobro.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 2000; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
 $cajaHoy = Invoke-RestMethod -Uri "$base/caja/hoy" -Headers $h
 Write-Output "CAJA: pagosDeudaAnterior=$($cajaHoy.pagosDeudaAnterior) (esp 0, cita es de hoy) nuevasDeudas=$($cajaHoy.nuevasDeudas) (esp 3000)"
 

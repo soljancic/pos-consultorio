@@ -37,13 +37,6 @@ enum EstadoCobro {
   ANULADO
 }
 
-enum FormaPago {
-  EFECTIVO
-  QR
-  TARJETA
-  VALES
-}
-
 // Origen de la cita: agenda interna o portal publico de reservas (E2.5b)
 enum OrigenCita {
   INTERNO
@@ -369,7 +362,10 @@ model Pago {
   id          Int      @id @default(autoincrement())
   cobroId     Int
   cobro       Cobro     @relation(fields: [cobroId], references: [id])
-  formaPago   FormaPago
+  // Forma de pago = cuenta del catalogo (unificado con los gastos). esEfectivo
+  // de la cuenta define si participa del arqueo de efectivo.
+  tipoCuentaId Int
+  tipoCuenta   TipoCuenta @relation(fields: [tipoCuentaId], references: [id])
   monto       Decimal   @db.Decimal(10, 2)
   referencia  String?
   createdById Int
@@ -386,6 +382,7 @@ model Pago {
   reversa         Pago?     @relation("PagoReversa")
 
   @@index([cobroId])
+  @@index([tipoCuentaId])
   @@map("pagos")
 }
 
@@ -398,10 +395,9 @@ model CajaDiaria {
   usuarioApertura   Usuario     @relation("CajaAbiertaPor", fields: [usuarioAperturaId], references: [id])
   usuarioCierreId   Int?
   usuarioCierre     Usuario?    @relation("CajaCerradaPor", fields: [usuarioCierreId], references: [id])
+  // Solo se persisten efectivo (para el arqueo) y general; el desglose por
+  // cuenta se calcula dinamicamente desde los pagos del dia
   totalEfectivo     Decimal     @default(0) @db.Decimal(10, 2)
-  totalQr           Decimal     @default(0) @db.Decimal(10, 2)
-  totalVales        Decimal     @default(0) @db.Decimal(10, 2)
-  totalTarjeta      Decimal     @default(0) @db.Decimal(10, 2)
   totalGeneral      Decimal     @default(0) @db.Decimal(10, 2)
   cerrada           Boolean     @default(false)
   cierreAt          DateTime?
@@ -556,6 +552,7 @@ model TipoCuenta {
   updatedAt     DateTime @updatedAt
 
   gastos Gasto[]
+  pagos  Pago[]
 
   @@index([consultorioId])
   @@map("tipos_cuenta")

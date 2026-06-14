@@ -99,10 +99,7 @@ export class MailService {
     horaCierre: string
     moneda: string
     montoInicial: string
-    efectivo: string
-    tarjeta: string
-    qr: string
-    vales: string
+    cuentas: { nombre: string; total: string }[]
     gastos: string
     esperado: string
     contado: string
@@ -126,10 +123,7 @@ export class MailService {
 
   <h3 style="font-size:14px;color:#0e7490;margin:20px 0 4px">Ingresos por forma de pago</h3>
   <table style="font-size:14px;line-height:1.5;border-collapse:collapse;width:100%">
-    ${fila('Efectivo', dinero(d.efectivo))}
-    ${fila('Tarjeta', dinero(d.tarjeta))}
-    ${fila('QR', dinero(d.qr))}
-    ${fila('Vales', dinero(d.vales))}
+    ${d.cuentas.map((c) => fila(c.nombre, dinero(c.total))).join('')}
     ${fila('Gastos del turno (efectivo)', `- ${dinero(d.gastos)}`)}
   </table>
 

@@ -9,7 +9,7 @@ import { ModalHeader } from '../../components/shared/ModalHeader'
 export interface PagoAnulable {
   id: number
   monto: number
-  formaPago: string
+  cuenta: string // forma de pago / cuenta (ej: "Efectivo")
   descripcion?: string // ej: "Perez, Ana - Consulta"
 }
 
@@ -69,7 +69,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
           <p className="text-sm text-foreground">
             Se anula el pago de{' '}
             <span className="font-semibold tabular-nums">{formatMoneda(pago.monto)}</span> (
-            {pago.formaPago}){pago.descripcion ? ` de ${pago.descripcion}` : ''}. El pago
+            {pago.cuenta}){pago.descripcion ? ` de ${pago.descripcion}` : ''}. El pago
             original no se borra: se registra una reversa negativa que descuenta de la caja
             de hoy y la deuda del paciente se restaura.
           </p>

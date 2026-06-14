@@ -46,10 +46,13 @@ export class AuthService {
             { nombre: 'Servicios' }, { nombre: 'Impuestos' }, { nombre: 'Otros' },
           ],
         },
+        // Cuentas/formas de pago: sirven para cobros y gastos. esEfectivo
+        // define cuales participan del arqueo de efectivo.
         tiposCuenta: {
           create: [
-            { nombre: 'Caja efectivo', esEfectivo: true },
-            { nombre: 'Banco' }, { nombre: 'Otro' },
+            { nombre: 'Efectivo', esEfectivo: true },
+            { nombre: 'QR' }, { nombre: 'Tarjeta' },
+            { nombre: 'Banco' }, { nombre: 'Vales' },
           ],
         },
       },

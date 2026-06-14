@@ -27,7 +27,7 @@ export class ReportesService {
         },
         select: {
           monto: true,
-          formaPago: true,
+          tipoCuenta: { select: { nombre: true } },
           cobro: { select: { cita: { select: { doctorId: true } } } },
         },
       }),
@@ -65,7 +65,8 @@ export class ReportesService {
     for (const p of pagos) {
       const monto = Number(p.monto)
       ingresosTotal += monto
-      porFormaPago[p.formaPago] = (porFormaPago[p.formaPago] ?? 0) + monto
+      const cuenta = p.tipoCuenta.nombre
+      porFormaPago[cuenta] = (porFormaPago[cuenta] ?? 0) + monto
       const docId = p.cobro.cita.doctorId
       ingresosPorDoctor.set(docId, (ingresosPorDoctor.get(docId) ?? 0) + monto)
     }
