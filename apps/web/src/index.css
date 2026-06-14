@@ -93,3 +93,9 @@
 }
 .modal-fade { animation: modal-fade-in 0.18s ease-out; }
 .modal-pop { animation: modal-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@media print {
+  aside, header, .print\:hidden { display: none !important; }
+  main { overflow: visible !important; }
+  body { background: #fff !important; }
+}
