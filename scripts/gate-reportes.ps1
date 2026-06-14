@@ -88,3 +88,134 @@ if ($pagoQr) {
 } else {
   Write-Output "8 TRAS ANULAR QR: SKIP (no se encontro el pago QR via GET pagos)"
 }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Fase 1 — 5 endpoints de reportes (Tasks 4-8)
+# Reutiliza el tenant ya creado arriba (mismo $h / $hoy).
+# DOCTOR: crea usuario DOCTOR vinculado al doctor del tenant.
+# ═══════════════════════════════════════════════════════════════════════════════
+$hoy = (Get-Date).ToString("yyyy-MM-dd")
+$emailDoc = "repdoc$ts@test.com"
+
+# Crear usuario DOCTOR en el tenant existente y vincularlo a $docA
+$nuevoDocUsuario = Invoke-RestMethod -Uri "$base/usuarios" -Method Post -Headers $h -ContentType "application/json" `
+  -Body (@{ nombre = "Doctor Usuario $ts"; email = $emailDoc; password = "Password123!"; rol = "DOCTOR" } | ConvertTo-Json)
+Invoke-RestMethod -Uri "$base/doctores/$($docA.id)" -Method Put -Headers $h -ContentType "application/json" `
+  -Body (@{ usuarioId = $nuevoDocUsuario.id } | ConvertTo-Json) | Out-Null
+$loginDoc = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" `
+  -Body (@{ email = $emailDoc; password = "Password123!" } | ConvertTo-Json)
+$hDoc = @{ Authorization = "Bearer $($loginDoc.accessToken)" }
+Write-Output ""
+Write-Output "=== SETUP DOCTOR OK ==="
+
+# ─── Task 4: /reportes/citas ────────────────────────────────────────────────
+Write-Output ""
+Write-Output "--- CITAS ---"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/citas" -Headers $h } 400 "CITAS 400 sin fechas"
+
+$citas = Invoke-RestMethod -Uri "$base/reportes/citas?desde=$hoy&hasta=$hoy" -Headers $h
+$citasShape = ($null -ne $citas.kpis) -and ($null -ne $citas.rows) -and ($null -ne $citas.page) -and ($null -ne $citas.pageSize) -and ($null -ne $citas.total)
+Write-Output "CITAS 200 shape: $citasShape (esp True)"
+
+$kpiKeys = @($citas.kpis) | ForEach-Object { $_.key }
+$ck_total     = $kpiKeys -contains 'total'
+$ck_atend     = $kpiKeys -contains 'atendidas'
+$ck_cancel    = $kpiKeys -contains 'canceladas'
+$ck_noasist   = $kpiKeys -contains 'no_asistio'
+$ck_ingresos  = $kpiKeys -contains 'ingresos'
+Write-Output "CITAS KPIs: total=$ck_total atendidas=$ck_atend canceladas=$ck_cancel no_asistio=$ck_noasist ingresos=$ck_ingresos (todos esp True)"
+
+$citasDoc = Invoke-RestMethod -Uri "$base/reportes/citas?desde=$hoy&hasta=$hoy" -Headers $hDoc
+Write-Output "CITAS DOCTOR 200: ok=$($null -ne $citasDoc.kpis) (esp True)"
+
+# DOCTOR escopeado: solo ve citas de su doctor (docA); Beta no deberia aparecer en rows del DOCTOR
+$citasDocRows = @($citasDoc.rows)
+$doctoresEnDocRows = $citasDocRows | ForEach-Object { $_.doctor } | Sort-Object -Unique
+Write-Output "CITAS DOCTOR scope: doctores en rows=$($doctoresEnDocRows -join ',') (esp solo Dr. Alfa o vacio)"
+
+# ─── Task 5: /reportes/cobranzas ────────────────────────────────────────────
+Write-Output ""
+Write-Output "--- COBRANZAS ---"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/cobranzas" -Headers $h } 400 "COBRANZAS 400 sin fechas"
+
+$cobr = Invoke-RestMethod -Uri "$base/reportes/cobranzas?desde=$hoy&hasta=$hoy" -Headers $h
+$cobrShape = ($null -ne $cobr.kpis) -and ($null -ne $cobr.rows) -and ($null -ne $cobr.page) -and ($null -ne $cobr.total)
+Write-Output "COBRANZAS 200 shape: $cobrShape (esp True)"
+
+$cobrKeys = @($cobr.kpis) | ForEach-Object { $_.key }
+$cok_total    = $cobrKeys -contains 'total'
+$cok_efect    = $cobrKeys -contains 'efectivo'
+$cok_noEfect  = $cobrKeys -contains 'no_efectivo'
+$cok_deuda    = $cobrKeys -contains 'deuda'
+Write-Output "COBRANZAS KPIs: total=$cok_total efectivo=$cok_efect no_efectivo=$cok_noEfect deuda=$cok_deuda (todos esp True)"
+
+$tieneCuentas = ($null -ne $cobr.meta) -and ($null -ne $cobr.meta.cuentas)
+Write-Output "COBRANZAS meta.cuentas array: $tieneCuentas (esp True)"
+
+$cobrDoc = Invoke-RestMethod -Uri "$base/reportes/cobranzas?desde=$hoy&hasta=$hoy" -Headers $hDoc
+Write-Output "COBRANZAS DOCTOR 200: ok=$($null -ne $cobrDoc.kpis) (esp True)"
+
+# ─── Task 6: /reportes/gastos ───────────────────────────────────────────────
+Write-Output ""
+Write-Output "--- GASTOS ---"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/gastos" -Headers $h } 400 "GASTOS 400 sin fechas"
+
+$gast = Invoke-RestMethod -Uri "$base/reportes/gastos?desde=$hoy&hasta=$hoy" -Headers $h
+$gastShape = ($null -ne $gast.kpis) -and ($null -ne $gast.rows) -and ($null -ne $gast.total)
+Write-Output "GASTOS 200 shape: $gastShape (esp True)"
+
+$gastKeys = @($gast.kpis) | ForEach-Object { $_.key }
+$gk_total    = $gastKeys -contains 'total'
+$gk_utilidad = $gastKeys -contains 'utilidad'
+Write-Output "GASTOS KPIs: total=$gk_total utilidad=$gk_utilidad (todos esp True)"
+
+$tienePorCat = ($null -ne $gast.meta) -and ($null -ne $gast.meta.porCategoria)
+$tienePorFP  = ($null -ne $gast.meta) -and ($null -ne $gast.meta.porFormaPago)
+Write-Output "GASTOS meta: porCategoria=$tienePorCat porFormaPago=$tienePorFP (todos esp True)"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/gastos?desde=$hoy&hasta=$hoy" -Headers $hDoc } 403 "GASTOS DOCTOR 403"
+
+# ─── Task 7: /reportes/pacientes ────────────────────────────────────────────
+Write-Output ""
+Write-Output "--- PACIENTES ---"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/pacientes" -Headers $h } 400 "PACIENTES 400 sin fechas"
+
+$pacs = Invoke-RestMethod -Uri "$base/reportes/pacientes?desde=$hoy&hasta=$hoy" -Headers $h
+$pacsShape = ($null -ne $pacs.kpis) -and ($null -ne $pacs.rows) -and ($null -ne $pacs.total)
+Write-Output "PACIENTES 200 shape: $pacsShape (esp True)"
+
+$pacsKeys = @($pacs.kpis) | ForEach-Object { $_.key }
+$pk_nuevos = $pacsKeys -contains 'nuevos'
+$pk_recur  = $pacsKeys -contains 'recurrentes'
+$pk_deuda  = $pacsKeys -contains 'con_deuda'
+$pk_inact  = $pacsKeys -contains 'inactivos'
+Write-Output "PACIENTES KPIs: nuevos=$pk_nuevos recurrentes=$pk_recur con_deuda=$pk_deuda inactivos=$pk_inact (todos esp True)"
+
+$pacsDoc = Invoke-RestMethod -Uri "$base/reportes/pacientes?desde=$hoy&hasta=$hoy" -Headers $hDoc
+Write-Output "PACIENTES DOCTOR 200: ok=$($null -ne $pacsDoc.kpis) (esp True)"
+
+# ─── Task 8: /reportes/servicios ────────────────────────────────────────────
+Write-Output ""
+Write-Output "--- SERVICIOS ---"
+
+Esperar-Error { Invoke-RestMethod -Uri "$base/reportes/servicios" -Headers $h } 400 "SERVICIOS 400 sin fechas"
+
+$serv = Invoke-RestMethod -Uri "$base/reportes/servicios?desde=$hoy&hasta=$hoy" -Headers $h
+$servShape = ($null -ne $serv.kpis) -and ($null -ne $serv.rows) -and ($null -ne $serv.total)
+Write-Output "SERVICIOS 200 shape: $servShape (esp True)"
+
+$servKeys = @($serv.kpis) | ForEach-Object { $_.key }
+$sk_masVend = $servKeys -contains 'mas_vendido'
+$sk_mayIng  = $servKeys -contains 'mayor_ingreso'
+$sk_sinMov  = $servKeys -contains 'sin_movimiento'
+Write-Output "SERVICIOS KPIs: mas_vendido=$sk_masVend mayor_ingreso=$sk_mayIng sin_movimiento=$sk_sinMov (todos esp True)"
+
+$servDoc = Invoke-RestMethod -Uri "$base/reportes/servicios?desde=$hoy&hasta=$hoy" -Headers $hDoc
+Write-Output "SERVICIOS DOCTOR 200: ok=$($null -ne $servDoc.kpis) (esp True)"
+
+Write-Output ""
+Write-Output "=== gate-reportes Fase 1 DONE ==="
