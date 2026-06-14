@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle, DollarSign, ChevronDown, ChevronRight, CircleDollarSign, CheckCircle2, Search } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, buildWhatsAppUrl, abrirWhatsApp, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderDeuda } from '../../lib/whatsapp'
 import { inputUI, cardUI, chipIconUI } from '../../lib/ui'
 import { CobroModal } from '../agenda/CobroModal'
@@ -109,6 +109,11 @@ export function DeudoresPage() {
                 {filtrados.map((d) => {
                   const variasCitas = d.cobros.length > 1
                   const abierto = expandido === d.pacienteId
+                  const msgWa = renderDeuda(plantillas.deuda, {
+                    nombre: d.nombre,
+                    monto: formatMoneda(d.deudaTotal),
+                    consultorio: consultorioNombre,
+                  }, linkQRBase)
                   return (
                     <Fragment key={d.pacienteId}>
                       <tr className="border-b last:border-0 hover:bg-muted/60 transition-colors duration-150">
@@ -159,15 +164,11 @@ export function DeudoresPage() {
                           <div className="flex justify-end gap-2">
                             {d.telefono && (
                               <a
-                                href={buildWhatsAppUrl(
-                                  d.telefono,
-                                  renderDeuda(plantillas.deuda, {
-                                    nombre: d.nombre,
-                                    monto: formatMoneda(d.deudaTotal),
-                                    consultorio: consultorioNombre,
-                                  }, linkQRBase),
-                                  d.pais,
-                                )}
+                                href={buildWhatsAppUrl(d.telefono, msgWa, d.pais)}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  abrirWhatsApp(d.telefono!, msgWa, d.pais)
+                                }}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"

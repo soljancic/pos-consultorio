@@ -39,3 +39,31 @@ export function buildWhatsAppUrl(telefono: string, mensaje: string, pais?: strin
   const numero = telefonoIntl(telefono, pais).replace(/\D/g, '')
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
 }
+
+// Abre WhatsApp en la app nativa (movil) o en WhatsApp Desktop via el esquema
+// whatsapp://, evitando la pagina intermedia de wa.me (en iOS, el "Continuar al
+// chat" de Safari). Si la app no esta instalada, cae a wa.me (web) para no
+// dejar al usuario sin nada. Se detecta el exito porque la pestana se oculta
+// (la app toma el foco); si seguimos visibles a los 1.2s, abrimos la web.
+export function abrirWhatsApp(telefono: string, mensaje: string, pais?: string | null) {
+  const numero = telefonoIntl(telefono, pais).replace(/\D/g, '')
+  const texto = encodeURIComponent(mensaje)
+  // Sin numero (p.ej. futuro paciente): WhatsApp abre el selector de contacto.
+  const appUrl = numero ? `whatsapp://send?phone=${numero}&text=${texto}` : `whatsapp://send?text=${texto}`
+  const webUrl = numero ? `https://wa.me/${numero}?text=${texto}` : `https://wa.me/?text=${texto}`
+
+  let abrioApp = false
+  const marcar = () => { abrioApp = true }
+  document.addEventListener('visibilitychange', marcar, { once: true })
+  window.addEventListener('blur', marcar, { once: true })
+
+  window.location.href = appUrl
+
+  window.setTimeout(() => {
+    document.removeEventListener('visibilitychange', marcar)
+    window.removeEventListener('blur', marcar)
+    if (!abrioApp && !document.hidden) {
+      window.open(webUrl, '_blank', 'noopener,noreferrer')
+    }
+  }, 1200)
+}

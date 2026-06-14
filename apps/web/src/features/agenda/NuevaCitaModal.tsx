@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn, buildWhatsAppUrl } from '../../lib/utils'
+import { cn, abrirWhatsApp } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -123,8 +123,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     const saludo = pacienteSeleccionado ? `Hola ${pacienteSeleccionado.nombre}! ` : '¡Hola! '
     const queCita = servicio ? `tu cita de ${servicio}` : 'tu cita'
     const msg = `${saludo}Reservá ${queCita}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${buildLinkReserva()}`
-    // Sin telefono (futuro paciente), wa.me abre WhatsApp para elegir el contacto
-    window.open(buildWhatsAppUrl(pacienteSeleccionado?.telefono ?? '', msg, pacienteSeleccionado?.pais), '_blank')
+    // Sin telefono (futuro paciente), WhatsApp abre el selector de contacto
+    abrirWhatsApp(pacienteSeleccionado?.telefono ?? '', msg, pacienteSeleccionado?.pais)
     onClose()
   }
 

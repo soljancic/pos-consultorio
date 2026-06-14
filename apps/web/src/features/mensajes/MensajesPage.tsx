@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle, RefreshCw, Check, X, CalendarClock, CircleDollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatHora, buildWhatsAppUrl, cn } from '../../lib/utils'
+import { formatMoneda, formatHora, buildWhatsAppUrl, abrirWhatsApp, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
@@ -172,6 +172,14 @@ export function MensajesPage() {
                     {telefono && (
                       <a
                         href={buildWhatsAppUrl(telefono, mensajeDe(m), m.paciente.pais)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          abrirWhatsApp(telefono!, mensajeDe(m), m.paciente.pais)
+                          // Tocar WhatsApp = intencion de enviar: lo marcamos
+                          // enviado de una (WhatsApp no avisa de vuelta). El X
+                          // queda para omitir si al final no lo mandaste.
+                          resolver.mutate({ id: m.id, estado: 'ENVIADO' })
+                        }}
                         target="_blank"
                         rel="noreferrer"
                         title="Abrir WhatsApp"
@@ -181,15 +189,19 @@ export function MensajesPage() {
                         <MessageCircle className="h-4 w-4" aria-hidden="true" />
                       </a>
                     )}
-                    <button
-                      onClick={() => resolver.mutate({ id: m.id, estado: 'ENVIADO' })}
-                      disabled={resolver.isPending}
-                      title="Marcar enviado"
-                      aria-label="Marcar como enviado"
-                      className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
-                    >
-                      <Check className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                    {/* Sin telefono, WhatsApp no esta: el check es la unica
+                        forma de marcar enviado (p.ej. avisado por otra via) */}
+                    {!telefono && (
+                      <button
+                        onClick={() => resolver.mutate({ id: m.id, estado: 'ENVIADO' })}
+                        disabled={resolver.isPending}
+                        title="Marcar enviado"
+                        aria-label="Marcar como enviado"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
+                      >
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
                     <button
                       onClick={() => resolver.mutate({ id: m.id, estado: 'OMITIDO' })}
                       disabled={resolver.isPending}
