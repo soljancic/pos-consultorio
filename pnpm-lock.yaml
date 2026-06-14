@@ -253,6 +253,9 @@ importers:
       vite-plugin-pwa:
         specifier: ^1.3.0
         version: 1.3.0(vite@6.4.3(@types/node@22.19.20)(jiti@1.21.7)(terser@5.48.0))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
+      workbox-window:
+        specifier: ^7.4.1
+        version: 7.4.1
 
   packages/types:
     devDependencies:
@@ -7557,7 +7560,7 @@ snapshots:
   '@rollup/plugin-replace@6.0.3(rollup@4.61.1)':
     dependencies:
       '@rollup/pluginutils': 5.4.0(rollup@4.61.1)
-      magic-string: 0.30.17
+      magic-string: 0.30.21
     optionalDependencies:
       rollup: 4.61.1
 

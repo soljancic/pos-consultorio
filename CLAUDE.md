@@ -23,6 +23,31 @@
 
 ---
 
+## PWA (apps/web es una PWA — tenerlo en cuenta al tocar el front)
+
+- Plugin: **vite-plugin-pwa** (Workbox, modo `generateSW`) configurado en
+  `apps/web/vite.config.ts`. El SW + el `manifest.json` se generan en el build.
+- **El manifest NO es un archivo estatico**: para cambiar nombre/iconos/colores se
+  edita el objeto `manifest` en `vite.config.ts`. Iconos en `apps/web/public/brand/`
+  (incluye `maskable-512x512.png` con padding para la mascara de Android).
+- **Actualizacion = prompt, NO auto-reload** (`registerType: 'prompt'`):
+  `components/shared/PwaUpdatePrompt.tsx` (usa `useRegisterSW`) muestra "Actualizar"
+  y el usuario decide cuando recargar. Tras un cambio, el usuario lo ve recien
+  DESPUES de deployar (y al tocar Actualizar). Registro del SW + chequeo cada 60s
+  viven en ese componente; no recargar la app por codigo.
+- **Cache**: app-shell (js/css/html) precacheado + `navigateFallback` a index.html
+  (offline la SPA arranca). API: `NetworkFirst` solo en GET (cacheName
+  `consultech-api`); POST/PUT NUNCA se cachean; imagenes `StaleWhileRevalidate`.
+  Si agregas assets que deban andar offline, ajusta `workbox.globPatterns`/`includeAssets`.
+- **Offline UX**: `components/shared/OfflineBanner.tsx` avisa sin conexion.
+- **Push a futuro**: `apps/web/public/sw-push.js` (via `importScripts`) ya tiene los
+  listeners `push`/`notificationclick`; falta el backend Web Push (VAPID).
+- **El SW solo corre en build de produccion** (`devOptions.enabled: false`): para
+  probarlo, `pnpm --filter web build` + `vite preview` (no en `pnpm dev`).
+- No importar `virtual:pwa-register` sin tener `workbox-window` instalado.
+
+---
+
 ## Workflow obligatorio
 
 ```

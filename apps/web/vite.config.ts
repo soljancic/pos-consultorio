@@ -7,12 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // autoUpdate: ante un deploy nuevo el SW se actualiza y la app se recarga
-      // sola (no queda pegada a archivos viejos cacheados). En main.tsx forzamos
-      // un chequeo de updates cada 60s (API nativa) para que una pestaña abierta
-      // mucho rato tambien tome los cambios.
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // prompt: ante un deploy nuevo NO se recarga solo; PwaUpdatePrompt muestra
+      // un aviso "Actualizar" y el usuario decide cuando recargar (no pierde lo
+      // que esta haciendo). El registro del SW lo hace useRegisterSW (main.tsx),
+      // que ademas chequea updates cada 60s para pestañas abiertas mucho rato.
+      registerType: 'prompt',
+      injectRegister: null,
       manifestFilename: 'manifest.json',
       includeAssets: ['brand/favicon.ico', 'brand/apple-touch-icon.png'],
       manifest: {
@@ -30,9 +30,9 @@ export default defineConfig({
         scope: '/',
         categories: ['medical', 'productivity', 'business'],
         icons: [
-          { src: '/brand/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/brand/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/brand/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/brand/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/brand/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/brand/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
