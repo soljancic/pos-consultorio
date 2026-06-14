@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, buildWhatsAppUrl } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
@@ -100,28 +100,43 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     setShowPacienteList(false)
   }
 
-  // Alternativa a crear la cita: mandar al paciente el link del portal con
-  // doctor, servicio y su token opaco para que el elija fecha y hora con sus
-  // datos precargados (los datos personales NO viajan en la URL).
-  // (pacienteInicial de la ficha no trae telefono: el boton no aparece ahi)
-  const puedeEnviarLink = !!(
-    consultorio?.slug && consultorio.portalActivo &&
-    pacienteSeleccionado?.telefono && tokenPortal?.token && doctorId && servicioId
-  )
+  // Link de reserva del portal: alternativa a crear la cita. Lo unico obligatorio
+  // es el portal activo; doctor, servicio y paciente son OPCIONALES, asi se puede
+  // enviar a alguien que aun NO es paciente. Si hay paciente, el link va precargado
+  // con su token opaco (sus datos personales NO viajan en la URL).
+  const portalListo = !!(consultorio?.slug && consultorio.portalActivo)
+  const [copiadoLink, setCopiadoLink] = useState(false)
+
+  function buildLinkReserva() {
+    const query = new URLSearchParams()
+    if (doctorId) query.set('doctor', doctorId)
+    if (servicioId) query.set('servicio', servicioId)
+    if (pacienteSeleccionado && tokenPortal?.token) query.set('p', tokenPortal.token)
+    const qs = query.toString()
+    return `${window.location.origin}/reservar/${consultorio!.slug}${qs ? `?${qs}` : ''}`
+  }
 
   function enviarLinkReserva() {
-    if (!puedeEnviarLink || !pacienteSeleccionado?.telefono) return
-    const query = new URLSearchParams({
-      doctor: doctorId,
-      servicio: servicioId,
-      p: tokenPortal!.token,
-    })
-    const link = `${window.location.origin}/reservar/${consultorio!.slug}?${query.toString()}`
-    const servicio = servicios.find((s) => String(s.id) === servicioId)?.nombre ?? 'su cita'
-    const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre ?? ''
-    const msg = `Hola ${pacienteSeleccionado.nombre}! Reservá tu cita de ${servicio}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${link}`
-    window.open(buildWhatsAppUrl(pacienteSeleccionado.telefono, msg, pacienteSeleccionado.pais), '_blank')
+    if (!portalListo) return
+    const servicio = servicios.find((s) => String(s.id) === servicioId)?.nombre
+    const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre
+    const saludo = pacienteSeleccionado ? `Hola ${pacienteSeleccionado.nombre}! ` : '¡Hola! '
+    const queCita = servicio ? `tu cita de ${servicio}` : 'tu cita'
+    const msg = `${saludo}Reservá ${queCita}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${buildLinkReserva()}`
+    // Sin telefono (futuro paciente), wa.me abre WhatsApp para elegir el contacto
+    window.open(buildWhatsAppUrl(pacienteSeleccionado?.telefono ?? '', msg, pacienteSeleccionado?.pais), '_blank')
     onClose()
+  }
+
+  async function copiarLink() {
+    if (!portalListo) return
+    try {
+      await navigator.clipboard.writeText(buildLinkReserva())
+      setCopiadoLink(true)
+      setTimeout(() => setCopiadoLink(false), 2000)
+    } catch {
+      setError('No se pudo copiar el link')
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -227,16 +242,39 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
             </select>
           </div>
 
-          {/* Con doctor, servicio y paciente elegidos, la secretaria puede
-              delegarle la fecha al paciente via portal precargado */}
-          {puedeEnviarLink && (
+          {/* Link de reserva del portal: alternativa a crear la cita. Siempre
+              visible con el portal activo; sirve aunque no haya nada elegido
+              (futuro paciente). Si hay paciente, va precargado. */}
+          {portalListo && (
             <div>
-              <button type="button" onClick={enviarLinkReserva} className={cn(btnOutlineUI, 'w-full')}>
-                <MessageCircle className="h-4 w-4 text-accent" aria-hidden="true" />
-                Enviar link de reserva por WhatsApp
-              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={enviarLinkReserva} className={cn(btnOutlineUI, 'flex-1')}>
+                  <MessageCircle className="h-4 w-4 text-accent" aria-hidden="true" />
+                  Enviar link de reserva por WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={copiarLink}
+                  aria-label="Copiar link de reserva"
+                  className={cn(btnOutlineUI, 'px-3 shrink-0')}
+                >
+                  {copiadoLink ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" aria-hidden="true" />
+                      Copiar
+                    </>
+                  )}
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground mt-1.5">
-                El paciente recibe el link con sus datos precargados y elige fecha y hora en el portal.
+                {pacienteSeleccionado
+                  ? 'El paciente recibe el link con sus datos precargados y elige fecha y hora en el portal.'
+                  : 'Para alguien que aún no es paciente: se abre WhatsApp para elegir el contacto (o copiá el link). La persona elige fecha y hora y carga sus datos en el portal.'}
               </p>
             </div>
           )}
