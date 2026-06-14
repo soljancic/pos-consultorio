@@ -43,6 +43,21 @@ export class ReportesService {
     return { slice: rows.slice(start, start + pageSize), total: rows.length }
   }
 
+  // Orden in-memory por columna (sortBy = key de la fila del reporte).
+  // Si no hay sortBy, conserva el orden por defecto que ya trae cada metodo.
+  private ordenar<T>(rows: T[], sortBy?: string, sortDir: 'asc' | 'desc' = 'desc'): T[] {
+    if (!sortBy) return rows
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...rows].sort((a: any, b: any) => {
+      const x = a[sortBy], y = b[sortBy]
+      if (x == null && y == null) return 0
+      if (x == null) return 1
+      if (y == null) return -1
+      if (typeof x === 'number' && typeof y === 'number') return (x - y) * dir
+      return String(x).localeCompare(String(y)) * dir
+    })
+  }
+
   async citas(consultorioId: number, rol: string, usuarioId: number, f: ReportFiltersDto): Promise<ReportPage<CitaReportRow>> {
     const { ini, fin } = this.rango(f.desde, f.hasta)
     const doctorId = await this.doctorIdForzado(consultorioId, rol, usuarioId, f.doctorId)
@@ -97,7 +112,7 @@ export class ReportesService {
       monto: Number(c.cobro?.total ?? c.servicio.precioBase),
       observaciones: c.notasSecretaria,
     }))
-    const { slice, total } = this.paginar(rows, f)
+    const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
       kpis: [
@@ -169,7 +184,7 @@ export class ReportesService {
       monto: Number(p.monto),
       usuario: p.createdBy.nombre,
     }))
-    const { slice, total: count } = this.paginar(rows, f)
+    const { slice, total: count } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
       kpis: [
@@ -229,7 +244,7 @@ export class ReportesService {
       monto: Number(g.monto),
       usuario: g.registradoPor.nombre,
     }))
-    const { slice, total: count } = this.paginar(rows, f)
+    const { slice, total: count } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
       kpis: [
@@ -294,7 +309,7 @@ export class ReportesService {
       }
     })
     rows.sort((a, b) => (b.ultimaCita ?? '').localeCompare(a.ultimaCita ?? ''))
-    const { slice, total } = this.paginar(rows, f)
+    const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
       kpis: [
@@ -347,7 +362,7 @@ export class ReportesService {
     const masVendido = rows[0]?.cantidadRealizada ?? 0
     const mayorIngreso = rows.reduce((max, r) => Math.max(max, r.totalCobrado), 0)
 
-    const { slice, total } = this.paginar(rows, f)
+    const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
     return {
       kpis: [
         { key: 'mas_vendido', label: 'Más vendido (cant.)', value: masVendido, format: 'number' },
