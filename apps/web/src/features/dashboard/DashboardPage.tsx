@@ -111,14 +111,13 @@ export function DashboardPage() {
     .sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime())
     .slice(0, 5)
 
-  const filasCaja: Array<[string, number]> = caja
-    ? [
-        ['Efectivo', Number(caja.totalEfectivo)],
-        ['QR', Number(caja.totalQr)],
-        ['Vales', Number(caja.totalVales)],
-        ['Tarjeta', Number(caja.totalTarjeta)],
-      ]
-    : []
+  // Desglose dinamico por forma de pago (cuenta), igual que CajaPage: sale del
+  // catalogo TipoCuenta, no de campos fijos (totalQr/Vales/Tarjeta ya no existen
+  // tras la migracion y daban NaN). El monto llega null cuando el arqueo ciego
+  // lo oculta a quien no es ADMIN con el turno abierto.
+  const filasCaja: Array<[string, number | null]> = (
+    (cajaData?.desglosePagos ?? []) as Array<{ nombre: string; total: number | null }>
+  ).map((c) => [c.nombre, c.total])
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 max-w-5xl mx-auto w-full">
@@ -152,7 +151,9 @@ export function DashboardPage() {
               {filasCaja.map(([label, monto]) => (
                 <div key={label} className="flex justify-between">
                   <span className="text-muted-foreground">{label}</span>
-                  <span className="font-medium tabular-nums">{formatMoneda(monto)}</span>
+                  <span className="font-medium tabular-nums">
+                    {monto === null ? '••••' : formatMoneda(Number(monto))}
+                  </span>
                 </div>
               ))}
               <div className="flex justify-between border-t pt-2.5 mt-2.5 font-bold text-foreground">
