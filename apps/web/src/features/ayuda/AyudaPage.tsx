@@ -30,16 +30,26 @@ function Captura({ id, imagen, titulo }: { id: string; imagen?: string; titulo: 
 
 export function AyudaPage() {
   const user = useAuthStore((s) => s.user)
-  const rolInicial = AYUDA.find((s) => s.rol === user?.rol)?.rol ?? AYUDA[0].rol
+  // Deep-link: /ayuda#cobrar-cita abre ese tema (util para ayuda contextual)
+  const hashId = (typeof window !== 'undefined' ? window.location.hash : '').replace('#', '')
+  const seccionHash = hashId ? AYUDA.find((s) => s.temas.some((t) => t.id === hashId)) : undefined
+  const rolInicial = seccionHash?.rol ?? AYUDA.find((s) => s.rol === user?.rol)?.rol ?? AYUDA[0].rol
+  const temaInicial = seccionHash ? hashId : (AYUDA.find((s) => s.rol === rolInicial) ?? AYUDA[0]).temas[0].id
+
   const [rolSel, setRolSel] = useState(rolInicial)
+  const [temaId, setTemaId] = useState(temaInicial)
   const seccion = AYUDA.find((s) => s.rol === rolSel) ?? AYUDA[0]
-  const [temaId, setTemaId] = useState(seccion.temas[0].id)
   const tema = seccion.temas.find((t) => t.id === temaId) ?? seccion.temas[0]
+
+  function irATema(id: string) {
+    setTemaId(id)
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `#${id}`)
+  }
 
   function elegirRol(rol: typeof rolSel) {
     setRolSel(rol)
     const s = AYUDA.find((x) => x.rol === rol)
-    if (s) setTemaId(s.temas[0].id)
+    if (s) irATema(s.temas[0].id)
   }
 
   return (
@@ -82,7 +92,7 @@ export function AyudaPage() {
               {seccion.temas.map((t) => (
                 <li key={t.id}>
                   <button
-                    onClick={() => setTemaId(t.id)}
+                    onClick={() => irATema(t.id)}
                     aria-current={t.id === temaId ? 'true' : undefined}
                     className={cn(
                       'w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
