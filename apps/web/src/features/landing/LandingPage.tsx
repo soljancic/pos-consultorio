@@ -39,7 +39,7 @@ const PASOS = [
   { n: '3', titulo: 'Cobrá', texto: 'Cobro por cita, caja del día por forma de pago y cierre con arqueo ciego.' },
 ]
 
-const CAPACIDADES = ['Agenda', 'Reservas online', 'Caja', 'Deudores', 'WhatsApp', 'Recetas', 'Reportes', 'Multi-consultorio']
+const CAPACIDADES = ['Agenda', 'Reservas online', 'Caja', 'Deudores', 'WhatsApp', 'Recetas', 'Reportes', 'Multi-doctor']
 
 const INCLUYE = [
   'Agenda día, semana y mes',
@@ -48,7 +48,7 @@ const INCLUYE = [
   'Deudores y recordatorios por WhatsApp',
   'Historia clínica y recetas en PDF',
   'Reportes, comisiones y export a Excel',
-  'Multi-consultorio',
+  'Varios doctores en una misma agenda',
   'App instalable (PWA)',
 ]
 
@@ -139,7 +139,7 @@ export function LandingPage() {
 
             <div className="ct-rise mt-8 flex flex-wrap items-center lg:justify-start justify-center gap-x-6 gap-y-2" style={{ animationDelay: '240ms' }}>
               {[
-                { icon: ShieldCheck, t: 'Multi-consultorio seguro' },
+                { icon: ShieldCheck, t: 'Multi-doctor con roles' },
                 { icon: Globe, t: 'Reservas 24/7' },
                 { icon: MessageCircle, t: 'WhatsApp integrado' },
               ].map(({ icon: Icon, t }) => (
