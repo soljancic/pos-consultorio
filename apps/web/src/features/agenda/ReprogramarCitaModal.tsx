@@ -63,7 +63,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
         <ModalHeader
           icon={CalendarClock}
           title="Reprogramar cita"
-          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; hoy {formatHora(cita.fechaHora)}</>}
+          subtitle={<>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; hoy {formatHora(cita.fechaHora)}</>}
           onClose={onClose}
         />
 

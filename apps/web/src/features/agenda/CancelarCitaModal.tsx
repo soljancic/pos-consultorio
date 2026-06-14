@@ -74,7 +74,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
           <p className="text-sm text-foreground">
             {t.verbo} la cita de{' '}
             <span className="font-semibold">
-              {cita.paciente?.apellido}, {cita.paciente?.nombre}
+              {cita.paciente?.nombre} {cita.paciente?.apellido}
             </span>{' '}
             del {formatFecha(cita.fechaHora)} a las {formatHora(cita.fechaHora)}. El cobro
             asociado queda anulado. Se puede reabrir despues como Pendiente.

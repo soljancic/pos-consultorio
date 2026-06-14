@@ -132,7 +132,7 @@ export function AtencionModal({ cita, onClose }: Props) {
         <ModalHeader
           icon={FileText}
           title="Atención"
-          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre} &bull; {formatHora(cita.fechaHora)}</>}
+          subtitle={<>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; {cita.servicio?.nombre} &bull; {formatHora(cita.fechaHora)}</>}
           onClose={onClose}
         />
 

@@ -153,7 +153,7 @@ export function MensajesPage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-foreground truncate">
-                    {m.paciente.apellido}, {m.paciente.nombre}
+                    {m.paciente.nombre} {m.paciente.apellido}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {m.tipo === 'RECORDATORIO' && m.cita

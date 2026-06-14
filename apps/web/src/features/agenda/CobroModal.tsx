@@ -120,7 +120,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
         <ModalHeader
           icon={Wallet}
           title="Registrar Cobro"
-          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {cita.servicio?.nombre}</>}
+          subtitle={<>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; {cita.servicio?.nombre}</>}
           onClose={onClose}
         />
 

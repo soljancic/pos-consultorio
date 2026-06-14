@@ -107,7 +107,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   }
 
   return (
-    <div className={cn(cardUI, 'relative p-4 flex items-start gap-3')}>
+    <div className={cn(cardUI, 'relative p-4')}>
       {/* Acento de color por estado en el borde izquierdo (pedido del owner): barra
           de alto completo con esquinas que siguen el radio de la tarjeta, en vez de
           un border-left plano. El codigo de color refuerza el badge de un vistazo. */}
@@ -116,6 +116,11 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
         className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl"
         style={{ backgroundColor: color }}
       />
+      {/* En mobile las acciones bajan a su propia fila: asi el nombre del paciente
+          (lo mas importante) usa el ancho completo y no se corta. En sm+ vuelven a
+          la derecha del contenido. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
       {/* Hora */}
       <div className="text-center min-w-[48px]">
         <div className="text-lg font-bold text-foreground tabular-nums">{formatHora(cita.fechaHora)}</div>
@@ -126,7 +131,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-foreground truncate">
-            {cita.paciente?.apellido}, {cita.paciente?.nombre}
+            {cita.paciente?.nombre} {cita.paciente?.apellido}
           </span>
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium text-white shrink-0"
@@ -145,7 +150,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           )}
         </div>
         <div className="text-sm text-muted-foreground mt-0.5">
-          {cita.servicio?.nombre} &bull; {cita.doctor?.nombre}
+          {cita.doctor?.nombre} &bull; {cita.servicio?.nombre}
         </div>
         {tieneSaldo && (
           <div className="text-xs text-destructive font-medium mt-1 tabular-nums">
@@ -153,9 +158,10 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           </div>
         )}
       </div>
+        </div>
 
-      {/* Acciones */}
-      <div className="flex items-center gap-1 shrink-0">
+        {/* Acciones: en mobile fila propia (a la derecha); en sm+ a la derecha del contenido */}
+        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
         {telefonoWhatsApp && (
           <button
             onClick={handleWhatsApp}
@@ -249,6 +255,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

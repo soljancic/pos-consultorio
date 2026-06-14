@@ -340,7 +340,7 @@ export function DashboardPage() {
                         key={cita.id}
                         tabIndex={0}
                         role="link"
-                        aria-label={`Ver en agenda la cita de ${hora}, ${cita.paciente?.apellido}, ${cita.paciente?.nombre}`}
+                        aria-label={`Ver en agenda la cita de ${hora}, ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
                         onClick={() => navigate('/agenda')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -352,7 +352,7 @@ export function DashboardPage() {
                       >
                         <td className="px-4 py-3 font-semibold text-primary tabular-nums w-20">{hora}</td>
                         <td className="px-4 py-3 font-medium text-foreground">
-                          {cita.paciente?.apellido}, {cita.paciente?.nombre}
+                          {cita.paciente?.nombre} {cita.paciente?.apellido}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{cita.doctor?.nombre}</td>
                         <td className="px-4 py-3 text-muted-foreground">{cita.servicio?.nombre}</td>

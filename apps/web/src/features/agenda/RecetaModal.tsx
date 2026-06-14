@@ -48,7 +48,7 @@ export function RecetaModal({ cita, onClose }: Props) {
         <ModalHeader
           icon={FileSignature}
           title="Nueva receta"
-          subtitle={<>{cita.paciente?.apellido}, {cita.paciente?.nombre} &bull; {formatHora(cita.fechaHora)}</>}
+          subtitle={<>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; {formatHora(cita.fechaHora)}</>}
           onClose={onClose}
         />
 

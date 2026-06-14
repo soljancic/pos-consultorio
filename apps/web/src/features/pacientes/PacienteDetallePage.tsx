@@ -95,7 +95,7 @@ export function PacienteDetallePage() {
           </button>
           <div>
             <h1 className="text-lg font-semibold text-foreground">
-              {paciente.apellido}, {paciente.nombre}
+              {paciente.nombre} {paciente.apellido}
             </h1>
             <span className="flex flex-wrap items-center gap-2">
               {Number(paciente.deudaTotal) > 0 && (

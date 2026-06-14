@@ -203,7 +203,7 @@ export function CajaPage() {
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                       <td className="px-4 py-2 text-muted-foreground tabular-nums">{formatHora(p.createdAt)}</td>
                       <td className="px-4 py-2 font-medium">
-                        {p.cobro.cita.paciente.apellido}, {p.cobro.cita.paciente.nombre}
+                        {p.cobro.cita.paciente.nombre} {p.cobro.cita.paciente.apellido}
                         {esDeudaVieja && (
                           <span className="ml-2 text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">Deuda</span>
                         )}
@@ -229,7 +229,7 @@ export function CajaPage() {
                                   id: p.id,
                                   monto: Number(p.monto),
                                   cuenta: p.tipoCuenta?.nombre ?? '',
-                                  descripcion: `${p.cobro.cita.paciente.apellido}, ${p.cobro.cita.paciente.nombre} - ${p.cobro.cita.servicio.nombre}`,
+                                  descripcion: `${p.cobro.cita.paciente.nombre} ${p.cobro.cita.paciente.apellido} - ${p.cobro.cita.servicio.nombre}`,
                                 })
                               }
                               title="Anular pago"

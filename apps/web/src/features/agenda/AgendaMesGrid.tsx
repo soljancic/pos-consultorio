@@ -83,12 +83,12 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
                         onClick={() => onCitaClick(cita)}
                         className="w-full rounded px-1 py-0.5 text-left text-[11px] leading-tight flex items-center gap-1 overflow-hidden hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
                         style={{ backgroundColor: color + '22', border: `1px solid ${color}55` }}
-                        title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.apellido}, ${cita.paciente?.nombre}`}
+                        title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
                       >
                         <span className="font-semibold tabular-nums text-foreground shrink-0">
                           {formatHora(cita.fechaHora)}
                         </span>
-                        <span className="text-foreground truncate">{cita.paciente?.apellido}</span>
+                        <span className="text-foreground truncate">{cita.paciente?.nombre} {cita.paciente?.apellido}</span>
                       </button>
                     )
                   })}

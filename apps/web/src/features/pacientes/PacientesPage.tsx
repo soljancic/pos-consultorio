@@ -81,7 +81,7 @@ export function PacientesPage() {
                     key={p.id}
                     tabIndex={0}
                     role="link"
-                    aria-label={`Ver ficha de ${p.apellido}, ${p.nombre}`}
+                    aria-label={`Ver ficha de ${p.nombre} ${p.apellido}`}
                     onClick={() => navigate(`/pacientes/${p.id}`)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -92,7 +92,7 @@ export function PacientesPage() {
                     className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {p.apellido}, {p.nombre}
+                      {p.nombre} {p.apellido}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono ? telefonoIntl(p.telefono, p.pais) : '-'}</td>

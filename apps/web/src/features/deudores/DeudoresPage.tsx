@@ -136,7 +136,7 @@ export function DeudoresPage() {
                                 )}
                               </button>
                             )}
-                            {d.apellido}, {d.nombre}
+                            {d.nombre} {d.apellido}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">

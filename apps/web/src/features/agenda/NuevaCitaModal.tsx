@@ -28,7 +28,7 @@ type PacienteBusqueda = Pick<Paciente, 'id' | 'nombre' | 'apellido'> & {
 export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pacienteInicial, onClose }: Props) {
   const qc = useQueryClient()
   const [pacienteQuery, setPacienteQuery] = useState(
-    pacienteInicial ? `${pacienteInicial.apellido}, ${pacienteInicial.nombre}` : '',
+    pacienteInicial ? `${pacienteInicial.nombre} ${pacienteInicial.apellido}` : '',
   )
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState<PacienteBusqueda | null>(pacienteInicial ?? null)
   const [showPacienteList, setShowPacienteList] = useState(false)
@@ -96,7 +96,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
 
   function seleccionarPaciente(p: PacienteBusqueda) {
     setPacienteSeleccionado(p)
-    setPacienteQuery(`${p.apellido}, ${p.nombre}`)
+    setPacienteQuery(`${p.nombre} ${p.apellido}`)
     setShowPacienteList(false)
   }
 
@@ -190,7 +190,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                     onClick={() => seleccionarPaciente(p)}
                     className="w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
                   >
-                    {p.apellido}, {p.nombre}
+                    {p.nombre} {p.apellido}
                   </button>
                 ))}
               </div>
