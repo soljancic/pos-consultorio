@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
@@ -97,6 +97,28 @@ export function AgendaPage() {
   // En celular se quita solo la vista Mes del toggle (el calendario completo no
   // entra bien en pantalla chica); el resto de las vistas siguen disponibles.
   const esCelular = useEsCelular()
+
+  // Menu de vista en celular: un solo boton (Lista/Dia/Semana) en vez del toggle
+  // de varias opciones. Mismo patron que los otros dropdowns del header.
+  const [vistaMenuAbierto, setVistaMenuAbierto] = useState(false)
+  const vistaMenuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!vistaMenuAbierto) return
+    function handleClick(e: MouseEvent) {
+      if (vistaMenuRef.current && !vistaMenuRef.current.contains(e.target as Node)) {
+        setVistaMenuAbierto(false)
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setVistaMenuAbierto(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [vistaMenuAbierto])
 
   // Dropdown de orden en celular: menu estilizado (mismo patron que el menu de
   // acciones de CitaCard), mas prolijo que el <select> nativo.
@@ -279,6 +301,9 @@ export function AgendaPage() {
       ? `${format(inicioSemana, 'd MMM', { locale: es })} – ${format(finSemana, 'd MMM', { locale: es })}`
       : format(fecha, "EEEE d 'de' MMMM", { locale: es })
 
+  const vistaActualDef = VISTAS.find((v) => v.id === vista) ?? VISTAS[0]
+  const VistaActualIcon = vistaActualDef.icon
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -304,27 +329,67 @@ export function AgendaPage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Toggle de vista. En celular se omite "Mes" (calendario completo). */}
-          <div className="flex rounded-md border overflow-hidden">
-            {VISTAS.filter(({ id }) => !(esCelular && id === 'mes')).map(({ id, label, icon: Icon }) => (
+        <div className="flex flex-nowrap items-center gap-2">
+          {/* Vista: en celular un solo dropdown (Lista/Dia/Semana); en sm+ el
+              toggle segmentado con las 4 vistas (incluye Mes). */}
+          {esCelular ? (
+            <div ref={vistaMenuRef} className="relative">
               <button
-                key={id}
-                onClick={() => cambiarVista(id)}
-                title={label}
-                aria-pressed={vista === id}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                  vista === id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted',
-                )}
+                type="button"
+                onClick={() => setVistaMenuAbierto((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={vistaMenuAbierto}
+                aria-label={`Vista: ${vistaActualDef.label}`}
+                title={`Vista: ${vistaActualDef.label}`}
+                className="inline-flex items-center gap-1 h-10 px-2.5 shrink-0 rounded-md border bg-card text-foreground cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
               >
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{label}</span>
+                <VistaActualIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               </button>
-            ))}
-          </div>
+              {vistaMenuAbierto && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-full mt-1 z-20 w-40 bg-card border rounded-md shadow-lg py-1"
+                >
+                  {VISTAS.filter((v) => v.id !== 'mes').map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      role="menuitemradio"
+                      aria-checked={vista === id}
+                      onClick={() => { cambiarVista(id); setVistaMenuAbierto(false) }}
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        {label}
+                      </span>
+                      {vista === id && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex rounded-md border overflow-hidden">
+              {VISTAS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => cambiarVista(id)}
+                  title={label}
+                  aria-pressed={vista === id}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                    vista === id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {user?.rol !== 'DOCTOR' && (
             <select
