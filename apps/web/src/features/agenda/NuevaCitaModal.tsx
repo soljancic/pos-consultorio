@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, abrirWhatsApp, publicBaseUrl } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { PacienteModal } from '../pacientes/PacienteModal'
 
 interface Props {
   fechaInicial: Date
@@ -38,6 +39,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   const [hora, setHora] = useState(horaInicial ?? '09:00')
   const [notas, setNotas] = useState('')
   const [error, setError] = useState('')
+  const [modalNuevoPaciente, setModalNuevoPaciente] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
 
   const { data: pacientesResultado = [] } = useQuery<PacienteBusqueda[]>({
@@ -122,7 +124,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     const doctor = doctores.find((d) => String(d.id) === doctorId)?.nombre
     const saludo = pacienteSeleccionado ? `Hola ${pacienteSeleccionado.nombre}! ` : '¡Hola! '
     const queCita = servicio ? `tu cita de ${servicio}` : 'tu cita'
-    const msg = `${saludo}Reservá ${queCita}${doctor ? ` con ${doctor}` : ''} en el horario que mejor te quede: ${buildLinkReserva()}`
+    const msg = `${saludo}Podés reservar ${queCita}${doctor ? ` con ${doctor}` : ''} en el horario que te resulte más conveniente desde el siguiente enlace: ${buildLinkReserva()}`
     // Sin telefono (futuro paciente), WhatsApp abre el selector de contacto
     abrirWhatsApp(pacienteSeleccionado?.telefono ?? '', msg, pacienteSeleccionado?.pais)
     onClose()
@@ -158,43 +160,57 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader icon={CalendarPlus} title="Nueva cita" onClose={onClose} />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Paciente */}
-          <div ref={searchRef} className="relative">
+          <div ref={searchRef}>
             <label className="block text-sm font-medium text-foreground mb-1.5">Paciente</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
-              <input
-                value={pacienteQuery}
-                onChange={(e) => {
-                  setPacienteQuery(e.target.value)
-                  setPacienteSeleccionado(null)
-                  setShowPacienteList(true)
-                }}
-                onFocus={() => setShowPacienteList(true)}
-                placeholder="Buscar paciente..."
-                className={cn(inputUI, 'pl-9')}
-                required
-              />
-            </div>
-            {showPacienteList && pacientesResultado.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-auto">
-                {pacientesResultado.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => seleccionarPaciente(p)}
-                    className="w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
-                  >
-                    {p.nombre} {p.apellido}
-                  </button>
-                ))}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
+                <input
+                  value={pacienteQuery}
+                  onChange={(e) => {
+                    setPacienteQuery(e.target.value)
+                    setPacienteSeleccionado(null)
+                    setShowPacienteList(true)
+                  }}
+                  onFocus={() => setShowPacienteList(true)}
+                  placeholder="Buscar paciente..."
+                  className={cn(inputUI, 'pl-9')}
+                  required
+                />
+                {showPacienteList && pacientesResultado.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-auto">
+                    {pacientesResultado.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => seleccionarPaciente(p)}
+                        className="w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                      >
+                        {p.nombre} {p.apellido}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+              {/* Alta rapida de un paciente sin salir del modal: al guardar queda
+                  seleccionado en la cita (no navega a su ficha). */}
+              <button
+                type="button"
+                onClick={() => setModalNuevoPaciente(true)}
+                aria-label="Nuevo paciente"
+                title="Nuevo paciente"
+                className="inline-flex items-center justify-center h-10 w-10 shrink-0 rounded-md border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+              >
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           {/* E3 item 11: alerta de prepago — informa, no bloquea */}
@@ -335,5 +351,12 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
         </form>
       </div>
     </div>
+    {modalNuevoPaciente && (
+      <PacienteModal
+        onClose={() => setModalNuevoPaciente(false)}
+        onCreated={(p) => seleccionarPaciente(p)}
+      />
+    )}
+    </>
   )
 }

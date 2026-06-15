@@ -278,17 +278,23 @@ export class CitasService {
         })
       }
 
-      await tx.log.create({
-        data: {
-          consultorioId,
-          usuarioId,
-          entidad: 'Cita',
-          entidadId: citaId,
-          accion: 'STATE_CHANGE',
-          payloadAntes: { estado: cita.estado },
-          payloadDespues: { estado: dto.estado, motivo: dto.motivo },
-        },
-      })
+      // Solo auditamos los cambios de estado con valor de auditoria: cancelacion
+      // y no-show. Las transiciones de rutina (confirmar, llego, en atencion,
+      // atendida, cobrado, etc.) NO se loguean para no inflar la actividad sin
+      // aportar nada. La reprogramacion tiene su propio log en reprogramar().
+      if (dto.estado === EstadoCita.CANCELADA || dto.estado === EstadoCita.NO_ASISTIO) {
+        await tx.log.create({
+          data: {
+            consultorioId,
+            usuarioId,
+            entidad: 'Cita',
+            entidadId: citaId,
+            accion: 'STATE_CHANGE',
+            payloadAntes: { estado: cita.estado },
+            payloadDespues: { estado: dto.estado, motivo: dto.motivo },
+          },
+        })
+      }
 
       // E3 item 11: al tercer no-show el paciente queda marcado con
       // requierePrepago (alerta al agendar; NO bloquea, regla del proyecto)

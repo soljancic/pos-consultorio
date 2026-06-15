@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api-client'
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
-import { cn } from '../../lib/utils'
+import { cn, setMonedaActual } from '../../lib/utils'
 import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
 
 const NAV_ITEMS = [
@@ -93,6 +93,17 @@ export function AppShell() {
     staleTime: 60 * 1000,
   })
   const badgeMensajes = pendientes?.pendientes ?? 0
+
+  // Moneda del consultorio: se aplica globalmente para que formatMoneda use el
+  // simbolo correcto (Bs, $, etc.) en toda la app y en los mensajes de cobranza.
+  const { data: consultorioCfg } = useQuery<{ moneda: string }>({
+    queryKey: ['consultorio'],
+    queryFn: () => api.get('/consultorio').then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  useEffect(() => {
+    setMonedaActual(consultorioCfg?.moneda)
+  }, [consultorioCfg?.moneda])
 
   // Estado del turno visible en todo el sistema; sin turno abierto no se
   // cobra ni se gasta (E2-M9), asi que se puede abrir desde aca mismo

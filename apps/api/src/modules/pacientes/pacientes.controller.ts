@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { PacientesService, CreatePacienteDto, UpdatePacienteDto } from './pacientes.service'
+import { PacientesService, CreatePacienteDto, UpdatePacienteDto, SetActivoDto } from './pacientes.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Pacientes')
@@ -11,8 +11,30 @@ export class PacientesController {
 
   @Get()
   @ApiOperation({ summary: 'Listar pacientes (con busqueda)' })
-  findAll(@CurrentUser() user: JwtPayload, @Query('search') search?: string) {
-    return this.service.findAll(user.consultorioId, search)
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('search') search?: string,
+    // Por defecto solo activos; con incluirInactivos tambien los archivados.
+    @Query('incluirInactivos') incluirInactivos?: string,
+  ) {
+    return this.service.findAll(user.consultorioId, search, incluirInactivos === 'true')
+  }
+
+  @Get('coincidencias')
+  @ApiOperation({ summary: 'Avisar si ya existe un paciente con ese CI, telefono o correo (no bloquea)' })
+  coincidencias(
+    @CurrentUser() user: JwtPayload,
+    @Query('dni') dni?: string,
+    @Query('telefono') telefono?: string,
+    @Query('email') email?: string,
+    @Query('excluirId') excluirId?: string,
+  ) {
+    return this.service.coincidencias(user.consultorioId, {
+      dni,
+      telefono,
+      email,
+      excluirId: excluirId ? Number(excluirId) : undefined,
+    })
   }
 
   @Get(':id/portal-token')
@@ -31,6 +53,16 @@ export class PacientesController {
   @ApiOperation({ summary: 'Crear paciente' })
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePacienteDto) {
     return this.service.create(user.consultorioId, dto)
+  }
+
+  @Put(':id/activo')
+  @ApiOperation({ summary: 'Archivar / reactivar paciente (activo:false/true)' })
+  setActivo(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetActivoDto,
+  ) {
+    return this.service.setActivo(user.consultorioId, id, dto.activo, user.sub)
   }
 
   @Put(':id')

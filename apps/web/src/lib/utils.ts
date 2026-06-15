@@ -25,8 +25,32 @@ export function formatDia(fechaIso: string, fmt = 'dd/MM/yyyy') {
   return format(new Date(y, m - 1, d), fmt, { locale: es })
 }
 
-export function formatMoneda(monto: number, moneda = 'ARS') {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: moneda }).format(monto)
+// Moneda del consultorio. Se setea una vez (AppShell, al cargar la config) y
+// TODAS las llamadas a formatMoneda la usan por defecto: asi el simbolo correcto
+// (Bs para BOB, $ para ARS/USD) aparece en todo el front y en los mensajes de
+// cobranza sin pasar la moneda en cada lugar. Se persiste para que el simbolo
+// ya sea correcto en el primer render tras recargar.
+const MONEDA_KEY = 'pos-moneda'
+let monedaActual =
+  (typeof localStorage !== 'undefined' && localStorage.getItem(MONEDA_KEY)) || 'ARS'
+
+export function setMonedaActual(moneda?: string | null) {
+  if (!moneda || moneda === monedaActual) return
+  monedaActual = moneda
+  try {
+    localStorage.setItem(MONEDA_KEY, moneda)
+  } catch {
+    /* storage no disponible (modo privado): igual queda en memoria */
+  }
+}
+
+// narrowSymbol: "$" para ARS/USD, "Bs" para BOB (en vez de los codigos ARS/BOB).
+export function formatMoneda(monto: number, moneda = monedaActual) {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: moneda,
+    currencyDisplay: 'narrowSymbol',
+  }).format(monto)
 }
 
 export function tiempoRelativo(date: Date | string) {
@@ -55,7 +79,10 @@ export function buildWhatsAppUrl(telefono: string, mensaje: string, pais?: strin
 // dejar al usuario sin nada. Se detecta el exito porque la pestana se oculta
 // (la app toma el foco); si seguimos visibles a los 1.2s, abrimos la web.
 export function abrirWhatsApp(telefono: string, mensaje: string, pais?: string | null) {
-  const numero = telefonoIntl(telefono, pais).replace(/\D/g, '')
+  // Sin telefono real, NO armar numero: telefonoIntl devolveria solo el prefijo
+  // del pais (ej "+591"), que WhatsApp toma como numero invalido. Vacio = el
+  // selector de contacto se abre con el texto ya cargado.
+  const numero = telefono.trim() ? telefonoIntl(telefono, pais).replace(/\D/g, '') : ''
   const texto = encodeURIComponent(mensaje)
   // Sin numero (p.ej. futuro paciente): WhatsApp abre el selector de contacto.
   const appUrl = numero ? `whatsapp://send?phone=${numero}&text=${texto}` : `whatsapp://send?text=${texto}`

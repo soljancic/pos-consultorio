@@ -1,7 +1,6 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { AlertCircle, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, AlertTriangle, UserPlus } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
@@ -13,11 +12,13 @@ import type { Paciente } from '@pos/types'
 interface Props {
   paciente?: Partial<Paciente>
   onClose: () => void
+  // Si se pasa, al CREAR un paciente se llama con el nuevo en vez de navegar a
+  // su ficha (sirve para crear rapido desde otro modal, ej. Nueva cita).
+  onCreated?: (paciente: Paciente) => void
 }
 
-export function PacienteModal({ paciente, onClose }: Props) {
+export function PacienteModal({ paciente, onClose, onCreated }: Props) {
   const qc = useQueryClient()
-  const navigate = useNavigate()
   const editando = !!paciente?.id
   const [error, setError] = useState('')
 
@@ -53,7 +54,10 @@ export function PacienteModal({ paciente, onClose }: Props) {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['pacientes'] })
-      if (!editando) navigate(`/pacientes/${res.data.id}`)
+      // Al crear no abrimos el Kardex: la grilla ya se refresca por el invalidate.
+      // Si hay onCreated (alta rapida desde otro modal), el llamador se queda
+      // con el paciente nuevo.
+      if (!editando && onCreated) onCreated(res.data)
       onClose()
     },
     onError: (err: any) => {
@@ -65,6 +69,37 @@ export function PacienteModal({ paciente, onClose }: Props) {
   function set(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
   }
+
+  // Avisos (no bloqueantes) de CI/telefono/correo ya usados por otro paciente.
+  // Solo al crear. Se consulta con un pequeno debounce para no pegarle al backend
+  // en cada tecla. El nombre duplicado lo bloquea el backend (no es un aviso).
+  const [coincQuery, setCoincQuery] = useState({ dni: '', telefono: '', email: '' })
+  useEffect(() => {
+    const t = setTimeout(
+      () => setCoincQuery({ dni: form.dni, telefono: form.telefono, email: form.email }),
+      350,
+    )
+    return () => clearTimeout(t)
+  }, [form.dni, form.telefono, form.email])
+
+  const { data: coincidencias } = useQuery<{ dni: boolean; telefono: boolean; email: boolean }>({
+    queryKey: ['pacientes-coincidencias', coincQuery, paciente?.id],
+    queryFn: () => {
+      const p = new URLSearchParams()
+      if (coincQuery.dni) p.set('dni', coincQuery.dni)
+      if (coincQuery.telefono) p.set('telefono', coincQuery.telefono)
+      if (coincQuery.email) p.set('email', coincQuery.email)
+      // Al editar, no avisar de coincidencia con uno mismo.
+      if (editando && paciente?.id) p.set('excluirId', String(paciente.id))
+      return api.get(`/pacientes/coincidencias?${p.toString()}`).then((r) => r.data)
+    },
+    enabled: !!(coincQuery.dni || coincQuery.telefono || coincQuery.email),
+  })
+
+  const avisos: string[] = []
+  if (coincidencias?.dni) avisos.push('ese CI')
+  if (coincidencias?.telefono) avisos.push('ese teléfono')
+  if (coincidencias?.email) avisos.push('ese correo')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -82,6 +117,17 @@ export function PacienteModal({ paciente, onClose }: Props) {
         />
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Aviso no bloqueante: el CI/telefono/correo ya existe en otro paciente
+              (puede ser un familiar). El nombre+apellido duplicado SI bloquea (backend). */}
+          {avisos.length > 0 && (
+            <p
+              role="status"
+              className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>Ya hay otro paciente con {avisos.join(' y ')}. Puede ser un familiar (ej. comparten teléfono).</span>
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>

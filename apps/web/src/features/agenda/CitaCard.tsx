@@ -143,9 +143,13 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
             <span
               className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300 shrink-0"
               title="Reservada desde el portal público"
+              aria-label="Reservada desde el portal público"
             >
               <Globe className="h-3 w-3" aria-hidden="true" />
-              Portal
+              {/* En celular/tablet solo el ícono (mas espacio para el nombre);
+                  la palabra aparece en desktop. El aria-label mantiene el nombre
+                  accesible cuando el texto esta oculto. */}
+              <span className="hidden lg:inline">Portal</span>
             </span>
           )}
         </div>

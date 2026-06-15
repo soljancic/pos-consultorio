@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
@@ -42,6 +42,32 @@ const ORDENES: Array<{ id: Orden; label: string }> = [
   { id: 'hora', label: 'Hora' },
 ]
 
+// Filtro "ojo" de la vista Lista. Estados que ya cerraron el ciclo de la cita:
+// no requieren ninguna accion en la agenda, asi que se ocultan al desmarcar.
+const MOSTRAR_TODAS_KEY = 'pos-agenda-mostrar-todas'
+const ESTADOS_TERMINADOS: EstadoCita[] = [
+  EstadoCita.COBRADO,
+  EstadoCita.CON_DEUDA,
+  EstadoCita.CANCELADA,
+  EstadoCita.NO_ASISTIO,
+  EstadoCita.REPROGRAMADA,
+]
+
+// "Celular solamente": < sm (640px). En celular la agenda se reduce a Lista
+// (las grillas dia/semana/mes son para pantallas anchas) y el header se condensa.
+function useEsCelular() {
+  const [esCelular, setEsCelular] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const onChange = (e: MediaQueryListEvent) => setEsCelular(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return esCelular
+}
+
 export function AgendaPage() {
   const user = useAuthStore((s) => s.user)
   const [fecha, setFecha] = useState(new Date())
@@ -50,6 +76,10 @@ export function AgendaPage() {
   )
   const [orden, setOrden] = useState<Orden>(
     () => (localStorage.getItem(ORDEN_KEY) as Orden) || 'estado',
+  )
+  // Marcado (default) = todas; desmarcado = solo lo en curso / que requiere atencion.
+  const [mostrarTodas, setMostrarTodas] = useState(
+    () => localStorage.getItem(MOSTRAR_TODAS_KEY) !== 'false',
   )
   const [doctorId, setDoctorId] = useState('')
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null)
@@ -64,6 +94,32 @@ export function AgendaPage() {
   const [accionError, setAccionError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
+  // En celular se quita solo la vista Mes del toggle (el calendario completo no
+  // entra bien en pantalla chica); el resto de las vistas siguen disponibles.
+  const esCelular = useEsCelular()
+
+  // Dropdown de orden en celular: menu estilizado (mismo patron que el menu de
+  // acciones de CitaCard), mas prolijo que el <select> nativo.
+  const [ordenMenuAbierto, setOrdenMenuAbierto] = useState(false)
+  const ordenMenuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!ordenMenuAbierto) return
+    function handleClick(e: MouseEvent) {
+      if (ordenMenuRef.current && !ordenMenuRef.current.contains(e.target as Node)) {
+        setOrdenMenuAbierto(false)
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOrdenMenuAbierto(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [ordenMenuAbierto])
+
   const fechaStr = format(fecha, 'yyyy-MM-dd')
   const inicioSemana = startOfWeek(fecha, { weekStartsOn: 1 })
   const finSemana = addDays(inicioSemana, 6)
@@ -76,6 +132,11 @@ export function AgendaPage() {
   function cambiarOrden(o: Orden) {
     setOrden(o)
     localStorage.setItem(ORDEN_KEY, o)
+  }
+
+  function cambiarMostrarTodas(v: boolean) {
+    setMostrarTodas(v)
+    localStorage.setItem(MOSTRAR_TODAS_KEY, String(v))
   }
 
   const { data: doctores = [] } = useQuery<Doctor[]>({
@@ -202,6 +263,11 @@ export function AgendaPage() {
     return new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime()
   })
 
+  // Vista Lista: con el "ojo" desmarcado se ocultan las citas ya cerradas.
+  const citasVisiblesLista = mostrarTodas
+    ? citasOrdenadas
+    : citasOrdenadas.filter((c) => !ESTADOS_TERMINADOS.includes(c.estado))
+
   const doctoresVisibles = doctorId
     ? doctores.filter((d) => d.id === Number(doctorId))
     : doctores
@@ -239,9 +305,9 @@ export function AgendaPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Toggle de vista */}
+          {/* Toggle de vista. En celular se omite "Mes" (calendario completo). */}
           <div className="flex rounded-md border overflow-hidden">
-            {VISTAS.map(({ id, label, icon: Icon }) => (
+            {VISTAS.filter(({ id }) => !(esCelular && id === 'mes')).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => cambiarVista(id)}
@@ -267,15 +333,81 @@ export function AgendaPage() {
               aria-label="Filtrar por doctor"
               className={cn(inputUI, 'w-auto max-w-[180px]')}
             >
-              <option value="">Todos los doctores</option>
+              <option value="">Todos</option>
               {doctores.map((d) => (
                 <option key={d.id} value={d.id}>{d.nombre}</option>
               ))}
             </select>
           )}
-          <button onClick={() => setModalNuevaCita(true)} className={btnPrimaryUI}>
+          {/* Orden de la lista en celular: dropdown estilizado en el header (en sm+
+              vive como toggle arriba de la lista). Solo aplica a la vista Lista. */}
+          {vista === 'lista' && (
+            <div ref={ordenMenuRef} className="relative sm:hidden">
+              {/* Solo el icono para ahorrar espacio; el aria-label y el titulo dan
+                  el contexto, y el menu muestra cual orden esta activo. */}
+              <button
+                type="button"
+                onClick={() => setOrdenMenuAbierto((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={ordenMenuAbierto}
+                aria-label="Ordenar por"
+                title="Ordenar por"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-md border bg-card text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+              >
+                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {ordenMenuAbierto && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1 z-20 w-40 bg-card border rounded-md shadow-lg py-1"
+                >
+                  {ORDENES.map(({ id, label }) => (
+                    <button
+                      key={id}
+                      role="menuitemradio"
+                      aria-checked={orden === id}
+                      onClick={() => { cambiarOrden(id); setOrdenMenuAbierto(false) }}
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                    >
+                      {label}
+                      {orden === id && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Filtro "ojo": marcado = todas las citas; desmarcado = solo lo en curso
+              o que requiere atencion (oculta cobrado, con deuda, cancelado, etc).
+              Cuando filtra, el boton se resalta para que el filtro activo se note. */}
+          {vista === 'lista' && (
+            <button
+              type="button"
+              onClick={() => cambiarMostrarTodas(!mostrarTodas)}
+              aria-pressed={mostrarTodas}
+              aria-label={mostrarTodas ? 'Mostrando todas las citas' : 'Mostrando solo las citas en curso'}
+              title={mostrarTodas ? 'Mostrando todas — tocá para ver solo lo pendiente' : 'Solo lo pendiente — tocá para ver todas'}
+              className={cn(
+                'inline-flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                mostrarTodas
+                  ? 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15',
+              )}
+            >
+              {mostrarTodas
+                ? <Eye className="h-4 w-4" aria-hidden="true" />
+                : <EyeOff className="h-4 w-4" aria-hidden="true" />}
+            </button>
+          )}
+          {/* En celular solo el "+" (icono); en sm+ el texto completo. El
+              aria-label mantiene el boton accesible cuando se ve solo el icono. */}
+          <button
+            onClick={() => setModalNuevaCita(true)}
+            className={btnPrimaryUI}
+            aria-label="Nueva cita"
+          >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Nueva cita
+            <span className="hidden sm:inline">Nueva cita</span>
           </button>
         </div>
       </div>
@@ -307,16 +439,25 @@ export function AgendaPage() {
             <div className="max-w-3xl mx-auto"><CardListSkeleton count={5} /></div>
           ) : isError ? (
             <ErrorState description="No se pudo cargar la agenda." onRetry={() => refetch()} />
-          ) : citasOrdenadas.length === 0 ? (
-            <EmptyState
-              icon={CalendarDays}
-              title="No hay citas para este día"
-              description="Cuando agendes una cita va a aparecer acá. Usá “Nueva cita” para empezar."
-            />
+          ) : citasVisiblesLista.length === 0 ? (
+            citasOrdenadas.length === 0 ? (
+              <EmptyState
+                icon={CalendarDays}
+                title="No hay citas para este día"
+                description="Cuando agendes una cita va a aparecer acá. Usá “Nueva cita” para empezar."
+              />
+            ) : (
+              <EmptyState
+                icon={Check}
+                title="Nada pendiente por ahora"
+                description="Las citas ya cerradas (cobradas, con deuda, canceladas) están ocultas. Tocá el ojo para verlas."
+              />
+            )
           ) : (
             <div className="max-w-3xl mx-auto">
               {/* Orden de la lista: "Hora" evita que la tarjeta salte al cambiar de estado */}
-              <div className="flex items-center justify-end gap-2 mb-3">
+              {/* En celular el orden esta en el header (al lado de "+"); aca solo en sm+ */}
+              <div className="hidden sm:flex items-center justify-end gap-2 mb-3">
                 <span className="text-xs text-muted-foreground">Ordenar por</span>
                 <div className="flex rounded-md border overflow-hidden">
                   {ORDENES.map(({ id, label }) => (
@@ -337,7 +478,7 @@ export function AgendaPage() {
                 </div>
               </div>
               <div className="space-y-3">
-                {citasOrdenadas.map((cita) => (
+                {citasVisiblesLista.map((cita) => (
                   <CitaCard
                     key={cita.id}
                     cita={cita}

@@ -124,7 +124,13 @@ export class MailService {
   }) {
     const fila = (label: string, valor: string, fuerte = false) =>
       `<tr><td style="color:#64748b;padding:4px 12px 4px 0">${label}</td><td style="text-align:right${fuerte ? ';font-weight:bold' : ''}">${valor}</td></tr>`
-    const dinero = (v: string) => `${d.moneda} ${v}`
+    // Simbolo de la moneda en vez del codigo ISO (Bs, $, etc.); fallback al codigo.
+    const SIMBOLO_MONEDA: Record<string, string> = {
+      ARS: '$', USD: '$', UYU: '$', CLP: '$', COP: '$', MXN: '$',
+      PEN: 'S/', BOB: 'Bs', BRL: 'R$',
+    }
+    const simbolo = SIMBOLO_MONEDA[d.moneda] ?? d.moneda
+    const dinero = (v: string) => `${simbolo} ${v}`
     return `
 <div style="font-family:Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1e293b">
   <h2 style="color:#0e7490;margin-bottom:2px">Cierre de caja</h2>

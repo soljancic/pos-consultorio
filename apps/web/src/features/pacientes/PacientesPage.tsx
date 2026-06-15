@@ -27,7 +27,8 @@ export function PacientesPage() {
   const { data: pacientes = [], isLoading, isError, refetch } = useQuery<Paciente[]>({
     queryKey: ['pacientes', debouncedSearch],
     queryFn: () =>
-      api.get(`/pacientes${debouncedSearch ? `?search=${debouncedSearch}` : ''}`).then((r) => r.data),
+      // Al buscar incluimos archivados (marcados); sin busqueda el grid muestra solo activos.
+      api.get(`/pacientes${debouncedSearch ? `?search=${debouncedSearch}&incluirInactivos=true` : ''}`).then((r) => r.data),
   })
 
   return (
@@ -70,7 +71,7 @@ export function PacientesPage() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Paciente</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">CI</th>
+                  <th className="hidden sm:table-cell text-left px-4 py-3 font-medium text-muted-foreground">CI</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Teléfono</th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">Deuda</th>
                 </tr>
@@ -92,9 +93,16 @@ export function PacientesPage() {
                     className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {p.nombre} {p.apellido}
+                      <span className={cn(p.activo === false && 'text-muted-foreground')}>
+                        {p.nombre} {p.apellido}
+                      </span>
+                      {p.activo === false && (
+                        <span className="ml-2 align-middle text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                          Archivado
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-muted-foreground tabular-nums">{p.dni || '-'}</td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">{p.telefono ? telefonoIntl(p.telefono, p.pais) : '-'}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {Number(p.deudaTotal) > 0 ? (

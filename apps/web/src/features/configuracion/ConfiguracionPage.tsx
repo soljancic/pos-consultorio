@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn, publicBaseUrl } from '../../lib/utils'
+import { cn, publicBaseUrl, setMonedaActual } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { UsuarioModal } from './UsuarioModal'
 
@@ -116,6 +116,9 @@ export function ConfiguracionPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
+      // Aplicar la moneda al instante (sin esperar el refetch) para que los
+      // simbolos del front se actualicen apenas se guarda.
+      setMonedaActual(consForm.moneda)
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2000)
     },
@@ -205,19 +208,12 @@ export function ConfiguracionPage() {
                 className={inputUI} />
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-[220px]">
-                <label htmlFor="cons-logourl" className="block text-sm font-medium text-foreground mb-1.5">
-                  Logo
-                </label>
-                <input id="cons-logourl" value={consultorio?.logoUrl ?? ''} readOnly
-                  placeholder="Subí una imagen para generarla"
-                  className={cn(inputUI, 'text-muted-foreground')} />
-              </div>
+              <span className="text-sm font-medium text-foreground">Logo</span>
               {consultorio?.logoUrl && (
                 <img src={consultorio.logoUrl} alt="Logo actual"
                   className="h-16 w-16 rounded-md border object-contain bg-white" />
               )}
-              <div className="pt-7">
+              <div>
                 <input
                   ref={logoFileRef}
                   type="file"
@@ -334,19 +330,11 @@ export function ConfiguracionPage() {
                 pública de pago, y el recordatorio de deuda incluye el link automáticamente.
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex-1 min-w-[220px]">
-                  <label htmlFor="cons-qrurl" className="block text-sm font-medium text-foreground mb-1.5">
-                    URL del QR
-                  </label>
-                  <input id="cons-qrurl" value={consultorio?.qrUrl ?? ''} readOnly
-                    placeholder="Subí una imagen para generarla"
-                    className={cn(inputUI, 'text-muted-foreground')} />
-                </div>
                 {consultorio?.qrUrl && (
                   <img src={consultorio.qrUrl} alt="QR de pagos actual"
                     className="h-16 w-16 rounded-md border object-contain bg-white" />
                 )}
-                <div className="pt-7">
+                <div>
                   <input
                     ref={qrFileRef}
                     type="file"

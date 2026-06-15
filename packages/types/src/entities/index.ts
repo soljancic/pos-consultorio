@@ -69,6 +69,8 @@ export interface Paciente {
   deudaTotal: number
   // E3 item 11: alerta de prepago por inasistencias (no bloquea)
   requierePrepago?: boolean
+  // Archivar: activo:false sale del grid por defecto pero se conserva/reactiva
+  activo?: boolean
   createdAt: Date
 }
 

@@ -1,14 +1,15 @@
 import { Fragment, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope, CalendarPlus } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronLeft, ChevronDown, MessageCircle, Pencil, Stethoscope, CalendarPlus, Archive, ArchiveRestore, AlertTriangle } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, buildWhatsAppUrl, abrirWhatsApp, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
 import { telefonoIntl } from '../../lib/paises'
-import { btnOutlineUI, btnIconUI, cardUI } from '../../lib/ui'
+import { btnOutlineUI, btnPrimaryUI, btnIconUI, cardUI } from '../../lib/ui'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 import { COLORES_ESTADO } from '@pos/types'
 import type { EstadoCita, Paciente, Cita } from '@pos/types'
 import { CobroModal } from '../agenda/CobroModal'
@@ -54,12 +55,24 @@ export function PacienteDetallePage() {
   const [citaExpandida, setCitaExpandida] = useState<number | null>(null)
   const [fechaControl, setFechaControl] = useState<string | null>(null)
   const [tab, setTab] = useState<'citas' | 'historia'>('citas')
+  const [confirmArchivar, setConfirmArchivar] = useState(false)
   const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
 
   const { data: paciente, isLoading, isError, refetch } = useQuery<PacienteDetalle>({
     queryKey: ['paciente', id],
     queryFn: () => api.get(`/pacientes/${id}`).then((r) => r.data),
     enabled: !!id,
+  })
+
+  // Archivar (activo:false) / reactivar. No bloquea; el modal solo avisa si hay
+  // deuda o citas futuras. La historia se conserva.
+  const setActivo = useMutation({
+    mutationFn: (activo: boolean) => api.put(`/pacientes/${id}/activo`, { activo }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['paciente', id] })
+      qc.invalidateQueries({ queryKey: ['pacientes'] })
+      setConfirmArchivar(false)
+    },
   })
 
   if (isLoading)
@@ -80,6 +93,14 @@ export function PacienteDetallePage() {
   const citasOrdenadas = [...(paciente.citas ?? [])].sort(
     (a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime()
   )
+
+  const archivado = paciente.activo === false
+  const tieneDeuda = Number(paciente.deudaTotal) > 0
+  const citasFuturas = citasOrdenadas.filter(
+    (c) =>
+      new Date(c.fechaHora) > new Date() &&
+      (['SOLICITADA', 'PENDIENTE', 'CONFIRMADA'] as string[]).includes(c.estado),
+  ).length
 
   return (
     <div className="flex flex-col h-full">
@@ -106,6 +127,11 @@ export function PacienteDetallePage() {
               {paciente.requierePrepago && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
                   Requiere prepago
+                </span>
+              )}
+              {archivado && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
+                  Archivado
                 </span>
               )}
               {paciente.noShows > 0 && (
@@ -144,6 +170,21 @@ export function PacienteDetallePage() {
             <Pencil className="h-4 w-4" aria-hidden="true" />
             Editar
           </button>
+          {archivado ? (
+            <button
+              onClick={() => setActivo.mutate(true)}
+              disabled={setActivo.isPending}
+              className={btnPrimaryUI}
+            >
+              <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
+              Reactivar
+            </button>
+          ) : (
+            <button onClick={() => setConfirmArchivar(true)} className={btnOutlineUI}>
+              <Archive className="h-4 w-4" aria-hidden="true" />
+              Archivar
+            </button>
+          )}
         </div>
       </div>
 
@@ -332,6 +373,48 @@ export function PacienteDetallePage() {
             qc.invalidateQueries({ queryKey: ['paciente', id] })
           }}
         />
+      )}
+
+      {confirmArchivar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+          <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
+            <ModalHeader icon={Archive} title="Archivar paciente" onClose={() => setConfirmArchivar(false)} />
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Vas a archivar a{' '}
+                <span className="font-medium text-foreground">{paciente.nombre} {paciente.apellido}</span>.
+                Sale del listado de pacientes pero su historia se conserva y podés reactivarlo cuando quieras.
+              </p>
+              {(tieneDeuda || citasFuturas > 0) && (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
+                >
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span>
+                    {tieneDeuda && <>Tiene una deuda de {formatMoneda(Number(paciente.deudaTotal))}. </>}
+                    {citasFuturas > 0 && (
+                      <>Tiene {citasFuturas} {citasFuturas === 1 ? 'cita futura' : 'citas futuras'}. </>
+                    )}
+                    Igual podés archivarlo.
+                  </span>
+                </p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setConfirmArchivar(false)} className={cn(btnOutlineUI, 'flex-1')}>
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => setActivo.mutate(false)}
+                  disabled={setActivo.isPending}
+                  className={cn(btnPrimaryUI, 'flex-1')}
+                >
+                  {setActivo.isPending ? 'Archivando...' : 'Archivar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
