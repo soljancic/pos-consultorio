@@ -11,6 +11,7 @@ import { ReportFilters } from './components/ReportFilters'
 import { KpiCards } from './components/KpiCards'
 import { DataTable } from './components/DataTable'
 import { ExportButtons } from './components/ExportButtons'
+import { MetaBreakdown } from './components/MetaBreakdown'
 import { REPORTS } from './reports'
 
 export function ReportesPage() {
@@ -84,6 +85,30 @@ export function ReportesPage() {
         </div>
 
         <KpiCards kpis={data?.kpis ?? []} />
+
+        {(() => {
+          const meta = (data?.meta ?? {}) as {
+            cuentas?: Array<{ nombre: string; total: number }>
+            porCategoria?: Array<{ nombre: string; total: number }>
+            porFormaPago?: Array<{ nombre: string; total: number }>
+          }
+          if (tab === 'cobranzas' && meta.cuentas?.length) {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <MetaBreakdown title="Por forma de pago" items={meta.cuentas} />
+              </div>
+            )
+          }
+          if (tab === 'gastos' && (meta.porCategoria?.length || meta.porFormaPago?.length)) {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <MetaBreakdown title="Por categoría" items={meta.porCategoria ?? []} />
+                <MetaBreakdown title="Por forma de pago" items={meta.porFormaPago ?? []} />
+              </div>
+            )
+          }
+          return null
+        })()}
 
         <DataTable
           columns={cfg.columns}
