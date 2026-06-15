@@ -38,8 +38,14 @@ async function bootstrap() {
   // Sin ClassSerializerInterceptor: la API devuelve objetos planos de Prisma y el
   // interceptor descomponia los Decimal en {s,e,d} en vez de dejar que toJSON()
   // los serialice como string.
+  // FRONTEND_URL admite varios origenes separados por coma (un mismo build se
+  // sirve desde varios dominios publicos: *.up.railway.app + dominio propio).
+  const origenesPermitidos = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: origenesPermitidos,
     credentials: true,
   })
 
