@@ -20,7 +20,7 @@ export class CreateDoctorDto {
   @IsString() @IsOptional()
   colorAgenda?: string
 
-  @IsString() @IsOptional()
+  @IsInt() @IsOptional()
   usuarioId?: number
 }
 
