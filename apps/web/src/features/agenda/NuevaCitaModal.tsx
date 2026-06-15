@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn, abrirWhatsApp } from '../../lib/utils'
+import { cn, abrirWhatsApp, publicBaseUrl } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -113,7 +113,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     if (servicioId) query.set('servicio', servicioId)
     if (pacienteSeleccionado && tokenPortal?.token) query.set('p', tokenPortal.token)
     const qs = query.toString()
-    return `${window.location.origin}/reservar/${consultorio!.slug}${qs ? `?${qs}` : ''}`
+    return `${publicBaseUrl()}/reservar/${consultorio!.slug}${qs ? `?${qs}` : ''}`
   }
 
   function enviarLinkReserva() {

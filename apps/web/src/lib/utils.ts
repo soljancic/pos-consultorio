@@ -33,6 +33,15 @@ export function tiempoRelativo(date: Date | string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
 
+// Base canonica para los links publicos que se mandan al paciente (reserva y
+// QR de pago). Se fija con VITE_PUBLIC_URL para que el link sea SIEMPRE el
+// dominio propio aunque el staff abra la app desde otro dominio (p.ej. el
+// *.up.railway.app). Sin la var configurada cae al origen actual.
+export function publicBaseUrl() {
+  const base = import.meta.env.VITE_PUBLIC_URL as string | undefined
+  return (base || window.location.origin).replace(/\/$/, '')
+}
+
 // El pais del paciente (ISO alfa-2) aporta el prefijo internacional que
 // wa.me exige; si el numero ya viene con "+", se respeta tal cual.
 export function buildWhatsAppUrl(telefono: string, mensaje: string, pais?: string | null) {

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from './api-client'
+import { publicBaseUrl } from './utils'
 
 // E3 item 26: plantillas de WhatsApp editables por consultorio.
 // Variables soportadas: {nombre} {hora} {fecha} {monto} {consultorio}
@@ -59,6 +60,6 @@ export function usePlantillasWhatsApp() {
   }
   // Base del link de pago: requiere QR cargado y slug configurado
   const linkQRBase =
-    data?.qrUrl && data?.slug ? `${window.location.origin}/qr/${data.slug}` : ''
+    data?.qrUrl && data?.slug ? `${publicBaseUrl()}/qr/${data.slug}` : ''
   return { plantillas, consultorioNombre: data?.nombre ?? 'el consultorio', linkQRBase }
 }

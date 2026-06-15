@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn } from '../../lib/utils'
+import { cn, publicBaseUrl } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { UsuarioModal } from './UsuarioModal'
 
@@ -309,12 +309,12 @@ export function ConfiguracionPage() {
               {consultorio?.slug && consultorio?.portalActivo && (
                 <div className="flex flex-wrap items-center gap-2 text-sm bg-muted/50 rounded-md px-3 py-2">
                   <span className="text-muted-foreground truncate">
-                    {`${window.location.origin}/reservar/${consultorio.slug}`}
+                    {`${publicBaseUrl()}/reservar/${consultorio.slug}`}
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/reservar/${consultorio.slug}`)
+                      navigator.clipboard.writeText(`${publicBaseUrl()}/reservar/${consultorio.slug}`)
                       setLinkCopiado(true)
                       setTimeout(() => setLinkCopiado(false), 2000)
                     }}
