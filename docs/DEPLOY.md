@@ -3,6 +3,35 @@
 > Hosting elegido: Railway (decision 2026-06-10). El frontend puede ir en el
 > mismo proyecto Railway (static) o en Vercel; abajo van ambas opciones.
 
+## Deploy del dia a dia (TL;DR)
+
+**No hay auto-deploy de GitHub**: el deploy se dispara a mano. La config de build
+(RAILPACK) y las variables viven en el dashboard de cada servicio; al deployar solo
+se sube el codigo del monorepo a los servicios `api` y `web` (production).
+
+```bash
+railway login            # una sola vez
+pnpm deploy              # deploya api + web (script scripts/deploy.ps1)
+```
+
+Solo un servicio:
+
+```powershell
+./scripts/deploy.ps1 -Service web
+```
+
+Equivalente manual (lo que hace el script, desde la raiz del repo):
+
+```bash
+railway up --ci -p 02c99275-ceef-4b0b-90da-4ab5a9e758cf -e production -s api
+railway up --ci -p 02c99275-ceef-4b0b-90da-4ab5a9e758cf -e production -s web
+```
+
+- Migraciones: el pre-deploy de `api` corre `prisma migrate deploy` (aplica
+  pendientes, NO borra datos). NUNCA usar `migrate reset`/`db push
+  --accept-data-loss` contra production (ver REGLA DE ORO en CLAUDE.md).
+- El resto de este documento es la configuracion inicial (one-time setup).
+
 ## Arquitectura en Railway
 
 ```
