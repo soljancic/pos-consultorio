@@ -84,14 +84,14 @@ export function MensajesPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
-        <div>
+        <div className="flex items-center gap-4">
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className={chipIconUI}>
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
             </span>
             Mensajes
           </h1>
-          <div className="flex gap-1 mt-3" role="tablist">
+          <div className="flex gap-1" role="tablist">
             {(['pendientes', 'resueltos'] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 role="tab"

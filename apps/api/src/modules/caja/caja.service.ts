@@ -325,6 +325,7 @@ export class CajaService {
       consultorio.emailCierreCaja,
       `Cierre de caja · ${fechaTurno} · ${consultorio.nombre}`,
       html,
+      consultorio.nombre,
     )
   }
 

@@ -49,14 +49,34 @@ export function ReportesPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card print:hidden">
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <span className={chipIconUI}><BarChart3 className="h-4 w-4" aria-hidden="true" /></span>
-          Reportes
-        </h1>
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <span className={chipIconUI}><BarChart3 className="h-4 w-4" aria-hidden="true" /></span>
+            Reportes
+          </h1>
+          <div className="flex flex-wrap gap-1" role="tablist">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => cambiarTab(t)}
+                className={cn(
+                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                {REPORTS[t].label}
+              </button>
+            ))}
+          </div>
+        </div>
         <ExportButtons filename={`reporte-${tab}-${filtros.desde}`} loadAll={loadAll} />
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5 max-w-6xl mx-auto w-full">
+        {/* Filtros. El estado vive en useReportFilters (nivel pagina) y
+            cambiarTab no lo toca: persisten al moverse entre tabs. */}
         <div className="print:hidden">
           <ReportFilters
             tab={tab}
@@ -65,23 +85,6 @@ export function ReportesPage() {
             onPreset={(p) => { setPreset(p); setPage(1) }}
             onPatch={(p) => { patch(p); setPage(1) }}
           />
-        </div>
-
-        <div className="flex flex-wrap gap-1 print:hidden" role="tablist">
-          {tabs.map((t) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => cambiarTab(t)}
-              className={cn(
-                'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
-                tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
-              )}
-            >
-              {REPORTS[t].label}
-            </button>
-          ))}
         </div>
 
         <KpiCards kpis={data?.kpis ?? []} />

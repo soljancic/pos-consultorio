@@ -197,6 +197,7 @@ export class CitasService {
         servicio: cita.servicio.nombre,
         doctor: cita.doctor.nombre,
       }),
+      cita.consultorio.nombre,
     )
   }
 

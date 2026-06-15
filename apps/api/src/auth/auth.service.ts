@@ -186,6 +186,7 @@ export class AuthService {
       usuario.email,
       'Restablecer contraseña',
       this.mail.htmlReset(usuario.nombre, this.mail.linkEstablecerPassword(token)),
+      usuario.consultorio?.nombre,
     )
     return MAIL_DEBUG ? { ok: true, devToken: token } : { ok: true }
   }

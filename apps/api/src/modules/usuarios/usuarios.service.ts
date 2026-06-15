@@ -115,6 +115,7 @@ export class UsuariosService {
         email,
         `Tu cuenta en ${consultorio?.nombre ?? 'el consultorio'}`,
         this.mail.htmlInvitacion(dto.nombre, consultorio?.nombre ?? 'el consultorio', this.mail.linkEstablecerPassword(token)),
+        consultorio?.nombre,
       )
       if (MAIL_DEBUG) return { ...usuario, devToken: token }
     }

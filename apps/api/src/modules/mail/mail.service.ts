@@ -11,14 +11,29 @@ export class MailService {
     : null
   private readonly from = process.env.MAIL_FROM ?? 'POS Consultorio <onboarding@resend.dev>'
 
-  async enviar(para: string, asunto: string, html: string) {
+  // Solo la direccion verificada de MAIL_FROM ("Nombre <addr>" -> "addr").
+  // El remitente visible (display name) se reemplaza por el nombre del
+  // consultorio; el dominio debe seguir siendo el verificado en Resend.
+  private direccionRemitente(): string {
+    return this.from.match(/<([^>]+)>/)?.[1] ?? this.from
+  }
+
+  // from con el nombre del consultorio como remitente visible. Sin nombre,
+  // cae al MAIL_FROM por defecto. Se limpian comillas/backslash para no
+  // romper el header RFC 5322.
+  private fromConRemitente(remitente?: string): string {
+    const nombre = remitente?.replace(/["\\]/g, ' ').trim()
+    return nombre ? `"${nombre}" <${this.direccionRemitente()}>` : this.from
+  }
+
+  async enviar(para: string, asunto: string, html: string, remitente?: string) {
     if (!this.resend) {
       this.logger.warn(`RESEND_API_KEY no configurada; email "${asunto}" a ${para} omitido`)
       return
     }
     try {
       const { error } = await this.resend.emails.send({
-        from: this.from,
+        from: this.fromConRemitente(remitente),
         to: para,
         subject: asunto,
         html,

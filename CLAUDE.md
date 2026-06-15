@@ -23,6 +23,25 @@
 
 ---
 
+## REGLA DE ORO — NUNCA borrar datos de la BD de produccion (Railway)
+
+- **JAMAS, bajo ninguna circunstancia, se borran datos de la base de produccion
+  publicada en Railway (Postgres del proyecto "Consultech").** Ni por pedido, ni
+  "para limpiar", ni para resetear, ni para probar. Esta regla NO se puede saltar.
+- Prohibido contra la BD de produccion: `DELETE`/`TRUNCATE`/`DROP`, `prisma migrate
+  reset`, `prisma db push --accept-data-loss`, `prisma db execute` con SQL
+  destructivo, borrar/recrear la base o el servicio Postgres, y cualquier migracion
+  que elimine columnas/tablas con datos sin un plan de respaldo aprobado por el owner.
+- En codigo el borrado YA es soft (deletedAt / activo:false); eso sigue valiendo.
+  Esta regla es sobre operaciones DIRECTAS contra la BD productiva.
+- Las migraciones destructivas (drop de columna/tabla) solo se aplican en dev/local.
+  Si una feature parece necesitar una migracion destructiva en produccion, PARAR y
+  pedir confirmacion explicita al owner antes de tocar nada.
+- Si una tarea parece exigir borrar datos de produccion: NO hacerlo, avisar al owner
+  y proponer una alternativa no destructiva.
+
+---
+
 ## PWA (apps/web es una PWA — tenerlo en cuenta al tocar el front)
 
 - Plugin: **vite-plugin-pwa** (Workbox, modo `generateSW`) configurado en
