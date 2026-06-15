@@ -7,5 +7,6 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   argon2: true
+  core-js: false
   esbuild: true
   prisma: true
