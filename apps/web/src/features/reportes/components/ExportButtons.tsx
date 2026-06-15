@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
-import { Download, Printer } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { Download, Printer, FileText } from 'lucide-react'
 import { btnOutlineUI } from '../../../lib/ui'
 import { cn } from '../../../lib/utils'
 
@@ -11,9 +13,11 @@ interface Props {
 }
 
 export function ExportButtons({ filename, loadAll }: Props) {
-  const [busy, setBusy] = useState(false)
+  const [busyExcel, setBusyExcel] = useState(false)
+  const [busyPdf, setBusyPdf] = useState(false)
+
   async function exportarExcel() {
-    setBusy(true)
+    setBusyExcel(true)
     try {
       const { headers, rows } = await loadAll()
       const hoja = XLSX.utils.aoa_to_sheet([headers, ...rows])
@@ -21,13 +25,38 @@ export function ExportButtons({ filename, loadAll }: Props) {
       XLSX.utils.book_append_sheet(libro, hoja, 'Reporte')
       XLSX.writeFile(libro, `${filename}.xlsx`)
     } finally {
-      setBusy(false)
+      setBusyExcel(false)
     }
   }
+
+  async function exportarPdf() {
+    setBusyPdf(true)
+    try {
+      const { headers, rows } = await loadAll()
+      const landscape = headers.length > 5
+      const doc = new jsPDF({ orientation: landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' })
+      doc.setFontSize(12)
+      doc.text(filename, 14, 14)
+      autoTable(doc, {
+        head: [headers],
+        body: rows.map((r) => r.map((v) => String(v))),
+        startY: 20,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [55, 65, 81] },
+      })
+      doc.save(`${filename}.pdf`)
+    } finally {
+      setBusyPdf(false)
+    }
+  }
+
   return (
     <div className="flex items-center gap-2">
-      <button onClick={exportarExcel} disabled={busy} className={cn(btnOutlineUI, 'disabled:opacity-60')}>
-        <Download className="h-4 w-4" aria-hidden="true" /> {busy ? 'Generando...' : 'Excel'}
+      <button onClick={exportarExcel} disabled={busyExcel} className={cn(btnOutlineUI, 'disabled:opacity-60')}>
+        <Download className="h-4 w-4" aria-hidden="true" /> {busyExcel ? 'Generando...' : 'Excel'}
+      </button>
+      <button onClick={exportarPdf} disabled={busyPdf} className={cn(btnOutlineUI, 'disabled:opacity-60')}>
+        <FileText className="h-4 w-4" aria-hidden="true" /> {busyPdf ? 'Generando...' : 'PDF'}
       </button>
       <button onClick={() => window.print()} className={btnOutlineUI}>
         <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir
