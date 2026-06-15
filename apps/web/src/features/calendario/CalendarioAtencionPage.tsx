@@ -16,6 +16,8 @@ import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 import { DisponibilidadModal, LABEL_TIPO, type BloqueEditable } from './DisponibilidadModal'
 
 // Scheduler semanal: filas = doctores, columnas = dias, bloques = horarios.
+// Mobile (<sm): strip de dias + tarjetas de doctor para el dia seleccionado.
+// Desktop (>=sm): grid semanal con scroll horizontal.
 
 type Bloque = BloqueEditable & { doctorId: number }
 
@@ -56,13 +58,9 @@ export function CalendarioAtencionPage() {
     queryFn: () => api.get(`/disponibilidades?desde=${desde}&hasta=${hasta}`).then((r) => r.data),
   })
 
-  // ADMIN edita todo; un usuario DOCTOR solo la fila de su doctor vinculado
   const doctorPropio = esDoctor ? doctores.find((d) => d.usuarioId === user?.id) : undefined
   const puedeEditar = (doctorId: number) => esAdmin || doctorPropio?.id === doctorId
 
-  // La fecha del bloque es un dia calendario guardado como medianoche UTC:
-  // new Date(...) la corre un dia hacia atras en GMT-4 (el viernes se pintaba
-  // el jueves). Comparar SIEMPRE por el string YYYY-MM-DD, sin pasar por Date.
   function bloquesDe(doctorId: number, dia: Date) {
     const diaStr = format(dia, 'yyyy-MM-dd')
     return bloques.filter(
@@ -70,12 +68,13 @@ export function CalendarioAtencionPage() {
     )
   }
 
-  function navegar(direccion: number) {
-    setFecha((f) => addDays(f, 7 * direccion))
+  function navegar(delta: number) {
+    setFecha((f) => addDays(f, delta))
   }
 
   return (
     <div className="flex flex-col h-full">
+      {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
         <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <span className={chipIconUI}>
@@ -83,15 +82,16 @@ export function CalendarioAtencionPage() {
           </span>
           Calendario de Atención
         </h1>
+        {/* Nav semana — igual en mobile y desktop */}
         <div className="flex items-center gap-2">
-          <button onClick={() => navegar(-1)} aria-label="Semana anterior"
+          <button onClick={() => navegar(-7)} aria-label="Semana anterior"
             className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
           <span className="text-sm font-medium text-foreground capitalize tabular-nums">
             {format(inicioSemana, 'd MMM', { locale: es })} – {format(addDays(inicioSemana, 6), 'd MMM', { locale: es })}
           </span>
-          <button onClick={() => navegar(1)} aria-label="Semana siguiente"
+          <button onClick={() => navegar(7)} aria-label="Semana siguiente"
             className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
             <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -113,75 +113,158 @@ export function CalendarioAtencionPage() {
             action={<Link to="/catalogo" className={cn(btnPrimaryUI, 'h-9')}>Ir al Catálogo</Link>}
           />
         ) : (
-          <div className={cn(cardUI, 'overflow-x-auto')}>
-            <div className="min-w-[900px]">
-              {/* Header de dias */}
-              <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
-                <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground">Doctor</div>
-                {dias.map((dia) => (
-                  <div key={dia.toISOString()}
-                    className={cn('px-2 py-2.5 text-center border-l', isSameDay(dia, hoy) && 'bg-primary/10')}>
-                    <span className="block text-xs uppercase text-muted-foreground">
-                      {format(dia, 'EEE', { locale: es })}
-                    </span>
-                    <span className="text-sm font-semibold text-foreground tabular-nums">{format(dia, 'd')}</span>
-                  </div>
-                ))}
+          <>
+            {/* ── Mobile: strip de dias + tarjetas ── */}
+            <div className="sm:hidden space-y-4">
+              {/* Strip de 7 dias — tap para seleccionar */}
+              <div className="flex gap-1">
+                {dias.map((dia) => {
+                  const seleccionado = isSameDay(dia, fecha)
+                  const esHoy = isSameDay(dia, hoy)
+                  return (
+                    <button
+                      key={dia.toISOString()}
+                      onClick={() => setFecha(dia)}
+                      className={cn(
+                        'flex-1 flex flex-col items-center py-2 rounded-xl text-xs font-medium transition-colors duration-150 min-w-0',
+                        seleccionado
+                          ? 'bg-primary text-primary-foreground'
+                          : esHoy
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      <span className="uppercase text-[10px]">
+                        {format(dia, 'EEEEE', { locale: es })}
+                      </span>
+                      <span className="font-semibold tabular-nums mt-0.5">{format(dia, 'd')}</span>
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* Una fila por doctor */}
-              {doctores.map((doc) => (
-                <div key={doc.id} className="grid border-b last:border-0"
-                  style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
-                  <div className="flex items-center gap-2 px-3 py-3">
-                    <DoctorAvatar nombre={doc.nombre} colorAgenda={doc.colorAgenda} fotoUrl={doc.fotoUrl} size={28} />
-                    <span className="text-sm font-medium text-foreground truncate">{doc.nombre}</span>
-                  </div>
-                  {dias.map((dia) => {
-                    const delDia = bloquesDe(doc.id, dia)
-                    const fechaStr = format(dia, 'yyyy-MM-dd')
-                    return (
-                      <div key={dia.toISOString()}
-                        className={cn('group border-l p-1.5 min-h-[72px] space-y-1', isSameDay(dia, hoy) && 'bg-primary/5')}>
-                        {delDia.map((b) => (
-                          <button
-                            key={b.id}
-                            onClick={() => puedeEditar(doc.id) && setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr, bloque: b })}
-                            disabled={!puedeEditar(doc.id)}
-                            title={`${LABEL_TIPO[b.tipo]}${b.nota ? ` — ${b.nota}` : ''}`}
-                            className={cn(
-                              'block w-full text-left text-xs font-medium px-1.5 py-1 rounded border tabular-nums transition-colors duration-150',
-                              ESTILO_TIPO[b.tipo],
-                              puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            )}
-                          >
-                            {b.horaInicio}–{b.horaFin}
-                            {b.tipo !== TipoDisponibilidad.DISPONIBLE && (
-                              <span className="block truncate font-normal">{LABEL_TIPO[b.tipo]}</span>
-                            )}
-                          </button>
-                        ))}
+              {/* Tarjetas de doctor para el dia seleccionado */}
+              <div className="space-y-3">
+                {doctores.map((doc) => {
+                  const delDia = bloquesDe(doc.id, fecha)
+                  const fechaStr = format(fecha, 'yyyy-MM-dd')
+                  return (
+                    <div key={doc.id} className={cn(cardUI)}>
+                      <div className="flex items-center justify-between px-4 py-3 border-b">
+                        <div className="flex items-center gap-2">
+                          <DoctorAvatar nombre={doc.nombre} colorAgenda={doc.colorAgenda} fotoUrl={doc.fotoUrl} size={28} />
+                          <span className="text-sm font-medium text-foreground">{doc.nombre}</span>
+                        </div>
                         {puedeEditar(doc.id) && (
                           <button
                             onClick={() => setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr })}
-                            aria-label={`Agregar horario a ${doc.nombre} el ${fechaStr}`}
-                            className="w-full flex items-center justify-center py-1 rounded text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-muted-foreground transition-colors duration-150"
+                            aria-label={`Agregar horario a ${doc.nombre}`}
+                            className={cn(btnIconUI, 'h-8 w-8 text-primary hover:bg-primary/10')}
                           >
-                            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                            <Plus className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                       </div>
-                    )
-                  })}
-                </div>
-              ))}
+                      <div className="px-4 py-3 space-y-1.5 min-h-[52px]">
+                        {delDia.length === 0 ? (
+                          <p className="text-sm text-muted-foreground/55 py-0.5">Sin horarios</p>
+                        ) : (
+                          delDia.map((b) => (
+                            <button
+                              key={b.id}
+                              onClick={() => puedeEditar(doc.id) && setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr, bloque: b })}
+                              disabled={!puedeEditar(doc.id)}
+                              className={cn(
+                                'flex items-center justify-between w-full text-left text-xs font-medium px-2.5 py-2 rounded-lg border tabular-nums transition-colors duration-150',
+                                ESTILO_TIPO[b.tipo],
+                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              )}
+                            >
+                              <span>{b.horaInicio}–{b.horaFin}</span>
+                              {b.tipo !== TipoDisponibilidad.DISPONIBLE && (
+                                <span className="font-normal ml-2 text-right">{LABEL_TIPO[b.tipo]}</span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+
+            {/* ── Desktop: grid semanal ── */}
+            <div className={cn(cardUI, 'hidden sm:block overflow-x-auto')}>
+              <div className="min-w-[900px]">
+                {/* Header de dias */}
+                <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
+                  <div className="px-3 py-2.5 text-xs font-medium text-muted-foreground">Doctor</div>
+                  {dias.map((dia) => (
+                    <div key={dia.toISOString()}
+                      className={cn('px-2 py-2.5 text-center border-l', isSameDay(dia, hoy) && 'bg-primary/10')}>
+                      <span className="block text-xs uppercase text-muted-foreground">
+                        {format(dia, 'EEE', { locale: es })}
+                      </span>
+                      <span className="text-sm font-semibold text-foreground tabular-nums">{format(dia, 'd')}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Una fila por doctor */}
+                {doctores.map((doc) => (
+                  <div key={doc.id} className="grid border-b last:border-0"
+                    style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
+                    <div className="flex items-center gap-2 px-3 py-3">
+                      <DoctorAvatar nombre={doc.nombre} colorAgenda={doc.colorAgenda} fotoUrl={doc.fotoUrl} size={28} />
+                      <span className="text-sm font-medium text-foreground truncate">{doc.nombre}</span>
+                    </div>
+                    {dias.map((dia) => {
+                      const delDia = bloquesDe(doc.id, dia)
+                      const fechaStr = format(dia, 'yyyy-MM-dd')
+                      return (
+                        <div key={dia.toISOString()}
+                          className={cn('group border-l p-1.5 min-h-[72px] space-y-1', isSameDay(dia, hoy) && 'bg-primary/5')}>
+                          {delDia.map((b) => (
+                            <button
+                              key={b.id}
+                              onClick={() => puedeEditar(doc.id) && setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr, bloque: b })}
+                              disabled={!puedeEditar(doc.id)}
+                              title={`${LABEL_TIPO[b.tipo]}${b.nota ? ` — ${b.nota}` : ''}`}
+                              className={cn(
+                                'block w-full text-left text-xs font-medium px-1.5 py-1 rounded border tabular-nums transition-colors duration-150',
+                                ESTILO_TIPO[b.tipo],
+                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              )}
+                            >
+                              {b.horaInicio}–{b.horaFin}
+                              {b.tipo !== TipoDisponibilidad.DISPONIBLE && (
+                                <span className="block truncate font-normal">{LABEL_TIPO[b.tipo]}</span>
+                              )}
+                            </button>
+                          ))}
+                          {puedeEditar(doc.id) && (
+                            <button
+                              onClick={() => setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr })}
+                              aria-label={`Agregar horario a ${doc.nombre} el ${fechaStr}`}
+                              className="w-full flex items-center justify-center py-1 rounded text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-muted-foreground transition-colors duration-150"
+                            >
+                              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         <p className="text-xs text-muted-foreground mt-3">
-          Las citas solo se pueden agendar dentro de los bloques Disponible del doctor (si tiene
-          horarios configurados); los bloqueos rechazan citas siempre.
+          Las citas solo se pueden agendar dentro de los rangos "Disponible" (si tiene
+          horarios configurados); No se podrá agendar citas fuera de estos rangos, ni en rango Bloqueado.
         </p>
       </div>
 

@@ -4,8 +4,10 @@ import { AlertCircle, UserCog } from 'lucide-react'
 import type { Doctor } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
 
 const ROLES = ['ADMIN', 'SECRETARIA', 'DOCTOR', 'CAJA'] as const
 
@@ -80,55 +82,55 @@ export function UsuarioModal({ usuario, onClose }: Props) {
           title={editando ? 'Editar usuario' : 'Nuevo usuario'}
           onClose={onClose}
         />
-        <form onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
-            <input required value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              className={inputUI} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
-            <input required type="email" autoComplete="off" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className={inputUI} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              {editando ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}
-            </label>
-            <input type="password" autoComplete="new-password" minLength={8} value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              className={inputUI} />
-            {!editando && (
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Mínimo 8 caracteres. Si la dejás vacía, el usuario recibe un correo con un enlace para
-                definirla él mismo.
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Rol *</label>
-            <select value={form.rol} onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
-              className={inputUI}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+        <form onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }} className="p-6 sm:p-7 space-y-5">
+          <FloatingInput
+            label="Nombre"
+            required
+            value={form.nombre}
+            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+          />
+          <FloatingInput
+            label="Email"
+            required
+            type="email"
+            autoComplete="off"
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          />
+          <FloatingInput
+            label={editando ? 'Nueva contraseña' : 'Contraseña'}
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            hint={
+              editando
+                ? 'Dejá vacío para no cambiarla.'
+                : 'Mínimo 8 caracteres. Si la dejás vacía, el usuario recibe un correo con un enlace para definirla él mismo.'
+            }
+          />
+          <FloatingSelect
+            label="Rol"
+            required
+            value={form.rol}
+            onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
+          >
+            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </FloatingSelect>
           {form.rol === 'DOCTOR' && (
-            <div>
-              <label htmlFor="usuario-doctor" className="block text-sm font-medium text-foreground mb-1.5">
-                Doctor asociado
-              </label>
-              <select id="usuario-doctor" value={form.doctorId}
-                onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value }))}
-                className={inputUI}>
-                <option value="">Sin asociar</option>
-                {doctoresElegibles.map((d) => (
-                  <option key={d.id} value={d.id}>{d.nombre}</option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Al loguearse vera y editara solo su agenda y su calendario de atención.
-              </p>
-            </div>
+            <FloatingSelect
+              id="usuario-doctor"
+              label="Doctor asociado"
+              value={form.doctorId}
+              onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value }))}
+              hint="Al loguearse verá y editará solo su agenda y su calendario de atención."
+            >
+              <option value="">Sin asociar</option>
+              {doctoresElegibles.map((d) => (
+                <option key={d.id} value={d.id}>{d.nombre}</option>
+              ))}
+            </FloatingSelect>
           )}
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
@@ -142,7 +144,7 @@ export function UsuarioModal({ usuario, onClose }: Props) {
               {error}
             </p>
           )}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
               {mutation.isPending ? 'Guardando...' : editando ? 'Guardar' : 'Crear usuario'}

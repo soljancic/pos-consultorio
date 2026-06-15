@@ -7,11 +7,13 @@ interface Props {
   value: string
   onChange: (codigo: string) => void
   disabled?: boolean
+  // Override del estilo del boton (alto/bordes) para alinear con distintos inputs
+  buttonClassName?: string
 }
 
 // Selector compacto de pais para acompanar un input de telefono: boton con
 // la bandera + dropdown con buscador (patron intl-tel-input, sin dependencias).
-export function SelectorPais({ value, onChange, disabled }: Props) {
+export function SelectorPais({ value, onChange, disabled, buttonClassName }: Props) {
   const [abierto, setAbierto] = useState(false)
   const [busqueda, setBusqueda] = useState('')
   const contenedorRef = useRef<HTMLDivElement>(null)
@@ -57,7 +59,10 @@ export function SelectorPais({ value, onChange, disabled }: Props) {
         aria-expanded={abierto}
         aria-label={`País: ${seleccionado.nombre} +${seleccionado.dial}`}
         title={`${seleccionado.nombre} +${seleccionado.dial}`}
-        className="inline-flex items-center gap-1 h-10 px-2.5 border border-input bg-card rounded-md text-base cursor-pointer hover:bg-muted/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 border border-input bg-card text-base cursor-pointer hover:bg-muted/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150',
+          buttonClassName ?? 'h-10 rounded-md',
+        )}
       >
         <span aria-hidden="true">{banderaDe(seleccionado.codigo)}</span>
         <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />

@@ -5,7 +5,10 @@ import { EstadoCita, type Cita, type Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { abrirAdjunto, abrirRecetaPdf, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -139,50 +142,58 @@ export function AtencionModal({ cita, onClose }: Props) {
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">Cargando...</div>
         ) : (
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Servicio realizado</label>
-              <select
-                value={servicioId}
-                disabled={!puedeEditar || cita.estado === EstadoCita.COBRADO}
-                onChange={(e) => setServicioId(e.target.value)}
-                className={inputUI}
-              >
-                {servicios.length === 0 && (
-                  <option value={String(cita.servicioId)}>{cita.servicio?.nombre ?? 'Servicio'}</option>
-                )}
-                {servicios.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
-                ))}
-              </select>
-              {String(cita.servicioId) !== servicioId && (
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  Al guardar, la cita y el cobro se actualizan al precio de este servicio.
-                </p>
+          <div className="p-6 sm:p-7 space-y-5">
+            <FloatingSelect
+              label="Servicio realizado"
+              value={servicioId}
+              disabled={!puedeEditar || cita.estado === EstadoCita.COBRADO}
+              onChange={(e) => setServicioId(e.target.value)}
+              hint={
+                String(cita.servicioId) !== servicioId
+                  ? 'Al guardar, la cita y el cobro se actualizan al precio de este servicio.'
+                  : undefined
+              }
+            >
+              {servicios.length === 0 && (
+                <option value={String(cita.servicioId)}>{cita.servicio?.nombre ?? 'Servicio'}</option>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Motivo de consulta</label>
-              <input value={form.motivo} disabled={!puedeEditar} onChange={(e) => set('motivo', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Diagnóstico</label>
-              <input value={form.diagnostico} disabled={!puedeEditar} onChange={(e) => set('diagnostico', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Tratamiento indicado</label>
-              <input value={form.tratamiento} disabled={!puedeEditar} onChange={(e) => set('tratamiento', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Evolución / notas</label>
-              <textarea rows={3} value={form.evolucion} disabled={!puedeEditar} onChange={(e) => set('evolucion', e.target.value)}
-                className={textareaUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Próximo control</label>
-              <input type="date" value={form.proximoControl} disabled={!puedeEditar} onChange={(e) => set('proximoControl', e.target.value)}
-                className={inputUI} />
-            </div>
+              {servicios.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
+              ))}
+            </FloatingSelect>
+            <FloatingInput
+              label="Motivo de consulta"
+              value={form.motivo}
+              disabled={!puedeEditar}
+              onChange={(e) => set('motivo', e.target.value)}
+            />
+            <FloatingInput
+              label="Diagnóstico"
+              value={form.diagnostico}
+              disabled={!puedeEditar}
+              onChange={(e) => set('diagnostico', e.target.value)}
+            />
+            <FloatingInput
+              label="Tratamiento indicado"
+              value={form.tratamiento}
+              disabled={!puedeEditar}
+              onChange={(e) => set('tratamiento', e.target.value)}
+            />
+            <FloatingTextarea
+              label="Evolución / notas"
+              rows={3}
+              value={form.evolucion}
+              disabled={!puedeEditar}
+              onChange={(e) => set('evolucion', e.target.value)}
+            />
+            <FloatingInput
+              label="Próximo control"
+              type="date"
+              alwaysFloat
+              value={form.proximoControl}
+              disabled={!puedeEditar}
+              onChange={(e) => set('proximoControl', e.target.value)}
+            />
 
             {/* Adjuntos: requieren atencion guardada */}
             <div>
@@ -299,14 +310,14 @@ export function AtencionModal({ cita, onClose }: Props) {
               </p>
             )}
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               <button type="button" onClick={onClose} className={btnOutlineUI}>
                 {puedeEditar ? 'Cancelar' : 'Cerrar'}
               </button>
               {puedeEditar && (
                 <button type="button" disabled={guardar.isPending}
                   onClick={() => { setError(''); guardar.mutate({ marcarAtendida: false }) }}
-                  className="inline-flex items-center justify-center flex-1 h-10 px-4 border border-primary text-primary rounded-md text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
+                  className="inline-flex items-center justify-center flex-1 h-11 px-4 border border-primary text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
                   Guardar
                 </button>
               )}

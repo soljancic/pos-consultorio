@@ -54,7 +54,7 @@ const INCLUYE = [
 
 export function LandingPage() {
   return (
-    <div className="min-h-dvh bg-[#070d18] overflow-x-hidden antialiased selection:bg-cyan-400/30" style={{ color: '#cbd5e1' }}>
+    <div className="min-h-dvh bg-[#070d18] overflow-x-clip antialiased selection:bg-cyan-400/30" style={{ color: '#cbd5e1' }}>
       <style>{`
         @keyframes ct-rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
         .ct-rise { opacity:0; animation:ct-rise .6s cubic-bezier(.16,1,.3,1) forwards }

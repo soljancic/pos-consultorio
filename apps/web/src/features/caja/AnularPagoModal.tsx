@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Undo2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
-import { inputUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnOutlineUI, errorUI, btnPrimaryUI, btnDestructiveUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 export interface PagoAnulable {
   id: number
@@ -52,20 +53,17 @@ export function AnularPagoModal({ pago, onClose }: Props) {
         <ModalHeader icon={Undo2} title="Anular pago" tone="destructive" onClose={onClose} />
 
         {advertencia ? (
-          <div className="p-6 space-y-4">
+          <div className="p-6 sm:p-7 space-y-5">
             <p className="flex items-start gap-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-500/15 rounded-md px-3 py-2.5">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
               Pago anulado. {advertencia}
             </p>
-            <button
-              onClick={onClose}
-              className="inline-flex items-center justify-center w-full h-10 px-4 bg-primary text-primary-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
-            >
+            <button onClick={onClose} className={cn(btnPrimaryUI, 'w-full')}>
               Entendido
             </button>
           </div>
         ) : (
-        <div className="p-6 space-y-4">
+        <div className="p-6 sm:p-7 space-y-5">
           <p className="text-sm text-foreground">
             Se anula el pago de{' '}
             <span className="font-semibold tabular-nums">{formatMoneda(pago.monto)}</span> (
@@ -74,18 +72,13 @@ export function AnularPagoModal({ pago, onClose }: Props) {
             de hoy y la deuda del paciente se restaura.
           </p>
 
-          <div>
-            <label htmlFor="anular-motivo" className="block text-sm font-medium text-foreground mb-1.5">
-              Motivo <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <input
-              id="anular-motivo"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej: se cargo el monto equivocado"
-              className={inputUI}
-            />
-          </div>
+          <FloatingInput
+            id="anular-motivo"
+            label="Motivo (opcional)"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            hint="Ej: se cargó el monto equivocado"
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -94,7 +87,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>
@@ -102,7 +95,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
               type="button"
               onClick={() => { setError(''); anular.mutate() }}
               disabled={anular.isPending}
-              className="inline-flex items-center justify-center flex-1 h-10 px-4 bg-destructive text-destructive-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+              className={cn(btnDestructiveUI, 'flex-1')}
             >
               {anular.isPending ? 'Anulando...' : 'Anular pago'}
             </button>

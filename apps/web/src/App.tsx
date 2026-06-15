@@ -20,6 +20,7 @@ import { MensajesPage } from './features/mensajes/MensajesPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
 import { AyudaPage } from './features/ayuda/AyudaPage'
 import { LandingPage } from './features/landing/LandingPage'
+import { NotFoundPage } from './features/notfound/NotFoundPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.accessToken)
@@ -70,7 +71,9 @@ export default function App() {
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
         <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />
         <Route path="actividad" element={<AdminRoute><ActividadPage /></AdminRoute>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

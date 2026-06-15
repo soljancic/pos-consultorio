@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, abrirWhatsApp, publicBaseUrl } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 import { PacienteModal } from '../pacientes/PacienteModal'
 
 interface Props {
@@ -165,14 +168,18 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader icon={CalendarPlus} title="Nueva cita" onClose={onClose} />
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Paciente */}
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
+          {/* Paciente: buscador con autocompletado y floating label.
+              Usa el patron peer-* de Tailwind (label flota por CSS, sin estado). */}
           <div ref={searchRef}>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Paciente</label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 z-10 text-muted-foreground/45 peer-focus:text-primary transition-colors duration-150"
+                  aria-hidden="true"
+                />
                 <input
+                  id="cita-paciente"
                   value={pacienteQuery}
                   onChange={(e) => {
                     setPacienteQuery(e.target.value)
@@ -180,12 +187,21 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                     setShowPacienteList(true)
                   }}
                   onFocus={() => setShowPacienteList(true)}
-                  placeholder="Buscar paciente..."
-                  className={cn(inputUI, 'pl-9')}
+                  placeholder=" "
+                  className="peer w-full h-14 rounded-xl border border-input bg-card pl-10 pr-4 text-base sm:text-sm text-foreground hover:border-muted-foreground/35 focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/15 transition-colors duration-150"
                   required
                 />
+                <label
+                  htmlFor="cita-paciente"
+                  className="pointer-events-none select-none absolute -translate-y-1/2 bg-card px-1 transition-all duration-150
+                    top-0 left-3 text-xs font-semibold text-muted-foreground/75
+                    peer-placeholder-shown:top-1/2 peer-placeholder-shown:left-10 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-muted-foreground/50
+                    peer-focus:top-0 peer-focus:left-3 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-primary"
+                >
+                  Paciente
+                </label>
                 {showPacienteList && pacientesResultado.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-auto">
+                  <div className="absolute z-20 top-full w-full mt-1.5 bg-card border rounded-xl shadow-lg max-h-48 overflow-auto">
                     {pacientesResultado.map((p) => (
                       <button
                         key={p.id}
@@ -206,7 +222,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                 onClick={() => setModalNuevoPaciente(true)}
                 aria-label="Nuevo paciente"
                 title="Nuevo paciente"
-                className="inline-flex items-center justify-center h-10 w-10 shrink-0 rounded-md border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                className="inline-flex items-center justify-center h-14 w-14 shrink-0 rounded-xl border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
               >
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -225,38 +241,34 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
           )}
 
           {/* Doctor */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Doctor</label>
-            <select
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-              className={inputUI}
-              required
-            >
-              <option value="">Seleccionar doctor...</option>
-              {doctores.map((d) => (
-                <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` - ${d.especialidad}` : ''}</option>
-              ))}
-            </select>
-          </div>
+          <FloatingSelect
+            label="Doctor"
+            Icon={UserRound}
+            value={doctorId}
+            onChange={(e) => setDoctorId(e.target.value)}
+            required
+          >
+            <option value="">Seleccionar doctor...</option>
+            {doctores.map((d) => (
+              <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` - ${d.especialidad}` : ''}</option>
+            ))}
+          </FloatingSelect>
 
           {/* Servicio */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Servicio</label>
-            <select
-              value={servicioId}
-              onChange={(e) => setServicioId(e.target.value)}
-              className={inputUI}
-              required
-            >
-              <option value="">Seleccionar servicio...</option>
-              {servicios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre} ({s.duracionMin}min)
-                </option>
-              ))}
-            </select>
-          </div>
+          <FloatingSelect
+            label="Servicio"
+            Icon={Stethoscope}
+            value={servicioId}
+            onChange={(e) => setServicioId(e.target.value)}
+            required
+          >
+            <option value="">Seleccionar servicio...</option>
+            {servicios.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre} ({s.duracionMin}min)
+              </option>
+            ))}
+          </FloatingSelect>
 
           {/* Link de reserva del portal: alternativa a crear la cita. Siempre
               visible con el portal activo; sirve aunque no haya nada elegido
@@ -296,42 +308,35 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
           )}
 
           {/* Fecha y hora */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Fecha</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className={inputUI}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Hora</label>
-              <input
-                type="time"
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
-                className={inputUI}
-                required
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FloatingInput
+              label="Fecha"
+              type="date"
+              Icon={Calendar}
+              alwaysFloat
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              required
+            />
+            <FloatingInput
+              label="Hora"
+              type="time"
+              Icon={Clock}
+              alwaysFloat
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+              required
+            />
           </div>
 
           {/* Notas */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={2}
-              placeholder="Observaciones para la cita..."
-              className={textareaUI}
-            />
-          </div>
+          <FloatingTextarea
+            label="Notas (opcional)"
+            Icon={FileText}
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            rows={2}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -340,7 +345,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>

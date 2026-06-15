@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, UserPlus } from 'lucide-react'
+import { AlertCircle, AlertTriangle, UserPlus, User, IdCard, Cake, PersonStanding, Mail, MapPin, FileText } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 import type { Paciente } from '@pos/types'
 
 interface Props {
@@ -116,7 +119,7 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
           onClose={onClose}
         />
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
           {/* Aviso no bloqueante: el CI/telefono/correo ya existe en otro paciente
               (puede ser un familiar). El nombre+apellido duplicado SI bloquea (backend). */}
           {avisos.length > 0 && (
@@ -128,63 +131,95 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
               <span>Ya hay otro paciente con {avisos.join(' y ')}. Puede ser un familiar (ej. comparten teléfono).</span>
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
-              <input required value={form.nombre} onChange={(e) => set('nombre', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Apellido *</label>
-              <input required value={form.apellido} onChange={(e) => set('apellido', e.target.value)} className={inputUI} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FloatingInput
+              label="Nombre"
+              Icon={User}
+              required
+              value={form.nombre}
+              onChange={(e) => set('nombre', e.target.value)}
+            />
+            <FloatingInput
+              label="Apellido"
+              Icon={User}
+              required
+              value={form.apellido}
+              onChange={(e) => set('apellido', e.target.value)}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">CI</label>
-              <input inputMode="numeric" value={form.dni} onChange={(e) => set('dni', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Fecha de nacimiento</label>
-              <input type="date" value={form.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} className={inputUI} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FloatingInput
+              label="CI"
+              Icon={IdCard}
+              inputMode="numeric"
+              value={form.dni}
+              onChange={(e) => set('dni', e.target.value)}
+            />
+            <FloatingInput
+              label="Fecha de nacimiento"
+              Icon={Cake}
+              type="date"
+              alwaysFloat
+              value={form.fechaNacimiento}
+              onChange={(e) => set('fechaNacimiento', e.target.value)}
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
-              {/* El pais define el prefijo internacional de los WhatsApp */}
-              <div className="flex gap-2">
-                <SelectorPais value={form.pais} onChange={(codigo) => set('pais', codigo)} />
-                <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} className={inputUI} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Teléfono: selector de país + input unidos como un control segmentado.
+                El país define el prefijo internacional de los WhatsApp. */}
+            <div className="flex items-stretch">
+              <SelectorPais
+                value={form.pais}
+                onChange={(codigo) => set('pais', codigo)}
+                buttonClassName="h-14 rounded-l-xl rounded-r-none border-r-0"
+              />
+              <div className="relative flex-1">
+                <FloatingInput
+                  label="Teléfono"
+                  type="tel"
+                  value={form.telefono}
+                  onChange={(e) => set('telefono', e.target.value)}
+                  className="rounded-l-none"
+                />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Sexo</label>
-              <select value={form.sexo} onChange={(e) => set('sexo', e.target.value)} className={inputUI}>
-                <option value="">-</option>
-                <option value="F">Femenino</option>
-                <option value="M">Masculino</option>
-                <option value="X">Otro</option>
-              </select>
-            </div>
+            <FloatingSelect
+              label="Sexo"
+              Icon={PersonStanding}
+              value={form.sexo}
+              onChange={(e) => set('sexo', e.target.value)}
+            >
+              <option value="">Sin especificar</option>
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+              <option value="X">Otro</option>
+            </FloatingSelect>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputUI} />
-          </div>
+          <FloatingInput
+            label="Email"
+            Icon={Mail}
+            type="email"
+            value={form.email}
+            onChange={(e) => set('email', e.target.value)}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Dirección</label>
-            <input value={form.direccion} onChange={(e) => set('direccion', e.target.value)} className={inputUI} />
-          </div>
+          <FloatingInput
+            label="Dirección"
+            Icon={MapPin}
+            value={form.direccion}
+            onChange={(e) => set('direccion', e.target.value)}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Notas</label>
-            <textarea value={form.notas} onChange={(e) => set('notas', e.target.value)} rows={2}
-              className={textareaUI} />
-          </div>
+          <FloatingTextarea
+            label="Notas"
+            Icon={FileText}
+            value={form.notas}
+            onChange={(e) => set('notas', e.target.value)}
+            rows={2}
+          />
 
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
@@ -206,7 +241,7 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>

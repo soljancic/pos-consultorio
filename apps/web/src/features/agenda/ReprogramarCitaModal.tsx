@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { AlertCircle, CalendarClock } from 'lucide-react'
+import { AlertCircle, CalendarClock, Calendar, Clock, UserRound, Stethoscope } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import type { Cita, Doctor, Servicio } from '@pos/types'
 
 interface Props {
@@ -67,74 +69,60 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
           onClose={onClose}
         />
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="reprog-fecha" className="block text-sm font-medium text-foreground mb-1.5">
-                Nueva fecha
-              </label>
-              <input
-                id="reprog-fecha"
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className={inputUI}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="reprog-hora" className="block text-sm font-medium text-foreground mb-1.5">
-                Nueva hora
-              </label>
-              <input
-                id="reprog-hora"
-                type="time"
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
-                className={inputUI}
-                required
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <FloatingInput
+              id="reprog-fecha"
+              label="Nueva fecha"
+              type="date"
+              Icon={Calendar}
+              alwaysFloat
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              required
+            />
+            <FloatingInput
+              id="reprog-hora"
+              label="Nueva hora"
+              type="time"
+              Icon={Clock}
+              alwaysFloat
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+              required
+            />
           </div>
 
-          <div>
-            <label htmlFor="reprog-doctor" className="block text-sm font-medium text-foreground mb-1.5">
-              Doctor
-            </label>
-            <select
-              id="reprog-doctor"
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-              className={inputUI}
-              required
-            >
-              {doctores.map((d) => (
-                <option key={d.id} value={d.id}>{d.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <FloatingSelect
+            id="reprog-doctor"
+            label="Doctor"
+            Icon={UserRound}
+            value={doctorId}
+            onChange={(e) => setDoctorId(e.target.value)}
+            required
+          >
+            {doctores.map((d) => (
+              <option key={d.id} value={d.id}>{d.nombre}</option>
+            ))}
+          </FloatingSelect>
 
-          <div>
-            <label htmlFor="reprog-servicio" className="block text-sm font-medium text-foreground mb-1.5">
-              Servicio
-            </label>
-            <select
-              id="reprog-servicio"
-              value={servicioId}
-              onChange={(e) => setServicioId(e.target.value)}
-              className={inputUI}
-              required
-            >
-              {servicios.map((s) => (
-                <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
-              ))}
-            </select>
-            {String(cita.servicioId) !== servicioId && (
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Al cambiar el servicio, el cobro se recalcula al precio del nuevo servicio.
-              </p>
-            )}
-          </div>
+          <FloatingSelect
+            id="reprog-servicio"
+            label="Servicio"
+            Icon={Stethoscope}
+            value={servicioId}
+            onChange={(e) => setServicioId(e.target.value)}
+            required
+            hint={
+              String(cita.servicioId) !== servicioId
+                ? 'Al cambiar el servicio, el cobro se recalcula al precio del nuevo servicio.'
+                : undefined
+            }
+          >
+            {servicios.map((s) => (
+              <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin}min)</option>
+            ))}
+          </FloatingSelect>
 
           <p className="text-xs text-muted-foreground">
             La cita vuelve a estado Pendiente: confirmar de nuevo con el paciente.
@@ -147,7 +135,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>

@@ -4,8 +4,9 @@ import { AlertCircle, FileSignature } from 'lucide-react'
 import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
-import { textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 
 interface Props {
   cita: Cita
@@ -52,33 +53,22 @@ export function RecetaModal({ cita, onClose }: Props) {
           onClose={onClose}
         />
 
-        <div className="p-6 space-y-4">
-          <div>
-            <label htmlFor="receta-meds" className="block text-sm font-medium text-foreground mb-1.5">
-              Medicamentos * <span className="font-normal text-muted-foreground">(uno por línea)</span>
-            </label>
-            <textarea
-              id="receta-meds"
-              rows={5}
-              value={medicamentos}
-              onChange={(e) => setMedicamentos(e.target.value)}
-              placeholder={'Ibuprofeno 400 mg, 1 comprimido cada 8 horas por 5 días\nOmeprazol 20 mg, 1 cápsula en ayunas por 7 días'}
-              className={textareaUI}
-            />
-          </div>
-          <div>
-            <label htmlFor="receta-ind" className="block text-sm font-medium text-foreground mb-1.5">
-              Indicaciones
-            </label>
-            <textarea
-              id="receta-ind"
-              rows={3}
-              value={indicaciones}
-              onChange={(e) => setIndicaciones(e.target.value)}
-              placeholder="Reposo relativo, abundante líquido..."
-              className={textareaUI}
-            />
-          </div>
+        <div className="p-6 sm:p-7 space-y-5">
+          <FloatingTextarea
+            id="receta-meds"
+            label="Medicamentos (uno por línea)"
+            rows={5}
+            value={medicamentos}
+            onChange={(e) => setMedicamentos(e.target.value)}
+            hint="Ej: Ibuprofeno 400 mg, 1 comprimido cada 8 horas por 5 días."
+          />
+          <FloatingTextarea
+            id="receta-ind"
+            label="Indicaciones"
+            rows={3}
+            value={indicaciones}
+            onChange={(e) => setIndicaciones(e.target.value)}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -87,7 +77,7 @@ export function RecetaModal({ cita, onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className={btnOutlineUI}>
               Cancelar
             </button>

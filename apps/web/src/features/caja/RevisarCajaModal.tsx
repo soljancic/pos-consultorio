@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 export interface CajaRevisable {
   id: number
@@ -48,7 +49,7 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
           onClose={onClose}
         />
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 sm:p-7 space-y-5">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Declarado</span>
@@ -69,18 +70,12 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
             )}
           </div>
 
-          <div>
-            <label htmlFor="revision-nota" className="block text-sm font-medium text-foreground mb-1.5">
-              Nota de revisión <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <input
-              id="revision-nota"
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              placeholder="Ej: faltante justificado, se repuso"
-              className={inputUI}
-            />
-          </div>
+          <FloatingInput
+            id="revision-nota"
+            label="Nota de revisión (opcional)"
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -89,7 +84,7 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>

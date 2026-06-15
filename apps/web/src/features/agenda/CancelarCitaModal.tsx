@@ -4,8 +4,9 @@ import { AlertCircle, AlertTriangle, UserX } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, formatHora, cn } from '../../lib/utils'
-import { inputUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnOutlineUI, errorUI, btnDestructiveUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 type Modo = 'cancelar' | 'no-asistió'
 
@@ -70,7 +71,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader icon={Icono} title={t.titulo} tone="destructive" onClose={onClose} />
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 sm:p-7 space-y-5">
           <p className="text-sm text-foreground">
             {t.verbo} la cita de{' '}
             <span className="font-semibold">
@@ -80,18 +81,13 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
             asociado queda anulado. Se puede reabrir despues como Pendiente.
           </p>
 
-          <div>
-            <label htmlFor="cancelar-motivo" className="block text-sm font-medium text-foreground mb-1.5">
-              Motivo <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <input
-              id="cancelar-motivo"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder={t.placeholderMotivo}
-              className={inputUI}
-            />
-          </div>
+          <FloatingInput
+            id="cancelar-motivo"
+            label="Motivo (opcional)"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            hint={t.placeholderMotivo}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -100,7 +96,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>
@@ -108,7 +104,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
               type="button"
               onClick={() => { setError(''); cancelar.mutate() }}
               disabled={cancelar.isPending}
-              className="inline-flex items-center justify-center flex-1 h-10 px-4 bg-destructive text-destructive-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+              className={cn(btnDestructiveUI, 'flex-1')}
             >
               {cancelar.isPending ? t.botonCargando : t.boton}
             </button>

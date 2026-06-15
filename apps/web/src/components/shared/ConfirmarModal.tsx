@@ -1,6 +1,6 @@
 import { AlertTriangle, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { btnOutlineUI, btnIconUI } from '../../lib/ui'
+import { btnOutlineUI, btnIconUI, btnDestructiveUI } from '../../lib/ui'
 
 interface Props {
   titulo: string
@@ -33,7 +33,7 @@ export function ConfirmarModal({ titulo, mensaje, confirmLabel = 'Confirmar', pe
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-6 sm:p-7 space-y-5">
           <p className="text-sm text-foreground">{mensaje}</p>
           <div className="flex gap-3">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
@@ -43,7 +43,7 @@ export function ConfirmarModal({ titulo, mensaje, confirmLabel = 'Confirmar', pe
               type="button"
               onClick={onConfirm}
               disabled={pendiente}
-              className="inline-flex items-center justify-center flex-1 h-10 px-4 bg-destructive text-destructive-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+              className={cn(btnDestructiveUI, 'flex-1')}
             >
               {pendiente ? 'Procesando...' : confirmLabel}
             </button>

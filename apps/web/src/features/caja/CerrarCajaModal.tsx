@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Lock, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, cn } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { formatMoneda, simboloMoneda, cn } from '../../lib/utils'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 
 interface Props {
   onClose: () => void
@@ -58,45 +60,39 @@ export function CerrarCajaModal({ onClose }: Props) {
         <ModalHeader icon={Lock} title="Cerrar caja" onClose={onClose} />
 
         {!resultado ? (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
             <p className="flex items-start gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2.5">
               <EyeOff className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
               Arqueo ciego: conta el efectivo fisico de la caja y declara el total. El sistema
               no muestra el monto esperado hasta despues de cerrar.
             </p>
 
-            <div>
-              <label htmlFor="cierre-monto" className="block text-sm font-medium text-foreground mb-1.5">
-                Efectivo contado *
-              </label>
-              <input
-                id="cierre-monto"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="0.01"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-                placeholder="0.00"
-                className={inputUI}
-                autoFocus
-                required
-              />
-            </div>
+            <FloatingInput
+              id="cierre-monto"
+              label="Efectivo contado"
+              type="number"
+              inputMode="decimal"
+              leftSlot={
+                <span className="text-sm font-semibold text-primary/70 leading-none">
+                  {simboloMoneda()}
+                </span>
+              }
+              min={0}
+              step="0.01"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              className="tabular-nums"
+              autoFocus
+              required
+            />
 
-            <div>
-              <label htmlFor="cierre-notas" className="block text-sm font-medium text-foreground mb-1.5">
-                Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-              </label>
-              <textarea
-                id="cierre-notas"
-                rows={2}
-                value={notas}
-                onChange={(e) => setNotas(e.target.value)}
-                placeholder="Observaciones del cierre..."
-                className={textareaUI}
-              />
-            </div>
+            <FloatingTextarea
+              id="cierre-notas"
+              label="Notas (opcional)"
+              rows={2}
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+            />
 
             {error && (
               <p role="alert" className={errorUI}>
@@ -105,7 +101,7 @@ export function CerrarCajaModal({ onClose }: Props) {
               </p>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-1">
               <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
                 Volver
               </button>
@@ -115,7 +111,7 @@ export function CerrarCajaModal({ onClose }: Props) {
             </div>
           </form>
         ) : (
-          <div className="p-6 space-y-4">
+          <div className="p-6 sm:p-7 space-y-5">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Efectivo declarado</span>

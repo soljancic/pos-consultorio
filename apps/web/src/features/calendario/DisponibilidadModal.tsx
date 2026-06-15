@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Trash2, BookmarkPlus, CalendarClock } from 'lucide-react'
+import { AlertCircle, Trash2, BookmarkPlus, CalendarClock, Clock, Calendar } from 'lucide-react'
 import { TipoDisponibilidad } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
 
 export const LABEL_TIPO: Record<TipoDisponibilidad, string> = {
   [TipoDisponibilidad.DISPONIBLE]: 'Disponible',
@@ -146,7 +148,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
           onClose={onClose}
         />
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
           {!editando && (
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((p) => (
@@ -183,17 +185,27 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="disp-inicio" className="block text-sm font-medium text-foreground mb-1.5">Desde *</label>
-              <input id="disp-inicio" type="time" required value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label htmlFor="disp-fin" className="block text-sm font-medium text-foreground mb-1.5">Hasta *</label>
-              <input id="disp-fin" type="time" required value={horaFin}
-                onChange={(e) => setHoraFin(e.target.value)} className={inputUI} />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FloatingInput
+              id="disp-inicio"
+              label="Desde"
+              type="time"
+              Icon={Clock}
+              alwaysFloat
+              required
+              value={horaInicio}
+              onChange={(e) => setHoraInicio(e.target.value)}
+            />
+            <FloatingInput
+              id="disp-fin"
+              label="Hasta"
+              type="time"
+              Icon={Clock}
+              alwaysFloat
+              required
+              value={horaFin}
+              onChange={(e) => setHoraFin(e.target.value)}
+            />
           </div>
 
           {!editando && (
@@ -235,27 +247,28 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             )
           )}
 
-          <div>
-            <label htmlFor="disp-tipo" className="block text-sm font-medium text-foreground mb-1.5">Tipo *</label>
-            <select id="disp-tipo" value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoDisponibilidad)} className={inputUI}>
-              {Object.values(TipoDisponibilidad).map((t) => (
-                <option key={t} value={t}>{LABEL_TIPO[t]}</option>
-              ))}
-            </select>
-            {tipo !== TipoDisponibilidad.DISPONIBLE && (
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Los bloqueos no aceptan citas en ese horario.
-              </p>
-            )}
-          </div>
+          <FloatingSelect
+            id="disp-tipo"
+            label="Tipo"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoDisponibilidad)}
+            hint={
+              tipo !== TipoDisponibilidad.DISPONIBLE
+                ? 'Los bloqueos no aceptan citas en ese horario.'
+                : undefined
+            }
+          >
+            {Object.values(TipoDisponibilidad).map((t) => (
+              <option key={t} value={t}>{LABEL_TIPO[t]}</option>
+            ))}
+          </FloatingSelect>
 
-          <div>
-            <label htmlFor="disp-nota" className="block text-sm font-medium text-foreground mb-1.5">
-              Nota interna <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <input id="disp-nota" value={nota} onChange={(e) => setNota(e.target.value)} className={inputUI} />
-          </div>
+          <FloatingInput
+            id="disp-nota"
+            label="Nota interna (opcional)"
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+          />
 
           {!editando && (
             <div className="space-y-3 border-t pt-4">
@@ -288,13 +301,16 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                       </button>
                     ))}
                   </div>
-                  <div>
-                    <label htmlFor="disp-hasta" className="block text-sm font-medium text-foreground mb-1.5">
-                      Repetir hasta *
-                    </label>
-                    <input id="disp-hasta" type="date" required={repetir} value={hasta}
-                      onChange={(e) => setHasta(e.target.value)} className={inputUI} />
-                  </div>
+                  <FloatingInput
+                    id="disp-hasta"
+                    label="Repetir hasta"
+                    type="date"
+                    Icon={Calendar}
+                    alwaysFloat
+                    required={repetir}
+                    value={hasta}
+                    onChange={(e) => setHasta(e.target.value)}
+                  />
                 </>
               )}
             </div>
@@ -322,14 +338,14 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             </p>
           )}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             {editando && (
               <button
                 type="button"
                 onClick={() => setConfirmandoEliminar(true)}
                 disabled={eliminar.isPending}
                 aria-label="Eliminar horario"
-                className={cn(btnIconUI, 'h-10 w-10 border border-input text-destructive hover:bg-destructive/10')}
+                className={cn(btnIconUI, 'h-11 w-11 border border-input text-destructive hover:bg-destructive/10')}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
               </button>

@@ -4,8 +4,9 @@ import { AlertCircle, UserRound } from 'lucide-react'
 import type { Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
 
 const COLORES = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
@@ -99,7 +100,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
         />
         <form
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
-          className="p-6 space-y-4"
+          className="p-6 sm:p-7 space-y-5"
         >
           {/* Foto: se ve en la agenda dia y horarios; sin foto, el circulo de color */}
           <div className="flex items-center gap-3">
@@ -125,29 +126,29 @@ export function DoctorModal({ doctor, onClose }: Props) {
               <p className="text-xs text-muted-foreground mt-1">JPG, PNG o WebP, máx 5 MB.</p>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
-            <input required value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              className={inputUI} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Especialidad</label>
-              <input value={form.especialidad}
-                onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
-                className={inputUI} />
-            </div>
-            <div>
-              <label htmlFor="doctor-comision" className="block text-sm font-medium text-foreground mb-1.5">
-                Comisión (%)
-              </label>
-              <input id="doctor-comision" type="number" min={0} max={100} step="0.5"
-                value={form.comisionPct}
-                placeholder="Sin comisión"
-                onChange={(e) => setForm((f) => ({ ...f, comisionPct: e.target.value }))}
-                className={inputUI} />
-            </div>
+          <FloatingInput
+            label="Nombre"
+            required
+            value={form.nombre}
+            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <FloatingInput
+              label="Especialidad"
+              value={form.especialidad}
+              onChange={(e) => setForm((f) => ({ ...f, especialidad: e.target.value }))}
+            />
+            <FloatingInput
+              id="doctor-comision"
+              label="Comisión (%)"
+              type="number"
+              min={0}
+              max={100}
+              step="0.5"
+              value={form.comisionPct}
+              onChange={(e) => setForm((f) => ({ ...f, comisionPct: e.target.value }))}
+              className="tabular-nums"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Color en agenda</label>
@@ -219,7 +220,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
               {error}
             </p>
           )}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>
               {mutation.isPending ? 'Guardando...' : editando ? 'Guardar' : 'Crear'}

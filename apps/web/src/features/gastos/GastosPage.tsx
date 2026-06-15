@@ -90,78 +90,124 @@ export function GastosPage() {
           <TableSkeleton cols={6} />
         ) : isError ? (
           <ErrorState onRetry={() => refetch()} />
+        ) : gastos.length === 0 ? (
+          <EmptyState icon={Receipt} title="Sin gastos en el período" description="Los gastos que registres en este rango van a aparecer acá." className="py-12" />
         ) : (
-          <div className={cn(cardUI, 'overflow-x-auto')}>
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Categoría</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Descripción</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Personal</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta</th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">Monto</th>
-                  {esAdmin && <th className="px-4 py-3" />}
-                </tr>
-              </thead>
-              <tbody>
-                {gastos.map((g) => (
-                  <tr key={g.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
-                    <td className="px-4 py-3 tabular-nums">{formatDia(g.fecha)}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
-                        {g.tipoGasto?.nombre ?? '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{g.descripcion}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{g.personal || '-'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{g.tipoCuenta?.nombre ?? '-'}</td>
-                    <td className="px-4 py-3 text-right font-medium text-destructive tabular-nums">
+          <>
+            {/* Celular: cards (la grilla no entra bien en pantalla chica) */}
+            <div className="sm:hidden space-y-3">
+              {gastos.map((g) => (
+                <div key={g.id} className={cn(cardUI, 'p-4')}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground break-words">{g.descripcion}</p>
+                      <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{formatDia(g.fecha)}</p>
+                    </div>
+                    <span className="font-semibold text-destructive tabular-nums shrink-0">
                       {formatMoneda(Number(g.monto))}
-                    </td>
-                    {esAdmin && (
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex gap-1">
-                          <button
-                            onClick={() => { setGastoEdit(g); setModalAbierto(true) }}
-                            aria-label={`Editar gasto ${g.descripcion}`}
-                            className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted')}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                          <button
-                            onClick={() => setGastoBorrar(g)}
-                            aria-label={`Borrar gasto ${g.descripcion}`}
-                            className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </button>
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                    <span className="bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
+                      {g.tipoGasto?.nombre ?? '-'}
+                    </span>
+                    {g.tipoCuenta?.nombre && <span className="text-muted-foreground">{g.tipoCuenta.nombre}</span>}
+                    {g.personal && <span className="text-muted-foreground">· {g.personal}</span>}
+                  </div>
+                  {esAdmin && (
+                    <div className="mt-3 flex justify-end gap-1 border-t pt-2">
+                      <button
+                        onClick={() => { setGastoEdit(g); setModalAbierto(true) }}
+                        aria-label={`Editar gasto ${g.descripcion}`}
+                        className={cn(btnIconUI, 'h-9 w-9 text-muted-foreground/70 hover:text-foreground hover:bg-muted')}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        onClick={() => setGastoBorrar(g)}
+                        aria-label={`Borrar gasto ${g.descripcion}`}
+                        className={cn(btnIconUI, 'h-9 w-9 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className={cn(cardUI, 'p-4 flex items-center justify-between')}>
+                <span className="text-sm text-muted-foreground">
+                  {gastos.length} gasto{gastos.length !== 1 ? 's' : ''} en el período
+                </span>
+                <span className="font-bold text-destructive tabular-nums">{formatMoneda(total)}</span>
+              </div>
+            </div>
+
+            {/* sm+: tabla */}
+            <div className={cn(cardUI, 'hidden sm:block overflow-x-auto')}>
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Fecha</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Categoría</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Descripción</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Personal</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Cuenta</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Monto</th>
+                    {esAdmin && <th className="px-4 py-3" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {gastos.map((g) => (
+                    <tr key={g.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
+                      <td className="px-4 py-3 tabular-nums">{formatDia(g.fecha)}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
+                          {g.tipoGasto?.nombre ?? '-'}
                         </span>
                       </td>
-                    )}
-                  </tr>
-                ))}
-                {gastos.length === 0 && (
+                      <td className="px-4 py-3 text-foreground">{g.descripcion}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{g.personal || '-'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{g.tipoCuenta?.nombre ?? '-'}</td>
+                      <td className="px-4 py-3 text-right font-medium text-destructive tabular-nums">
+                        {formatMoneda(Number(g.monto))}
+                      </td>
+                      {esAdmin && (
+                        <td className="px-4 py-3 text-right">
+                          <span className="inline-flex gap-1">
+                            <button
+                              onClick={() => { setGastoEdit(g); setModalAbierto(true) }}
+                              aria-label={`Editar gasto ${g.descripcion}`}
+                              className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted')}
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                            <button
+                              onClick={() => setGastoBorrar(g)}
+                              aria-label={`Borrar gasto ${g.descripcion}`}
+                              className={cn(btnIconUI, 'h-8 w-8 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10')}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </span>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-muted/50 border-t">
                   <tr>
-                    <td colSpan={esAdmin ? 7 : 6} className="px-4 py-2">
-                      <EmptyState icon={Receipt} title="Sin gastos en el período" description="Los gastos que registres en este rango van a aparecer acá." className="py-8" />
+                    <td colSpan={5} className="px-4 py-3 text-sm text-muted-foreground">
+                      {gastos.length} gasto{gastos.length !== 1 ? 's' : ''} en el periodo
                     </td>
+                    <td className="px-4 py-3 text-right font-bold text-destructive tabular-nums">
+                      {formatMoneda(total)}
+                    </td>
+                    {esAdmin && <td />}
                   </tr>
-                )}
-              </tbody>
-              <tfoot className="bg-muted/50 border-t">
-                <tr>
-                  <td colSpan={5} className="px-4 py-3 text-sm text-muted-foreground">
-                    {gastos.length} gasto{gastos.length !== 1 ? 's' : ''} en el periodo
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-destructive tabular-nums">
-                    {formatMoneda(total)}
-                  </td>
-                  {esAdmin && <td />}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </tfoot>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

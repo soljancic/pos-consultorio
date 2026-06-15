@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { AlertCircle, MailCheck, KeyRound } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 interface Props {
   emailInicial?: string
@@ -51,24 +52,19 @@ export function RecuperarPasswordModal({ emailInicial, onClose }: Props) {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <p className="text-sm text-muted-foreground">
                 Ingresá el correo de tu cuenta y te enviamos un enlace para restablecerla.
               </p>
-              <div>
-                <label htmlFor="rec-email" className="block text-sm font-medium text-foreground mb-1.5">
-                  Email
-                </label>
-                <input
-                  id="rec-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputUI}
-                  required
-                />
-              </div>
+              <FloatingInput
+                id="rec-email"
+                label="Email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
 
               {error && (
                 <p role="alert" className={errorUI}>

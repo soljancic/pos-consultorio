@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Tag } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 interface TipoGasto {
   id?: number
@@ -53,14 +54,15 @@ export function TipoGastoModal({ tipo, onClose }: Props) {
         />
         <form
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
-          className="p-6 space-y-4"
+          className="p-6 sm:p-7 space-y-5"
         >
-          <div>
-            <label htmlFor="tg-nombre" className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
-            <input id="tg-nombre" required value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Marketing" className={inputUI} />
-          </div>
+          <FloatingInput
+            id="tg-nombre"
+            label="Nombre"
+            required
+            value={form.nombre}
+            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+          />
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
               <input type="checkbox" checked={form.activo}
@@ -75,7 +77,7 @@ export function TipoGastoModal({ tipo, onClose }: Props) {
               {error}
             </p>
           )}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>

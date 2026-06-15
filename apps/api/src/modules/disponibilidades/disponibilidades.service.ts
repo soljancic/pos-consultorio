@@ -8,7 +8,7 @@ import {
 import {
   IsInt, IsString, IsOptional, IsEnum, IsISO8601, Matches, IsArray, Min, Max,
 } from 'class-validator'
-import { TipoDisponibilidad, Prisma } from '@prisma/client'
+import { TipoDisponibilidad, EstadoCita, Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 
 const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -177,6 +177,13 @@ export class DisponibilidadesService {
       }
     }
 
+    // Un bloqueo no puede taparse encima de citas ya agendadas en ese periodo
+    if (esBloqueo) {
+      await this.verificarSinCitasEnBloqueo(
+        consultorioId, dto.doctorId, fechas, dto.horaInicio, dto.horaFin,
+      )
+    }
+
     return this.prisma.$transaction(async (tx) => {
       let serieId: number | undefined
       if (esSerie) {
@@ -250,6 +257,20 @@ export class DisponibilidadesService {
     }
 
     const where = this.whereAlcance(disp, alcance)
+
+    // Si el resultado es (o sigue siendo) un bloqueo, no debe tapar citas ya
+    // agendadas: revisa todas las ocurrencias afectadas con el horario nuevo.
+    const nuevoTipo = dto.tipo ?? disp.tipo
+    if (nuevoTipo !== TipoDisponibilidad.DISPONIBLE) {
+      const afectadas = await this.prisma.disponibilidad.findMany({
+        where,
+        select: { fecha: true },
+      })
+      await this.verificarSinCitasEnBloqueo(
+        consultorioId, disp.doctorId, afectadas.map((a) => a.fecha), horaInicio, horaFin,
+      )
+    }
+
     const data = {
       ...(dto.horaInicio !== undefined && { horaInicio: dto.horaInicio }),
       ...(dto.horaFin !== undefined && { horaFin: dto.horaFin }),
@@ -328,5 +349,60 @@ export class DisponibilidadesService {
     if (alcance === 'uno' || !disp.serieId) return { id: disp.id }
     if (alcance === 'serie') return { serieId: disp.serieId, deletedAt: null }
     return { serieId: disp.serieId, deletedAt: null, fecha: { gte: disp.fecha } }
+  }
+
+  // Un bloqueo (vacaciones, ausencia, etc.) no puede taparse encima de citas ya
+  // agendadas: avisa y corta. Misma convencion de TZ que la creacion de citas
+  // (la hora "HH:mm" es hora de pared local, igual que verificarHorarioAtencion).
+  private async verificarSinCitasEnBloqueo(
+    consultorioId: number,
+    doctorId: number,
+    fechas: Date[], // @db.Date (UTC midnight)
+    horaInicio: string,
+    horaFin: string,
+  ) {
+    if (fechas.length === 0) return
+    const rangos = fechas.map((f) => {
+      const dia = f.toISOString().slice(0, 10)
+      return {
+        ini: new Date(`${dia}T${horaInicio}:00`),
+        fin: new Date(`${dia}T${horaFin}:00`),
+      }
+    })
+    const globalIni = new Date(Math.min(...rangos.map((r) => r.ini.getTime())))
+    const globalFin = new Date(Math.max(...rangos.map((r) => r.fin.getTime())))
+    const VENTANA_MS = 12 * 60 * 60 * 1000 // ninguna cita dura mas de 12h
+
+    const candidatas = await this.prisma.cita.findMany({
+      where: {
+        consultorioId,
+        doctorId,
+        deletedAt: null,
+        estado: { notIn: [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO] },
+        fechaHora: { gte: new Date(globalIni.getTime() - VENTANA_MS), lt: globalFin },
+      },
+      select: {
+        fechaHora: true,
+        duracionMin: true,
+        paciente: { select: { nombre: true, apellido: true } },
+      },
+      orderBy: { fechaHora: 'asc' },
+    })
+
+    const enConflicto = candidatas.filter((c) => {
+      const finC = new Date(c.fechaHora.getTime() + c.duracionMin * 60 * 1000)
+      return rangos.some((r) => c.fechaHora < r.fin && finC > r.ini)
+    })
+
+    if (enConflicto.length > 0) {
+      const c = enConflicto[0]
+      const cuando = c.fechaHora.toLocaleString('es-BO', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+      })
+      const masTexto = enConflicto.length > 1 ? ` y ${enConflicto.length - 1} mas` : ''
+      throw new ConflictException(
+        `No se puede aplicar el bloqueo: el doctor tiene ${enConflicto.length} cita(s) agendada(s) en ese periodo (${c.paciente.nombre} ${c.paciente.apellido}, ${cuando}${masTexto}). Reprograme o cancele esas citas primero.`,
+      )
+    }
   }
 }

@@ -53,6 +53,18 @@ export function formatMoneda(monto: number, moneda = monedaActual) {
   }).format(monto)
 }
 
+// Solo el simbolo de la moneda activa ("Bs", "$", ...). Para prefijos de inputs.
+export function simboloMoneda(moneda = monedaActual) {
+  const parte = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: moneda,
+    currencyDisplay: 'narrowSymbol',
+  })
+    .formatToParts(0)
+    .find((p) => p.type === 'currency')
+  return parte?.value ?? moneda
+}
+
 export function tiempoRelativo(date: Date | string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
 import { api } from '../../lib/api-client'
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
-import { CalendarCheck, Wallet, BellRing, AlertCircle } from 'lucide-react'
+import { CalendarCheck, Wallet, BellRing, AlertCircle, ArrowLeft } from 'lucide-react'
 import { RecuperarPasswordModal } from './RecuperarPasswordModal'
 
 const BENEFICIOS = [
@@ -63,7 +63,30 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Barra superior: marca + volver a la landing (por si llegó directo al login) */}
+      <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur-md">
+        <div className="mx-auto max-w-6xl px-5 sm:px-8 h-14 flex items-center justify-between">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          >
+            <img src="/brand/isotipo.png" alt="" className="h-7 w-7" />
+            <span className="text-base font-bold tracking-tight text-foreground">
+              Consul<span className="text-primary">Tech</span>
+            </span>
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Volver al inicio
+          </Link>
+        </div>
+      </header>
+
+      <div className="flex-1 flex">
       {/* Panel de marca (desktop) */}
       <div className="hidden lg:flex lg:w-[45%] bg-primary text-primary-foreground flex-col justify-center p-12">
         <div className="space-y-8 max-w-md">
@@ -189,6 +212,8 @@ export function LoginPage() {
             <img src="/brand/toptech.png" alt="Toptech" className="h-5 w-auto" />
           </p>
         </div>
+      </div>
+
       </div>
 
       {recuperando && (

@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Unlock } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn } from '../../lib/utils'
-import { inputUI, textareaUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { cn, simboloMoneda } from '../../lib/utils'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 
 interface Props {
   onClose: () => void
@@ -43,44 +45,39 @@ export function AbrirCajaModal({ onClose }: Props) {
 
         <form
           onSubmit={(e) => { e.preventDefault(); setError(''); abrir.mutate() }}
-          className="p-6 space-y-4"
+          className="p-6 sm:p-7 space-y-5"
         >
           <p className="text-sm text-muted-foreground">
             Declara con cuanto efectivo arranca la jornada (caja chica). El arqueo del cierre
             lo contempla: inicial + cobros en efectivo − gastos en efectivo.
           </p>
 
-          <div>
-            <label htmlFor="abrir-monto" className="block text-sm font-medium text-foreground mb-1.5">
-              Monto inicial *
-            </label>
-            <input
-              id="abrir-monto"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="0.01"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              placeholder="0.00"
-              className={inputUI}
-              autoFocus
-              required
-            />
-          </div>
+          <FloatingInput
+            id="abrir-monto"
+            label="Monto inicial"
+            type="number"
+            inputMode="decimal"
+            leftSlot={
+              <span className="text-sm font-semibold text-primary/70 leading-none">
+                {simboloMoneda()}
+              </span>
+            }
+            min={0}
+            step="0.01"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            className="tabular-nums"
+            autoFocus
+            required
+          />
 
-          <div>
-            <label htmlFor="abrir-notas" className="block text-sm font-medium text-foreground mb-1.5">
-              Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <textarea
-              id="abrir-notas"
-              rows={2}
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              className={textareaUI}
-            />
-          </div>
+          <FloatingTextarea
+            id="abrir-notas"
+            label="Notas (opcional)"
+            rows={2}
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -89,7 +86,7 @@ export function AbrirCajaModal({ onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>

@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths } from 'date-fns'
-import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
+import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight, UserRound, User, Mail, FileText } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatDia, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT, PAISES } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
+import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 
 // Portal publico de reservas (E2.5b): pagina SIN auth ni AppShell, mobile-first.
 // Todo se deriva del slug en el backend; aca solo se eligen opciones visibles.
@@ -145,7 +148,7 @@ export function ReservarPage() {
       <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <div className={cn(cardUI, 'p-8 text-center max-w-sm')}>
           <p className="text-sm text-muted-foreground">
-            Este portal de reservas no está disponible. Verificá el enlace con el consultorio.
+            Este portal de reservas no está disponible. Verifique el enlace con el consultorio.
           </p>
         </div>
       </div>
@@ -179,7 +182,7 @@ export function ReservarPage() {
           </span>
           <div>
             <h1 className="text-lg font-semibold leading-tight">{info.consultorio.nombre}</h1>
-            <p className="text-xs text-cyan-50/90">Reservá tu cita en línea</p>
+            <p className="text-xs text-cyan-50/90">Reserve su cita en línea</p>
           </div>
         </div>
       </header>
@@ -196,7 +199,7 @@ export function ReservarPage() {
               {confirmacion.servicio} con {confirmacion.doctor}
             </p>
             <p className="text-xs text-muted-foreground">
-              El consultorio te contactará para confirmar la cita.
+              El consultorio lo contactará para confirmar la cita.
             </p>
           </div>
         ) : (
@@ -204,43 +207,50 @@ export function ReservarPage() {
             onSubmit={(e) => { e.preventDefault(); setError(''); reservar.mutate() }}
             className={cn(cardUI, 'p-5 sm:p-6 space-y-4')}
           >
-            <div>
-              <label htmlFor="res-servicio" className="block text-sm font-medium text-foreground mb-1.5">Servicio *</label>
-              <select id="res-servicio" required value={servicioId}
-                onChange={(e) => {
-                  setServicioId(e.target.value)
-                  setFecha(''); setHora(''); setMostrarForm(false)
-                  setMesCal(format(new Date(), 'yyyy-MM'))
-                  // El doctor elegido podria no atender el nuevo servicio
-                  if (!doctorFijo) setDoctorId('')
-                }} className={inputUI}>
-                <option value="">Elegí el servicio...</option>
-                {info.servicios.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
-                ))}
-              </select>
-            </div>
+            <FloatingSelect
+              id="res-servicio"
+              label="Servicio"
+              Icon={Stethoscope}
+              required
+              value={servicioId}
+              onChange={(e) => {
+                setServicioId(e.target.value)
+                setFecha(''); setHora(''); setMostrarForm(false)
+                setMesCal(format(new Date(), 'yyyy-MM'))
+                // El doctor elegido podria no atender el nuevo servicio
+                if (!doctorFijo) setDoctorId('')
+              }}
+            >
+              <option value="">Seleccione el servicio...</option>
+              {info.servicios.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
+              ))}
+            </FloatingSelect>
 
-            <div>
-              <label htmlFor="res-doctor" className="block text-sm font-medium text-foreground mb-1.5">Profesional *</label>
-              <select id="res-doctor" required value={doctorId} disabled={!!doctorFijo}
-                onChange={(e) => {
-                  setDoctorId(e.target.value)
-                  setFecha(''); setHora(''); setMostrarForm(false)
-                  setMesCal(format(new Date(), 'yyyy-MM'))
-                }} className={inputUI}>
-                <option value="">Elegí el profesional...</option>
-                {doctores.map((d) => (
-                  <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` — ${d.especialidad}` : ''}</option>
-                ))}
-              </select>
-            </div>
+            <FloatingSelect
+              id="res-doctor"
+              label="Profesional"
+              Icon={UserRound}
+              required
+              value={doctorId}
+              disabled={!!doctorFijo}
+              onChange={(e) => {
+                setDoctorId(e.target.value)
+                setFecha(''); setHora(''); setMostrarForm(false)
+                setMesCal(format(new Date(), 'yyyy-MM'))
+              }}
+            >
+              <option value="">Seleccione el profesional...</option>
+              {doctores.map((d) => (
+                <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` — ${d.especialidad}` : ''}</option>
+              ))}
+            </FloatingSelect>
 
             {puedeVerCalendario && (
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 border-t pt-4">
                 {/* Mini calendario mensual estilo Calendly: solo dias con disponibilidad */}
                 <div className="sm:w-[300px] sm:shrink-0">
-                  <span className="block text-sm font-medium text-foreground mb-2">Elegí el día *</span>
+                  <span className="block text-sm font-medium text-foreground mb-2">Elija el día</span>
                   <div className="rounded-lg border border-input bg-card p-3">
                     <div className="flex items-center justify-between mb-2">
                       <button
@@ -306,17 +316,17 @@ export function ReservarPage() {
                     1-N segun el ancho); "Siguiente" revela el formulario y baja el scroll */}
                 <div className="sm:flex-1 min-w-0">
                   <span className="block text-sm font-medium text-foreground mb-2">
-                    {fecha ? 'Horarios disponibles *' : 'Horarios'}
+                    {fecha ? 'Horarios disponibles' : 'Horarios'}
                   </span>
                   {!fecha ? (
                     <p className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2.5">
-                      Elegí un día con disponibilidad para ver los horarios.
+                      Elija un día con disponibilidad para ver los horarios.
                     </p>
                   ) : cargandoSlots ? (
                     <p className="text-sm text-muted-foreground py-2">Buscando horarios...</p>
                   ) : !slotsData?.slots?.length ? (
                     <p className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2.5">
-                      No hay horarios libres ese día. Probá con otra fecha.
+                      No hay horarios libres ese día. Pruebe con otra fecha.
                     </p>
                   ) : (
                     <>
@@ -361,40 +371,75 @@ export function ReservarPage() {
 
             {mostrarForm && hora && (
               <div ref={datosRef} className="space-y-4 border-t pt-4 scroll-mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="res-nombre" className="block text-sm font-medium text-foreground mb-1.5">Nombre *</label>
-                    <input id="res-nombre" required value={nombre} autoComplete="given-name"
-                      onChange={(e) => setNombre(e.target.value)} className={inputUI} />
-                  </div>
-                  <div>
-                    <label htmlFor="res-apellido" className="block text-sm font-medium text-foreground mb-1.5">Apellido *</label>
-                    <input id="res-apellido" required value={apellido} autoComplete="family-name"
-                      onChange={(e) => setApellido(e.target.value)} className={inputUI} />
-                  </div>
-                </div>
                 <div>
-                  <label htmlFor="res-telefono" className="block text-sm font-medium text-foreground mb-1.5">Teléfono (WhatsApp) *</label>
-                  <div className="flex gap-2">
-                    <SelectorPais value={pais} onChange={setPais} />
-                    <input id="res-telefono" type="tel" required value={telefono} autoComplete="tel"
-                      placeholder="71234567" onChange={(e) => setTelefono(e.target.value)} className={inputUI} />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {prefill ? 'Confirme sus datos' : 'Complete sus datos'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {prefill
+                      ? 'Vienen precargados desde el consultorio. Revíselos y corrija lo que haga falta.'
+                      : 'Los necesitamos para confirmar la reserva y poder contactarlo.'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FloatingInput
+                    id="res-nombre"
+                    label="Nombre"
+                    Icon={User}
+                    required
+                    value={nombre}
+                    autoComplete="given-name"
+                    onChange={(e) => setNombre(e.target.value)}
+                  />
+                  <FloatingInput
+                    id="res-apellido"
+                    label="Apellido"
+                    Icon={User}
+                    required
+                    value={apellido}
+                    autoComplete="family-name"
+                    onChange={(e) => setApellido(e.target.value)}
+                  />
+                </div>
+                {/* Telefono: selector de pais + input unidos como control segmentado */}
+                <div className="flex items-stretch">
+                  <SelectorPais
+                    value={pais}
+                    onChange={setPais}
+                    buttonClassName="h-14 rounded-l-xl rounded-r-none border-r-0"
+                  />
+                  <div className="relative flex-1">
+                    <FloatingInput
+                      id="res-telefono"
+                      label="Teléfono (WhatsApp)"
+                      type="tel"
+                      required
+                      value={telefono}
+                      autoComplete="tel"
+                      onChange={(e) => setTelefono(e.target.value)}
+                      className="rounded-l-none"
+                    />
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="res-email" className="block text-sm font-medium text-foreground mb-1.5">Email *</label>
-                  <input id="res-email" type="email" required value={email} autoComplete="email"
-                    onChange={(e) => setEmail(e.target.value)} className={inputUI} />
-                </div>
-                <div>
-                  <label htmlFor="res-notas" className="block text-sm font-medium text-foreground mb-1.5">
-                    Notas <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-                  </label>
-                  <textarea id="res-notas" rows={2} maxLength={300} value={notas}
-                    placeholder="Algo que el consultorio deba saber..."
-                    onChange={(e) => setNotas(e.target.value)}
-                    className="w-full border border-input bg-card rounded-md px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150 resize-none" />
-                </div>
+                <FloatingInput
+                  id="res-email"
+                  label="Email"
+                  Icon={Mail}
+                  type="email"
+                  required
+                  value={email}
+                  autoComplete="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <FloatingTextarea
+                  id="res-notas"
+                  label="Notas (opcional)"
+                  Icon={FileText}
+                  rows={2}
+                  maxLength={300}
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                />
 
                 {tokenPaciente && datosModificados && (
                   <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">

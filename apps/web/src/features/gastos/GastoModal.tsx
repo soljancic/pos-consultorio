@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { AlertCircle, Receipt } from 'lucide-react'
+import { AlertCircle, Receipt, Calendar, Tag, Wallet, FileText, User } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { cn, simboloMoneda } from '../../lib/utils'
+import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
+import { FloatingSelect } from '../../components/shared/FloatingSelect'
 
 interface TipoGasto { id: number; nombre: string }
 interface TipoCuenta { id: number; nombre: string; esEfectivo: boolean }
@@ -29,6 +31,7 @@ export function GastoModal({ gasto, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!gasto?.id
   const [error, setError] = useState('')
+  const [errores, setErrores] = useState<{ monto?: string; descripcion?: string }>({})
 
   const { data: tiposGasto = [] } = useQuery<TipoGasto[]>({
     queryKey: ['tipos-gasto', 'activos'],
@@ -48,7 +51,6 @@ export function GastoModal({ gasto, onClose }: Props) {
     tipoCuentaId: gasto?.tipoCuentaId ?? 0,
   })
 
-  // En alta, default al primer tipo de gasto y a la cuenta de efectivo (o la primera)
   useEffect(() => {
     if (form.tipoGastoId === 0 && tiposGasto.length > 0) {
       setForm((f) => ({ ...f, tipoGastoId: tiposGasto[0].id }))
@@ -70,8 +72,8 @@ export function GastoModal({ gasto, onClose }: Props) {
         fecha: form.fecha,
         tipoGastoId: form.tipoGastoId,
         monto: parseFloat(form.monto),
-        descripcion: form.descripcion,
-        personal: form.personal || undefined,
+        descripcion: form.descripcion.trim(),
+        personal: form.personal.trim() || undefined,
         tipoCuentaId: form.tipoCuentaId,
       }
       return editando ? api.put(`/gastos/${gasto!.id}`, payload) : api.post('/gastos', payload)
@@ -90,84 +92,116 @@ export function GastoModal({ gasto, onClose }: Props) {
 
   function set<K extends keyof typeof form>(campo: K, valor: (typeof form)[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
+    if (campo === 'monto' || campo === 'descripcion') {
+      setErrores((e) => ({ ...e, [campo]: undefined }))
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    const errs: typeof errores = {}
+    const montoNum = parseFloat(form.monto)
+    if (!form.monto || isNaN(montoNum) || montoNum <= 0) errs.monto = 'Ingresá un monto mayor a 0.'
+    if (!form.descripcion.trim()) errs.descripcion = 'Agregá una descripción.'
+    setErrores(errs)
+    if (Object.keys(errs).length > 0) return
+    mutation.mutate()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
-      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
+      <div className="bg-card rounded-2xl border shadow-xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader
           icon={Receipt}
           title={editando ? 'Editar gasto' : 'Nuevo gasto'}
           onClose={onClose}
         />
 
-        <form
-          onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate() }}
-          className="p-6 space-y-4"
-        >
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
           {sinTipos && (
             <p role="alert" className={errorUI}>
               <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Configure tipos de gasto y de cuenta en Catálogo antes de registrar.
+              Configurá tipos de gasto y de cuenta en Catálogo antes de registrar.
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="gasto-fecha" className="block text-sm font-medium text-foreground mb-1.5">Fecha *</label>
-              <input id="gasto-fecha" type="date" required value={form.fecha}
-                onChange={(e) => set('fecha', e.target.value)} className={inputUI} />
-            </div>
-            <div>
-              <label htmlFor="gasto-categoria" className="block text-sm font-medium text-foreground mb-1.5">Tipo de gasto *</label>
-              <select id="gasto-categoria" value={form.tipoGastoId}
-                onChange={(e) => set('tipoGastoId', Number(e.target.value))}
-                className={inputUI}>
-                {tiposGasto.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                ))}
-              </select>
-            </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FloatingInput
+              id="gasto-fecha"
+              type="date"
+              label="Fecha"
+              Icon={Calendar}
+              alwaysFloat
+              value={form.fecha}
+              onChange={(e) => set('fecha', e.target.value)}
+            />
+            <FloatingSelect
+              id="gasto-categoria"
+              label="Tipo de gasto"
+              Icon={Tag}
+              value={form.tipoGastoId}
+              onChange={(e) => set('tipoGastoId', Number(e.target.value))}
+            >
+              {tiposGasto.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </FloatingSelect>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="gasto-monto" className="block text-sm font-medium text-foreground mb-1.5">Monto *</label>
-              <input id="gasto-monto" type="number" inputMode="decimal" required min={0.01} step="0.01"
-                value={form.monto} onChange={(e) => set('monto', e.target.value)}
-                placeholder="0.00" className={inputUI} />
-            </div>
-            <div>
-              <label htmlFor="gasto-cuenta" className="block text-sm font-medium text-foreground mb-1.5">Cuenta *</label>
-              <select id="gasto-cuenta" value={form.tipoCuentaId}
-                onChange={(e) => set('tipoCuentaId', Number(e.target.value))}
-                className={inputUI}>
-                {tiposCuenta.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FloatingInput
+              id="gasto-monto"
+              type="number"
+              inputMode="decimal"
+              label="Monto"
+              leftSlot={
+                <span className="text-sm font-semibold text-primary/70 leading-none">
+                  {simboloMoneda()}
+                </span>
+              }
+              min={0.01}
+              step="0.01"
+              value={form.monto}
+              onChange={(e) => set('monto', e.target.value)}
+              className="tabular-nums"
+              error={errores.monto}
+            />
+            <FloatingSelect
+              id="gasto-cuenta"
+              label="Cuenta"
+              Icon={Wallet}
+              value={form.tipoCuentaId}
+              onChange={(e) => set('tipoCuentaId', Number(e.target.value))}
+            >
+              {tiposCuenta.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </FloatingSelect>
           </div>
 
           {cuentaSel?.esEfectivo && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground -mt-1">
               Los gastos en efectivo descuentan del arqueo de la caja del día.
             </p>
           )}
 
-          <div>
-            <label htmlFor="gasto-descripcion" className="block text-sm font-medium text-foreground mb-1.5">Descripción *</label>
-            <input id="gasto-descripcion" required value={form.descripcion}
-              onChange={(e) => set('descripcion', e.target.value)}
-              placeholder="Ej: compra de guantes y gasas" className={inputUI} />
-          </div>
+          <FloatingInput
+            id="gasto-descripcion"
+            label="Descripción"
+            Icon={FileText}
+            value={form.descripcion}
+            onChange={(e) => set('descripcion', e.target.value)}
+            error={errores.descripcion}
+          />
 
-          <div>
-            <label htmlFor="gasto-personal" className="block text-sm font-medium text-foreground mb-1.5">
-              Personal / beneficiario <span className="text-muted-foreground/70 font-normal">(opcional)</span>
-            </label>
-            <input id="gasto-personal" value={form.personal} onChange={(e) => set('personal', e.target.value)}
-              placeholder="A quien se le pago" className={inputUI} />
-          </div>
+          <FloatingInput
+            id="gasto-personal"
+            label="Pagado a (opcional)"
+            Icon={User}
+            value={form.personal}
+            onChange={(e) => set('personal', e.target.value)}
+          />
 
           {error && (
             <p role="alert" className={errorUI}>
@@ -176,12 +210,16 @@ export function GastoModal({ gasto, onClose }: Props) {
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Cancelar
             </button>
-            <button type="submit" disabled={mutation.isPending || sinTipos} className={cn(btnPrimaryUI, 'flex-1')}>
-              {mutation.isPending ? 'Guardando...' : editando ? 'Guardar' : 'Registrar gasto'}
+            <button
+              type="submit"
+              disabled={mutation.isPending || sinTipos}
+              className={cn(btnPrimaryUI, 'flex-1')}
+            >
+              {mutation.isPending ? 'Guardando...' : editando ? 'Guardar cambios' : 'Guardar gasto'}
             </button>
           </div>
         </form>

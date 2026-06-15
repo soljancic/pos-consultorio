@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { X, Pencil, Check, Undo2, Wallet } from 'lucide-react'
 import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, simboloMoneda, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
+import { FloatingInput } from '../../components/shared/FloatingInput'
 
 interface CobroModalProps {
   cita: Cita
@@ -254,21 +255,23 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
             )}
 
             <div>
-              <label htmlFor="cobro-monto" className="block text-sm font-medium text-foreground mb-1.5">
-                Monto que paga
-              </label>
-              <input
+              <FloatingInput
                 id="cobro-monto"
+                label="Monto que paga"
                 type="number"
                 inputMode="decimal"
+                leftSlot={
+                  <span className="text-sm font-semibold text-primary/70 leading-none">
+                    {simboloMoneda()}
+                  </span>
+                }
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
-                className={inputUI}
-                placeholder={saldo.toString()}
                 min="1"
                 max={saldo}
                 step="0.01"
                 required
+                className="tabular-nums"
               />
               <button
                 type="button"
@@ -291,7 +294,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                     onClick={() => setTipoCuentaId(tc.id)}
                     aria-pressed={tipoCuentaId === tc.id}
                     className={cn(
-                      'h-10 px-3 rounded-md text-sm font-medium border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                      'h-11 px-3 rounded-lg text-sm font-medium border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                       tipoCuentaId === tc.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-card text-foreground border-input hover:border-primary/60',
@@ -304,19 +307,13 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
             </div>
 
             {cuentaSel && !cuentaSel.esEfectivo && (
-              <div>
-                <label htmlFor="cobro-referencia" className="block text-sm font-medium text-foreground mb-1.5">
-                  Referencia (opcional)
-                </label>
-                <input
-                  id="cobro-referencia"
-                  type="text"
-                  value={referencia}
-                  onChange={(e) => setReferencia(e.target.value)}
-                  className={inputUI}
-                  placeholder="Número de comprobante"
-                />
-              </div>
+              <FloatingInput
+                id="cobro-referencia"
+                label="Referencia (opcional)"
+                type="text"
+                value={referencia}
+                onChange={(e) => setReferencia(e.target.value)}
+              />
             )}
 
             {montoNum > 0 && (
@@ -339,7 +336,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               </div>
             )}
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-1">
               <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
                 Cancelar
               </button>
