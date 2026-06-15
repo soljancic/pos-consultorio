@@ -13,7 +13,7 @@
 ## Deploy (Railway) — NO deployar sin pedido explicito
 
 - El proyecto YA esta en produccion en Railway (proyecto "Consultech":
-  web https://consultech.up.railway.app + api + Postgres).
+  web https://consultech.toptech.com.bo + api + Postgres).
 - **NUNCA correr `railway up` / redeploy ni tocar config de Railway por iniciativa
   propia.** Hay desarrollo y cambios continuos; el deploy se ejecuta SOLO cuando el
   owner lo pide explicitamente. Tras un cambio: implementar, verificar (tsc),
