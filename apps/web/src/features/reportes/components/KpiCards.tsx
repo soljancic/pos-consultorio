@@ -21,6 +21,7 @@ export function KpiCards({ kpis }: { kpis: ReportKpi[] }) {
         <div key={k.key} className={cn(cardUI, 'p-4')}>
           <p className="text-xs font-medium text-muted-foreground truncate">{k.label}</p>
           <p className={cn('text-xl font-bold tabular-nums mt-1', TONE[k.tone ?? 'default'])}>{fmt(k)}</p>
+          {k.hint && <p className="text-xs text-muted-foreground truncate mt-0.5">{k.hint}</p>}
         </div>
       ))}
     </div>

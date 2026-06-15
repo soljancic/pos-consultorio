@@ -359,14 +359,30 @@ export class ReportesService {
 
     const serviciosActivos = await this.prisma.servicio.count({ where: { consultorioId, activo: true } })
     const conMovimiento = new Set(rows.map((r) => r.servicioId)).size
+
+    // Aggregate by servicioId to find top service by quantity and by total revenue
+    const porServicio = new Map<number, { nombre: string; cantidad: number; total: number }>()
+    for (const r of rows) {
+      const entry = porServicio.get(r.servicioId)
+      if (!entry) {
+        porServicio.set(r.servicioId, { nombre: r.servicio, cantidad: r.cantidadRealizada, total: r.totalCobrado })
+      } else {
+        entry.cantidad += r.cantidadRealizada
+        entry.total += r.totalCobrado
+      }
+    }
+    const servicioEntries = [...porServicio.values()]
+    const topCantidad = servicioEntries.reduce<{ nombre: string; cantidad: number } | null>((best, s) => (!best || s.cantidad > best.cantidad ? s : best), null)
+    const topIngreso = servicioEntries.reduce<{ nombre: string; total: number } | null>((best, s) => (!best || s.total > best.total ? s : best), null)
+
     const masVendido = rows[0]?.cantidadRealizada ?? 0
     const mayorIngreso = rows.reduce((max, r) => Math.max(max, r.totalCobrado), 0)
 
     const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
     return {
       kpis: [
-        { key: 'mas_vendido', label: 'Más vendido (cant.)', value: masVendido, format: 'number' },
-        { key: 'mayor_ingreso', label: 'Mayor ingreso', value: mayorIngreso, format: 'money' },
+        { key: 'mas_vendido', label: 'Más vendido (cant.)', value: masVendido, format: 'number', ...(topCantidad ? { hint: topCantidad.nombre } : {}) },
+        { key: 'mayor_ingreso', label: 'Mayor ingreso', value: mayorIngreso, format: 'money', ...(topIngreso ? { hint: topIngreso.nombre } : {}) },
         { key: 'sin_movimiento', label: 'Sin movimiento', value: Math.max(0, serviciosActivos - conMovimiento), format: 'number', tone: 'warning' },
       ],
       rows: slice, page: f.page ?? 1, pageSize: f.pageSize ?? 25, total,

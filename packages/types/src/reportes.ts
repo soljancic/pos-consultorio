@@ -9,6 +9,7 @@ export interface ReportKpi {
   value: number
   format: KpiFormat
   tone?: KpiTone
+  hint?: string
 }
 
 export interface ReportPage<T> {
