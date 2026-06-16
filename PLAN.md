@@ -550,7 +550,7 @@ Testing:
 
 Para desarrollar:
   - PostgreSQL local + apps/api/.env (ver .env.example)
-  - cd apps/api && pnpm start:dev   (o pnpm build && pnpm start)
+  - cd apps/api && pnpm dev   (o pnpm build && pnpm start)
   - cd apps/web && pnpm dev
   - Tras cambiar packages/types: pnpm build dentro de packages/types
 ```

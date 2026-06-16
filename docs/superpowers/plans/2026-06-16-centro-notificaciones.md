@@ -603,7 +603,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Create: `scripts/gate-notificaciones.ps1`
 
 > Este gate es el test de integración del backend. Requiere la API corriendo
-> (`cd apps/api && pnpm start:dev`). Crea su propio tenant. La emisión es
+> (`cd apps/api && pnpm dev`). Crea su propio tenant. La emisión es
 > fire-and-forget, por eso hay `Start-Sleep` cortos antes de leer.
 
 - [ ] **Step 1: Escribir el gate**
@@ -713,7 +713,7 @@ Esperar-Error { Invoke-RestMethod -Uri "$base/notificaciones/999999/leida" -Meth
 
 - [ ] **Step 2: Correr el gate (con la API levantada)**
 
-En una terminal: `cd apps/api && pnpm start:dev`. En otra:
+En una terminal: `cd apps/api && pnpm dev`. En otra:
 ```bash
 pwsh scripts/gate-notificaciones.ps1
 ```

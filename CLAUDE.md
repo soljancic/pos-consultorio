@@ -224,7 +224,7 @@ Tras cambios grandes: `/graphify . --update` (incremental, usa el manifest).
 pnpm install                          # raiz del monorepo
 cd packages/types && pnpm build       # OBLIGATORIO tras cambiar tipos compartidos
 cd apps/api && npx prisma migrate dev # migraciones (dev)
-cd apps/api && pnpm start:dev         # API en :3000 (Swagger en /api/docs)
+cd apps/api && pnpm dev               # API en :3000 (Swagger en /api/docs)
 cd apps/web && pnpm dev               # web en :5173
 ```
 

@@ -32,7 +32,7 @@ npx prisma migrate dev
 cd ../../packages/types && pnpm build
 
 # 3. Levantar
-cd ../../apps/api && pnpm start:dev      # API :3000 (Swagger: /api/docs)
+cd ../../apps/api && pnpm dev            # API :3000 (Swagger: /api/docs)
 cd ../../apps/web && pnpm dev            # Web :5173
 ```
 
