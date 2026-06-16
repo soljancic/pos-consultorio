@@ -77,17 +77,17 @@ export enum AccionLog {
 
 // Colores de agenda por estado — fuente unica de verdad
 export const COLORES_ESTADO: Record<EstadoCita, string> = {
-  [EstadoCita.SOLICITADA]: '#ff0e0e',   // rojo (eleccion del owner)
-  [EstadoCita.PENDIENTE]: '#94A3B8',    // slate-400
-  [EstadoCita.CONFIRMADA]: '#60A5FA',   // blue-400
-  [EstadoCita.LLEGO]: '#34D399',        // emerald-400
-  [EstadoCita.EN_ATENCION]: '#FBBF24',  // amber-400
-  [EstadoCita.ATENDIDA]: '#A78BFA',     // violet-400
-  [EstadoCita.COBRADO]: '#4ADE80',      // green-400
-  [EstadoCita.CON_DEUDA]: '#F87171',    // red-400
-  [EstadoCita.CANCELADA]: '#9CA3AF',    // gray-400
-  [EstadoCita.NO_ASISTIO]: '#6B7280',   // gray-500
-  [EstadoCita.REPROGRAMADA]: '#C084FC', // purple-400
+  [EstadoCita.SOLICITADA]: '#FB923C',   // naranja
+  [EstadoCita.PENDIENTE]: '#94A3B8',    // gris
+  [EstadoCita.CONFIRMADA]: '#60A5FA',   // azul
+  [EstadoCita.LLEGO]: '#2DD4BF',        // teal
+  [EstadoCita.EN_ATENCION]: '#FBBF24',  // amarillo
+  [EstadoCita.ATENDIDA]: '#A78BFA',     // violeta
+  [EstadoCita.COBRADO]: '#22C55E',      // verde fuerte
+  [EstadoCita.CON_DEUDA]: '#EF4444',    // rojo
+  [EstadoCita.CANCELADA]: '#9CA3AF',    // gris claro
+  [EstadoCita.NO_ASISTIO]: '#4B5563',   // gris oscuro
+  [EstadoCita.REPROGRAMADA]: '#D946EF', // fucsia
 }
 
 // Maquina de estados: transiciones validas por estado
