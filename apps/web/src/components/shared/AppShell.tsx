@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api-client'
 import {
@@ -352,9 +352,19 @@ export function AppShell() {
           <span className="bg-white rounded-md p-1 shrink-0 flex items-center">
             <img src="/brand/isotipo.png" alt="" className="h-4 w-auto" />
           </span>
-          <span className="text-sm font-semibold truncate">
+          <span className="flex-1 min-w-0 text-sm font-semibold truncate">
             {user?.consultorioNombre || 'ConsulTech'}
           </span>
+          {/* Acceso rapido al manual: en movil el sidebar (con "Ayuda") queda
+              detras del drawer, asi que la topbar tiene su propio atajo */}
+          <Link
+            to="/ayuda"
+            title="Ayuda"
+            aria-label="Ayuda"
+            className="shrink-0 p-2 -mr-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
+          >
+            <HelpCircle className="h-5 w-5" aria-hidden="true" />
+          </Link>
         </header>
 
         <main className="flex-1 overflow-auto">
