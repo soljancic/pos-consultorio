@@ -39,6 +39,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return user?.rol === 'ADMIN' ? <>{children}</> : <Navigate to="/agenda" replace />
 }
 
+// Rutas no visibles para DOCTOR: si tipea la URL a mano, lo mandamos a Agenda.
+function SoloStaff({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+  return user?.rol === 'DOCTOR' ? <Navigate to="/agenda" replace /> : <>{children}</>
+}
+
 export default function App() {
   return (
     <Routes>
@@ -62,11 +68,11 @@ export default function App() {
         <Route path="calendario-atencion" element={<CalendarioAtencionPage />} />
         <Route path="pacientes" element={<PacientesPage />} />
         <Route path="pacientes/:id" element={<PacienteDetallePage />} />
-        <Route path="caja" element={<CajaPage />} />
-        <Route path="gastos" element={<GastosPage />} />
-        <Route path="deudores" element={<DeudoresPage />} />
-        <Route path="mensajes" element={<MensajesPage />} />
-        <Route path="catalogo" element={<CatalogoPage />} />
+        <Route path="caja" element={<SoloStaff><CajaPage /></SoloStaff>} />
+        <Route path="gastos" element={<SoloStaff><GastosPage /></SoloStaff>} />
+        <Route path="deudores" element={<SoloStaff><DeudoresPage /></SoloStaff>} />
+        <Route path="mensajes" element={<SoloStaff><MensajesPage /></SoloStaff>} />
+        <Route path="catalogo" element={<SoloStaff><CatalogoPage /></SoloStaff>} />
         <Route path="ayuda" element={<AyudaPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
         <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />
