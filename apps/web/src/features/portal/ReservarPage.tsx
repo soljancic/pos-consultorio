@@ -29,6 +29,8 @@ export function ReservarPage() {
   const [params] = useSearchParams()
   const doctorFijo = params.get('doctor')
   const tokenPaciente = params.get('p')
+  const tokenReprog = params.get('reprogramar')
+  const esReprogramacion = !!tokenReprog
 
   const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
   const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
@@ -54,6 +56,19 @@ export function ReservarPage() {
     retry: 1,
   })
 
+  type CtxReprog = {
+    cita: { fechaHoraActual: string; doctorActual: { id: number; nombre?: string } }
+    servicio: { id: number; nombre?: string; duracionMin?: number }
+    doctores: Array<{ id: number; nombre: string; especialidad: string | null; colorAgenda: string }>
+    paciente: { nombre?: string }
+  }
+  const { data: ctxReprog, isError: errReprog, isLoading: cargandoReprog } = useQuery<CtxReprog>({
+    queryKey: ['portal-reprog', slug, tokenReprog],
+    queryFn: () => api.get(`/public/${slug}/reprogramar/${tokenReprog}`).then((r) => r.data),
+    enabled: esReprogramacion,
+    retry: false,
+  })
+
   // Datos del paciente del link precargado (token opaco, no enumerable)
   const { data: prefill } = useQuery<{
     nombre: string; apellido: string; telefono: string | null; pais: string; email: string | null
@@ -77,6 +92,13 @@ export function ReservarPage() {
     if (PAISES.some((p) => p.codigo === prefill.pais)) setPais(prefill.pais)
     setEmail(prefill.email ?? '')
   }, [prefill])
+
+  // En reprogramacion el servicio es fijo (de la cita); el doctor arranca en el actual
+  useEffect(() => {
+    if (!ctxReprog) return
+    setServicioId(String(ctxReprog.servicio.id))
+    setDoctorId(String(ctxReprog.cita.doctorActual.id))
+  }, [ctxReprog])
 
   // El cliente toco algo de lo precargado: recien ahi se ofrece el check
   // "Actualizar mis datos" (sin cambios no hay nada que sincronizar)
@@ -140,10 +162,25 @@ export function ReservarPage() {
     },
   })
 
-  if (isLoading) {
+  const reprogramar = useMutation({
+    mutationFn: () =>
+      api.post(`/public/${slug}/reprogramar/${tokenReprog}`, {
+        doctorId: Number(doctorId),
+        fecha,
+        hora,
+      }),
+    onSuccess: (res) => setConfirmacion(res.data),
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo reprogramar, intente de nuevo')
+      setHora('')
+    },
+  })
+
+  if (isLoading || (esReprogramacion && cargandoReprog)) {
     return <div className="min-h-dvh flex items-center justify-center bg-background text-muted-foreground">Cargando...</div>
   }
-  if (isError || !info) {
+  if (isError || !info || (esReprogramacion && errReprog)) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <div className={cn(cardUI, 'p-8 text-center max-w-sm')}>
@@ -157,12 +194,14 @@ export function ReservarPage() {
 
   // Calendario f2: con servicio elegido, solo profesionales que lo atienden
   // (lista vacia = atiende todos)
-  const doctores = (doctorFijo
-    ? info.doctores.filter((d) => String(d.id) === doctorFijo)
-    : info.doctores
-  ).filter(
-    (d) => !servicioId || d.servicioIds.length === 0 || d.servicioIds.includes(Number(servicioId)),
-  )
+  const doctores = esReprogramacion
+    ? (ctxReprog?.doctores ?? [])
+    : (doctorFijo
+        ? info.doctores.filter((d) => String(d.id) === doctorFijo)
+        : info.doctores
+      ).filter(
+        (d) => !servicioId || d.servicioIds.length === 0 || d.servicioIds.includes(Number(servicioId)),
+      )
 
   // Grilla del mini calendario (lunes primero), mes controlado por mesCal
   const primeroMes = new Date(Number(mesCal.slice(0, 4)), Number(mesCal.slice(5, 7)) - 1, 1)
@@ -191,7 +230,9 @@ export function ReservarPage() {
         {confirmacion ? (
           <div className={cn(cardUI, 'p-6 space-y-4 text-center')}>
             <CheckCircle2 className="h-12 w-12 text-accent mx-auto" aria-hidden="true" />
-            <h2 className="text-xl font-bold text-foreground">¡Reserva enviada!</h2>
+            <h2 className="text-xl font-bold text-foreground">
+              {esReprogramacion ? '¡Reprogramación enviada!' : '¡Reserva enviada!'}
+            </h2>
             <p className="text-sm text-foreground">
               {formatDia(confirmacion.fecha, "EEEE d 'de' MMMM")} a las{' '}
               <span className="font-semibold tabular-nums">{confirmacion.hora}</span>
@@ -199,33 +240,48 @@ export function ReservarPage() {
               {confirmacion.servicio} con {confirmacion.doctor}
             </p>
             <p className="text-xs text-muted-foreground">
-              El consultorio lo contactará por email para confirmar la cita.
+              {esReprogramacion
+                ? 'El consultorio confirmara tu nueva fecha a la brevedad.'
+                : 'El consultorio lo contactará por email para confirmar la cita.'}
             </p>
           </div>
         ) : (
           <form
-            onSubmit={(e) => { e.preventDefault(); setError(''); reservar.mutate() }}
+            onSubmit={(e) => { e.preventDefault(); setError(''); (esReprogramacion ? reprogramar : reservar).mutate() }}
             className={cn(cardUI, 'p-5 sm:p-6 space-y-4')}
           >
-            <FloatingSelect
-              id="res-servicio"
-              label="Servicio"
-              Icon={Stethoscope}
-              required
-              value={servicioId}
-              onChange={(e) => {
-                setServicioId(e.target.value)
-                setFecha(''); setHora(''); setMostrarForm(false)
-                setMesCal(format(new Date(), 'yyyy-MM'))
-                // El doctor elegido podria no atender el nuevo servicio
-                if (!doctorFijo) setDoctorId('')
-              }}
-            >
-              <option value="">Seleccione el servicio...</option>
-              {info.servicios.map((s) => (
-                <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
-              ))}
-            </FloatingSelect>
+            {esReprogramacion && ctxReprog && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                <p className="text-sm font-medium text-foreground">
+                  Reprogramando tu cita de {ctxReprog.servicio.nombre}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Actual: {formatDia(ctxReprog.cita.fechaHoraActual, "EEEE d 'de' MMMM")} con{' '}
+                  {ctxReprog.cita.doctorActual.nombre}. Elegi tu nuevo dia y horario.
+                </p>
+              </div>
+            )}
+            {!esReprogramacion && (
+              <FloatingSelect
+                id="res-servicio"
+                label="Servicio"
+                Icon={Stethoscope}
+                required
+                value={servicioId}
+                onChange={(e) => {
+                  setServicioId(e.target.value)
+                  setFecha(''); setHora(''); setMostrarForm(false)
+                  setMesCal(format(new Date(), 'yyyy-MM'))
+                  // El doctor elegido podria no atender el nuevo servicio
+                  if (!doctorFijo) setDoctorId('')
+                }}
+              >
+                <option value="">Seleccione el servicio...</option>
+                {info.servicios.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
+                ))}
+              </FloatingSelect>
+            )}
 
             <FloatingSelect
               id="res-doctor"
@@ -353,7 +409,7 @@ export function ReservarPage() {
                           </button>
                         ))}
                       </div>
-                      {hora && !mostrarForm && (
+                      {!esReprogramacion && hora && !mostrarForm && (
                         <button
                           type="button"
                           onClick={() => setMostrarForm(true)}
@@ -369,7 +425,7 @@ export function ReservarPage() {
               </div>
             )}
 
-            {mostrarForm && hora && (
+            {!esReprogramacion && mostrarForm && hora && (
               <div ref={datosRef} className="space-y-4 border-t pt-4 scroll-mt-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
@@ -462,14 +518,16 @@ export function ReservarPage() {
               </p>
             )}
 
-            {mostrarForm && hora && (
+            {((esReprogramacion && hora) || (mostrarForm && hora)) && (
               <button
                 type="submit"
-                disabled={reservar.isPending}
+                disabled={reservar.isPending || reprogramar.isPending}
                 className={cn(btnPrimaryUI, 'w-full h-11')}
               >
                 <CalendarCheck className="h-4 w-4" aria-hidden="true" />
-                {reservar.isPending ? 'Reservando...' : `Reservar ${formatDia(fecha, 'dd/MM')} a las ${hora}`}
+                {esReprogramacion
+                  ? (reprogramar.isPending ? 'Reprogramando...' : `Confirmar ${formatDia(fecha, 'dd/MM')} a las ${hora}`)
+                  : (reservar.isPending ? 'Reservando...' : `Reservar ${formatDia(fecha, 'dd/MM')} a las ${hora}`)}
               </button>
             )}
           </form>

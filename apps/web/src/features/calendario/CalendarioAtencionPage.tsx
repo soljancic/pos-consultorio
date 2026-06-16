@@ -62,6 +62,11 @@ export function CalendarioAtencionPage() {
   const doctorPropio = esDoctor ? doctores.find((d) => d.usuarioId === user?.id) : undefined
   const puedeEditar = (doctorId: number) => esAdmin || doctorPropio?.id === doctorId
 
+  // El doctor solo ve su propia fila; admin/secretaria ven a todos
+  const doctoresVisibles = esDoctor
+    ? (doctorPropio ? [doctorPropio] : [])
+    : doctores
+
   function bloquesDe(doctorId: number, dia: Date) {
     const diaStr = format(dia, 'yyyy-MM-dd')
     return bloques.filter(
@@ -107,12 +112,14 @@ export function CalendarioAtencionPage() {
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {errDoctores || errBloques ? (
           <ErrorState onRetry={() => { refDoctores(); refBloques() }} />
-        ) : doctores.length === 0 ? (
+        ) : doctoresVisibles.length === 0 ? (
           <EmptyState
             icon={UserRound}
-            title="No hay doctores activos"
-            description="Creá un profesional en el Catálogo para configurar sus horarios."
-            action={<Link to="/catalogo" className={cn(btnPrimaryUI, 'h-9')}>Ir al Catálogo</Link>}
+            title={esDoctor ? 'No tenés un profesional vinculado' : 'No hay doctores activos'}
+            description={esDoctor
+              ? 'Pedile al administrador que vincule tu usuario a un profesional para ver tus horarios.'
+              : 'Creá un profesional en el Catálogo para configurar sus horarios.'}
+            action={esDoctor ? undefined : <Link to="/catalogo" className={cn(btnPrimaryUI, 'h-9')}>Ir al Catálogo</Link>}
           />
         ) : (
           <>
@@ -147,7 +154,7 @@ export function CalendarioAtencionPage() {
 
               {/* Tarjetas de doctor para el dia seleccionado */}
               <div className="space-y-3">
-                {doctores.map((doc) => {
+                {doctoresVisibles.map((doc) => {
                   const delDia = bloquesDe(doc.id, fecha)
                   const fechaStr = format(fecha, 'yyyy-MM-dd')
                   return (
@@ -214,7 +221,7 @@ export function CalendarioAtencionPage() {
                 </div>
 
                 {/* Una fila por doctor */}
-                {doctores.map((doc) => (
+                {doctoresVisibles.map((doc) => (
                   <div key={doc.id} className="grid border-b last:border-0"
                     style={{ gridTemplateColumns: '160px repeat(7, 1fr)' }}>
                     <div className="flex items-center gap-2 px-3 py-3">

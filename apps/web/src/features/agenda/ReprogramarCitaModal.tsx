@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { AlertCircle, CalendarClock, Calendar, Clock, UserRound, Stethoscope, MessageCircle } from 'lucide-react'
+import { AlertCircle, CalendarClock, Calendar, Clock, UserRound, Stethoscope, MessageCircle, Copy, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatHora, abrirWhatsApp, cn } from '../../lib/utils'
+import { formatHora, abrirWhatsApp, publicBaseUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp } from '../../lib/whatsapp'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -27,6 +27,28 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
   const [servicioId, setServicioId] = useState(String(cita.servicioId))
   const [error, setError] = useState('')
   const { consultorioNombre } = usePlantillasWhatsApp()
+
+  const [copiado, setCopiado] = useState(false)
+
+  // Portal: el link de reprogramacion solo aplica con el portal activo
+  const { data: consultorio } = useQuery<{ slug: string | null; portalActivo: boolean }>({
+    queryKey: ['consultorio'],
+    queryFn: () => api.get('/consultorio').then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+  const portalListo = !!(consultorio?.slug && consultorio.portalActivo)
+
+  // Token opaco de la cita (lo crea el backend si no existe): deja el click sincrono
+  const { data: tokenReprog } = useQuery<{ token: string }>({
+    queryKey: ['cita-token-reprogramacion', cita.id],
+    queryFn: () => api.get(`/citas/${cita.id}/token-reprogramacion`).then((r) => r.data),
+    enabled: portalListo,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  function buildLinkReprogramar() {
+    return `${publicBaseUrl()}/reservar/${consultorio!.slug}?reprogramar=${tokenReprog!.token}`
+  }
 
   const { data: doctores = [] } = useQuery<Doctor[]>({
     queryKey: ['doctores'],
@@ -61,12 +83,23 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
     reprogramar.mutate()
   }
 
-  // Consultar al paciente que nueva fecha/hora prefiere, por WhatsApp.
+  // Enviar al paciente el link para que reprograme el mismo su cita
   function handleWhatsApp() {
     const tel = cita.paciente?.telefono
-    if (!tel) return
-    const msg = `Hola ${cita.paciente?.nombre ?? ''}, necesitamos reprogramar tu cita en ${consultorioNombre}. ¿Qué nueva fecha y horario te quedan bien?`
+    if (!tel || !tokenReprog?.token) return
+    const msg = `Hola ${cita.paciente?.nombre ?? ''}, para reprogramar tu cita en ${consultorioNombre} elegi tu nueva fecha y horario desde este link: ${buildLinkReprogramar()}`
     abrirWhatsApp(tel, msg, cita.paciente?.pais)
+  }
+
+  async function copiarLink() {
+    if (!tokenReprog?.token) return
+    try {
+      await navigator.clipboard.writeText(buildLinkReprogramar())
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      setError('No se pudo copiar el link')
+    }
   }
 
   return (
@@ -138,15 +171,42 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
             La cita vuelve a estado Pendiente: confirmar de nuevo con el paciente.
           </p>
 
-          {cita.paciente?.telefono && (
-            <button
-              type="button"
-              onClick={handleWhatsApp}
-              className={cn(btnOutlineUI, 'w-full text-accent hover:bg-accent/10')}
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Consultar nueva fecha por WhatsApp
-            </button>
+          {portalListo && tokenReprog?.token && (
+            <div>
+              <div className="flex gap-2">
+                {cita.paciente?.telefono && (
+                  <button
+                    type="button"
+                    onClick={handleWhatsApp}
+                    className={cn(btnOutlineUI, 'flex-1 text-accent hover:bg-accent/10')}
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    Enviar link por WhatsApp
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={copiarLink}
+                  aria-label="Copiar link de reprogramacion"
+                  className={cn(btnOutlineUI, 'px-3 shrink-0')}
+                >
+                  {copiado ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" aria-hidden="true" />
+                      Copiar
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                El paciente abre el link y elige el mismo su nueva fecha y horario.
+              </p>
+            </div>
           )}
 
           {error && (

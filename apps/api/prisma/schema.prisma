@@ -300,6 +300,10 @@ model Cita {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?
+  // Token opaco para el link de auto-reprogramacion del paciente
+  // (capability URL: /reservar/:slug?reprogramar=token). Aleatorio e
+  // impredecible, se genera la primera vez que se pide el link.
+  portalToken     String?     @unique
 
   atencion Atencion?
   mensajesPendientes MensajePendiente[]

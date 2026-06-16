@@ -35,11 +35,11 @@ const NAV_ITEMS = [
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
-  { to: '/deudores', icon: AlertCircle, label: 'Deudores' },
-  { to: '/mensajes', icon: MessageCircle, label: 'Mensajes' },
-  { to: '/caja', icon: DollarSign, label: 'Caja' },
-  { to: '/gastos', icon: Receipt, label: 'Gastos' },
-  { to: '/catalogo', icon: Settings, label: 'Catálogo' },
+  { to: '/deudores', icon: AlertCircle, label: 'Deudores', ocultarDoctor: true },
+  { to: '/mensajes', icon: MessageCircle, label: 'Mensajes', ocultarDoctor: true },
+  { to: '/caja', icon: DollarSign, label: 'Caja', ocultarDoctor: true },
+  { to: '/gastos', icon: Receipt, label: 'Gastos', ocultarDoctor: true },
+  { to: '/catalogo', icon: Settings, label: 'Catálogo', ocultarDoctor: true },
   { to: '/reportes', icon: BarChart3, label: 'Reportes', soloAdmin: true },
   { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
   { to: '/configuracion', icon: Cog, label: 'Configuración', soloAdmin: true },
@@ -85,11 +85,13 @@ export function AppShell() {
     .toUpperCase()
 
   const esAdmin = user?.rol === 'ADMIN'
+  const esDoctor = user?.rol === 'DOCTOR'
 
   // Badge del nav Mensajes (item 41a): refresca solo cada 2 min
   const { data: pendientes } = useQuery<{ pendientes: number }>({
     queryKey: ['mensajes-pendientes-count'],
     queryFn: () => api.get('/mensajes/pendientes/count').then((r) => r.data),
+    enabled: !esDoctor,
     refetchInterval: 2 * 60 * 1000,
     staleTime: 60 * 1000,
   })
@@ -180,7 +182,7 @@ export function AppShell() {
 
         {/* Navegacion */}
         <nav className="flex-1 py-3 space-y-1 px-2 overflow-y-auto">
-          {NAV_ITEMS.filter((item) => !item.soloAdmin || esAdmin).map(
+          {NAV_ITEMS.filter((item) => (!item.soloAdmin || esAdmin) && !(esDoctor && item.ocultarDoctor)).map(
             ({ to, icon: Icon, label, end }) => (
               <NavLink
                 key={to}
@@ -222,7 +224,7 @@ export function AppShell() {
         </nav>
 
         {/* Estado del turno (E2-M9): visible siempre, apertura desde aca */}
-        {turno && (
+        {!esDoctor && turno && (
           <div className="px-2 pb-1">
             {!turno.existe ? (
               <button

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
-import { PortalService, ReservaPortalDto, DiasDisponiblesQueryDto } from './portal.service'
+import { PortalService, ReservaPortalDto, DiasDisponiblesQueryDto, ReprogramarPublicoDto } from './portal.service'
 import { Public } from '../../common/decorators/public.decorator'
 
 // Superficie PUBLICA (sin auth): rate limit estricto y cero enumeracion.
@@ -61,5 +61,25 @@ export class PortalController {
   @ApiOperation({ summary: 'Reservar: crea paciente (match por telefono) + cita PENDIENTE' })
   reservar(@Param('slug') slug: string, @Body() dto: ReservaPortalDto) {
     return this.service.reservar(slug, dto)
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Get(':slug/reprogramar/:token')
+  @ApiOperation({ summary: 'Contexto del link de reprogramacion (cita, servicio fijo, doctores)' })
+  contextoReprogramacion(@Param('slug') slug: string, @Param('token') token: string) {
+    return this.service.contextoReprogramacion(slug, token)
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post(':slug/reprogramar/:token')
+  @ApiOperation({ summary: 'Reprogramar (mover) la cita del token a una nueva fecha/hora' })
+  reprogramarPorToken(
+    @Param('slug') slug: string,
+    @Param('token') token: string,
+    @Body() dto: ReprogramarPublicoDto,
+  ) {
+    return this.service.reprogramarPorToken(slug, token, dto)
   }
 }

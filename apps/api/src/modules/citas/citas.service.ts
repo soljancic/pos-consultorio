@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import {
   Injectable,
   NotFoundException,
@@ -63,6 +64,14 @@ const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
   EstadoCita.PENDIENTE,
   EstadoCita.CONFIRMADA,
   EstadoCita.LLEGO,
+]
+
+// El portal permite mover citas aun en SOLICITADA (link reusable); no LLEGO
+// (el paciente ya esta en el consultorio).
+const ESTADOS_REPROGRAMABLES_PORTAL: EstadoCita[] = [
+  EstadoCita.PENDIENTE,
+  EstadoCita.CONFIRMADA,
+  EstadoCita.SOLICITADA,
 ]
 
 @Injectable()
@@ -527,6 +536,105 @@ export class CitasService {
     )
 
     return reprogramada
+  }
+
+  // Token opaco para el link de auto-reprogramacion (espejo de
+  // pacientes.portalToken): perezoso e idempotente. Solo para citas que se
+  // pueden mover; una cita atendida/cancelada no genera link.
+  async tokenReprogramacion(consultorioId: number, citaId: number) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+      select: { id: true, estado: true, portalToken: true },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    if (!ESTADOS_REPROGRAMABLES_PORTAL.includes(cita.estado)) {
+      throw new BadRequestException(
+        `No se puede reprogramar una cita en estado ${cita.estado}`,
+      )
+    }
+    if (cita.portalToken) return { token: cita.portalToken }
+
+    const actualizada = await this.prisma.cita.update({
+      where: { id: citaId },
+      data: { portalToken: randomBytes(18).toString('base64url') },
+      select: { portalToken: true },
+    })
+    return { token: actualizada.portalToken }
+  }
+
+  // Reprogramacion iniciada por el paciente desde el link publico. El token
+  // identifica la cita exacta; servicio queda fijo (misma cita), solo cambia
+  // doctor + fecha/hora. Vuelve a SOLICITADA: la secretaria reconfirma.
+  // El caller (PortalService) ya valido que el doctor atiende el servicio.
+  async reprogramarPorToken(
+    consultorioId: number,
+    token: string,
+    dto: { doctorId: number; fecha: string; hora: string },
+  ) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { consultorioId, portalToken: token, deletedAt: null },
+      include: { doctor: true, servicio: true },
+    })
+    if (!cita) throw new NotFoundException('Link no disponible')
+    if (!ESTADOS_REPROGRAMABLES_PORTAL.includes(cita.estado)) {
+      throw new ConflictException('Esta cita ya no se puede reprogramar')
+    }
+
+    const fechaHora = new Date(`${dto.fecha.slice(0, 10)}T${dto.hora}:00`)
+    const fechaFin = new Date(fechaHora.getTime() + cita.duracionMin * 60 * 1000)
+    await this.verificarDisponibilidad(consultorioId, dto.doctorId, fechaHora, fechaFin, cita.id)
+    await this.verificarHorarioAtencion(consultorioId, dto.doctorId, fechaHora, fechaFin)
+
+    const reprogramada = await this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.cita.update({
+        where: { id: cita.id },
+        data: {
+          fechaHora,
+          doctorId: dto.doctorId,
+          // pedido del paciente: vuelve a SOLICITADA para que la secretaria lo acepte
+          estado: EstadoCita.SOLICITADA,
+        },
+        include: { doctor: true, servicio: true },
+      })
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId: cita.createdById,
+          entidad: 'Cita',
+          entidadId: cita.id,
+          accion: 'UPDATE',
+          payloadAntes: {
+            fechaHora: cita.fechaHora.toISOString(),
+            doctorId: cita.doctorId,
+            estado: cita.estado,
+          },
+          payloadDespues: {
+            fechaHora: fechaHora.toISOString(),
+            doctorId: dto.doctorId,
+            estado: EstadoCita.SOLICITADA,
+            motivo: 'reprogramacion-portal',
+          },
+        },
+      })
+
+      return actualizada
+    })
+
+    // Avisa a admin + doctor que el paciente pidio reprogramar
+    void this.notificaciones.emitirEventoCita(
+      consultorioId,
+      cita.id,
+      TipoNotificacion.CITA_REPROGRAMADA,
+      { admin: true, doctor: true },
+    )
+
+    return {
+      fecha: dto.fecha.slice(0, 10),
+      hora: dto.hora,
+      doctor: reprogramada.doctor?.nombre,
+      servicio: reprogramada.servicio?.nombre,
+    }
   }
 
   // Calendario de Atencion (E2.5a): bloqueos siempre rechazan; si el doctor

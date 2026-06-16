@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { NotificacionesPanel } from './NotificacionesPanel'
+import { reproducirBip } from './sonido'
 
 // variant 'fab'    -> boton flotante abajo-derecha (celular).
 // variant 'button' -> boton en linea (barra superior en pc / topbar en tablet);
@@ -24,6 +25,15 @@ export function NotificacionesBell({
     staleTime: 15 * 1000,
   })
   const count = data?.count ?? 0
+
+  // Bip solo cuando el contador SUBE (no en la primera carga ni al bajar)
+  const countPrevio = useRef<number | null>(null)
+  useEffect(() => {
+    if (countPrevio.current !== null && count > countPrevio.current) {
+      reproducirBip()
+    }
+    countPrevio.current = count
+  }, [count])
 
   return (
     <>
