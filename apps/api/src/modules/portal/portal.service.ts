@@ -63,6 +63,18 @@ export class DiasDisponiblesQueryDto {
   mes: string
 }
 
+// Reprogramacion publica: el paciente solo elige doctor + nueva fecha/hora
+export class ReprogramarPublicoDto {
+  @IsInt()
+  doctorId: number
+
+  @IsISO8601()
+  fecha: string
+
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'hora debe ser HH:mm' })
+  hora: string
+}
+
 // Portal publico de reservas (E2.5b). REGLA CRITICA: el consultorioId se
 // deriva SIEMPRE del slug en el server; las respuestas no exponen datos de
 // pacientes ni de la agenda (solo horas libres).
@@ -270,5 +282,75 @@ export class PortalService {
       doctor: cita.doctor?.nombre,
       servicio: cita.servicio?.nombre,
     }
+  }
+
+  // Contexto del link de reprogramacion: cita actual + servicio fijo + los
+  // doctores que atienden ese servicio (para el selector). Sin datos sensibles.
+  async contextoReprogramacion(slug: string, token: string) {
+    const c = await this.consultorioPorSlug(slug)
+    const cita = await this.prisma.cita.findFirst({
+      where: { consultorioId: c.id, portalToken: token, deletedAt: null },
+      include: { doctor: true, servicio: true, paciente: true },
+    })
+    if (!cita || cita.deletedAt) throw new NotFoundException('Link no disponible')
+    if (!['PENDIENTE', 'CONFIRMADA', 'SOLICITADA'].includes(cita.estado)) {
+      throw new NotFoundException('Esta cita ya no se puede reprogramar')
+    }
+
+    // Doctores que atienden el servicio (lista de servicios vacia = atiende todos)
+    const doctores = await this.prisma.doctor.findMany({
+      where: { consultorioId: c.id, activo: true },
+      select: {
+        id: true, nombre: true, especialidad: true, colorAgenda: true,
+        servicios: { select: { id: true } },
+      },
+      orderBy: { nombre: 'asc' },
+    })
+    const habilitados = doctores
+      .filter((d) => d.servicios.length === 0 || d.servicios.some((s) => s.id === cita.servicioId))
+      .map(({ servicios, ...d }) => d)
+
+    return {
+      consultorio: { nombre: c.nombre, logoUrl: c.logoUrl },
+      cita: {
+        fechaHoraActual: cita.fechaHora.toISOString(),
+        doctorActual: { id: cita.doctorId, nombre: cita.doctor?.nombre },
+      },
+      servicio: {
+        id: cita.servicioId,
+        nombre: cita.servicio?.nombre,
+        duracionMin: cita.servicio?.duracionMin,
+      },
+      doctores: habilitados,
+      paciente: { nombre: cita.paciente?.nombre },
+    }
+  }
+
+  async reprogramarPorToken(slug: string, token: string, dto: ReprogramarPublicoDto) {
+    const c = await this.consultorioPorSlug(slug)
+    // El servicio queda fijo: lo tomamos de la cita del token para guardar que
+    // el doctor elegido efectivamente lo atiende (mismo guard que reservar()).
+    const cita = await this.prisma.cita.findFirst({
+      where: { consultorioId: c.id, portalToken: token, deletedAt: null },
+      select: { servicioId: true },
+    })
+    if (!cita) throw new NotFoundException('Link no disponible')
+    if (!(await this.doctores.atiendeServicio(dto.doctorId, cita.servicioId))) {
+      throw new ConflictException('Ese profesional no atiende el servicio de la cita')
+    }
+    // El slot debe seguir libre y futuro (CitasService revalida solape/horario)
+    const servicio = await this.prisma.servicio.findFirst({
+      where: { id: cita.servicioId, consultorioId: c.id, activo: true },
+    })
+    if (!servicio) throw new NotFoundException('Servicio no encontrado')
+    const disp = await this.doctores.getDisponibilidad(c.id, dto.doctorId, dto.fecha, servicio.duracionMin)
+    if (!this.filtrarSlotsPasados(dto.fecha, disp.slots).includes(dto.hora)) {
+      throw new ConflictException('Ese horario ya no esta disponible')
+    }
+    return this.citas.reprogramarPorToken(c.id, token, {
+      doctorId: dto.doctorId,
+      fecha: dto.fecha,
+      hora: dto.hora,
+    })
   }
 }
