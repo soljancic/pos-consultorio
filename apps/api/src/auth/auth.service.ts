@@ -52,7 +52,7 @@ export class AuthService {
           create: [
             { nombre: 'Efectivo', esEfectivo: true },
             { nombre: 'QR' }, { nombre: 'Tarjeta' },
-            { nombre: 'Banco' }, { nombre: 'Vales' },
+            { nombre: 'Vales' },
           ],
         },
       },
