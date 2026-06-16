@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import {
   Injectable,
   NotFoundException,
@@ -527,6 +528,30 @@ export class CitasService {
     )
 
     return reprogramada
+  }
+
+  // Token opaco para el link de auto-reprogramacion (espejo de
+  // pacientes.portalToken): perezoso e idempotente. Solo para citas que se
+  // pueden mover; una cita atendida/cancelada no genera link.
+  async tokenReprogramacion(consultorioId: number, citaId: number) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+      select: { id: true, estado: true, portalToken: true },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
+      throw new BadRequestException(
+        `No se puede reprogramar una cita en estado ${cita.estado}`,
+      )
+    }
+    if (cita.portalToken) return { token: cita.portalToken }
+
+    const actualizada = await this.prisma.cita.update({
+      where: { id: citaId },
+      data: { portalToken: randomBytes(18).toString('base64url') },
+      select: { portalToken: true },
+    })
+    return { token: actualizada.portalToken }
   }
 
   // Calendario de Atencion (E2.5a): bloqueos siempre rechazan; si el doctor

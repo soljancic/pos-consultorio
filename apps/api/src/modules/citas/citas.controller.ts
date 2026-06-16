@@ -52,6 +52,15 @@ export class CitasController {
     return this.service.cambiarEstado(user.consultorioId, id, dto, user.sub)
   }
 
+  @Get(':id/token-reprogramacion')
+  @ApiOperation({ summary: 'Token para el link de auto-reprogramacion (lo crea si no existe)' })
+  tokenReprogramacion(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.tokenReprogramacion(user.consultorioId, id)
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Reprogramar cita (editar fecha/hora/doctor en el lugar)' })
   reprogramar(
