@@ -1,17 +1,25 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { X, CheckCheck, BellOff } from 'lucide-react'
+import { X, CheckCheck, BellOff, Volume2, VolumeX } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, formatFecha, formatHora } from '../../lib/utils'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { CardListSkeleton } from '../../components/shared/Skeleton'
 import { TIPO_META, type Notificacion } from './types'
+import { sonidoActivado, setSonidoActivado } from './sonido'
 
 export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+
+  const [sonido, setSonido] = useState(sonidoActivado)
+  function toggleSonido() {
+    const nuevo = !sonido
+    setSonido(nuevo)
+    setSonidoActivado(nuevo)
+  }
 
   // Cerrar con Escape (mismo gesto que el resto de overlays de la app)
   useEffect(() => {
@@ -73,6 +81,15 @@ export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h2 className="text-sm font-semibold">Notificaciones</h2>
           <div className="flex items-center gap-1">
+            <button
+              onClick={toggleSonido}
+              aria-pressed={sonido}
+              aria-label={sonido ? 'Silenciar notificaciones' : 'Activar sonido de notificaciones'}
+              title={sonido ? 'Silenciar' : 'Activar sonido'}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
+            >
+              {sonido ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
+            </button>
             <button
               onClick={() => marcarTodas.mutate()}
               disabled={!hayNoLeidas || marcarTodas.isPending}
