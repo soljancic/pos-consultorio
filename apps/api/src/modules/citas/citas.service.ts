@@ -201,7 +201,7 @@ export class CitasService {
 
     await this.mail.enviar(
       cita.paciente.email,
-      `Tu reserva en ${cita.consultorio.nombre} fue aceptada`,
+      `Tu cita en ${cita.consultorio.nombre} fue aceptada`,
       this.mail.htmlReservaAceptada({
         nombre: cita.paciente.nombre,
         consultorio: cita.consultorio.nombre,

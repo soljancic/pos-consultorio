@@ -199,7 +199,7 @@ export function ReservarPage() {
               {confirmacion.servicio} con {confirmacion.doctor}
             </p>
             <p className="text-xs text-muted-foreground">
-              El consultorio lo contactará para confirmar la cita.
+              El consultorio lo contactará por email para confirmar la cita.
             </p>
           </div>
         ) : (
