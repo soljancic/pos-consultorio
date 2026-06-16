@@ -26,13 +26,13 @@ export function NotificacionesBell() {
           // Movil: FAB abajo-derecha
           'bottom-5 right-5 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90',
           // Desktop: campana chica arriba-derecha sobre card
-          'lg:bottom-auto lg:right-4 lg:top-3 lg:h-10 lg:w-10 lg:rounded-lg lg:bg-card lg:text-foreground lg:border lg:shadow-sm lg:hover:bg-muted',
+          'lg:bottom-auto lg:right-4 lg:top-3 lg:h-11 lg:w-11 lg:rounded-lg lg:bg-card lg:text-foreground lg:border lg:shadow-sm lg:hover:bg-muted',
         )}
       >
         <Bell className="h-6 w-6 lg:h-5 lg:w-5" aria-hidden="true" />
         {count > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs font-bold leading-5 text-center tabular-nums ring-2 ring-card"
+            className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-xs font-bold leading-5 text-center tabular-nums ring-2 ring-card"
             aria-hidden="true"
           >
             {count > 99 ? '99+' : count}

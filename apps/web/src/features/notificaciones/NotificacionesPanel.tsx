@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { X, CheckCheck, BellOff } from 'lucide-react'
@@ -11,6 +12,15 @@ import { TIPO_META, type Notificacion } from './types'
 export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+
+  // Cerrar con Escape (mismo gesto que el resto de overlays de la app)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const { data: items = [], isLoading, isError, refetch } = useQuery<Notificacion[]>({
     queryKey: ['notificaciones', 'lista'],
