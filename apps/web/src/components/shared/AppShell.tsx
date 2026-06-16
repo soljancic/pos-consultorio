@@ -341,7 +341,9 @@ export function AppShell() {
 
       {/* Columna principal */}
       <div className="flex-1 flex flex-col min-w-0">
-        <NotificacionesBell />
+        {/* Campana: en celular (<md) es un FAB flotante abajo-derecha. En tablet
+            y pc va en linea, a la derecha (ver topbar y barra superior abajo). */}
+        <NotificacionesBell variant="fab" className="md:hidden" />
         {/* Topbar movil */}
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-teal-950 text-white shrink-0">
           <button
@@ -357,6 +359,8 @@ export function AppShell() {
           <span className="flex-1 min-w-0 text-sm font-semibold truncate">
             {user?.consultorioNombre || 'ConsulTech'}
           </span>
+          {/* Campana en tablet (md..lg): en linea en la topbar, no flotante */}
+          <NotificacionesBell className="hidden md:inline-flex h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
           {/* Acceso rapido al manual: en movil el sidebar (con "Ayuda") queda
               detras del drawer, asi que la topbar tiene su propio atajo */}
           <Link
@@ -368,6 +372,12 @@ export function AppShell() {
             <HelpCircle className="h-5 w-5" aria-hidden="true" />
           </Link>
         </header>
+
+        {/* Barra superior solo en pc/tablet grande (lg+): la campana va aca, a la
+            derecha y en linea (no flotante), presente en todas las pantallas. */}
+        <div className="hidden lg:flex shrink-0 items-center justify-end h-14 px-4 border-b bg-background">
+          <NotificacionesBell className="h-11 w-11 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
+        </div>
 
         <main className="flex-1 overflow-auto">
           <Outlet />
