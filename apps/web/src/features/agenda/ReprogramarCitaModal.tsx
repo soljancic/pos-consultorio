@@ -89,6 +89,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
     if (!tel || !tokenReprog?.token) return
     const msg = `Hola ${cita.paciente?.nombre ?? ''}, para reprogramar tu cita en ${consultorioNombre} elegi tu nueva fecha y horario desde este link: ${buildLinkReprogramar()}`
     abrirWhatsApp(tel, msg, cita.paciente?.pais)
+    onClose()
   }
 
   async function copiarLink() {
@@ -96,7 +97,8 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
     try {
       await navigator.clipboard.writeText(buildLinkReprogramar())
       setCopiado(true)
-      setTimeout(() => setCopiado(false), 2000)
+      // mostrar "Copiado" un instante y cerrar el modal
+      setTimeout(onClose, 1000)
     } catch {
       setError('No se pudo copiar el link')
     }

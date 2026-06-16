@@ -138,7 +138,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     try {
       await navigator.clipboard.writeText(buildLinkReserva())
       setCopiadoLink(true)
-      setTimeout(() => setCopiadoLink(false), 2000)
+      // mostrar "Copiado" un instante y cerrar el modal
+      setTimeout(onClose, 1000)
     } catch {
       setError('No se pudo copiar el link')
     }
