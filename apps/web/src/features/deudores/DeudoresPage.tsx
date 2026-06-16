@@ -93,7 +93,9 @@ export function DeudoresPage() {
             <EmptyState icon={CheckCircle2} title="No hay deudas pendientes" description="Todos los pacientes están al día." />
           )
         ) : (
-          <div className={cn(cardUI, 'overflow-x-auto')}>
+          <>
+          {/* Desktop: tabla de 6 columnas */}
+          <div className={cn(cardUI, 'hidden sm:block overflow-x-auto')}>
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
@@ -234,6 +236,125 @@ export function DeudoresPage() {
               </tfoot>
             </table>
           </div>
+
+          {/* Mobile: lista de tarjetas (la tabla de 6 columnas no entra en celular).
+              Prioriza el monto y las 2 acciones; el detalle por cita se expande dentro. */}
+          <div className="sm:hidden space-y-3">
+            <div className="flex items-center justify-between rounded-xl border bg-muted/40 px-4 py-3">
+              <span className="text-sm text-muted-foreground">
+                {filtrados.length} paciente{filtrados.length !== 1 ? 's' : ''}
+              </span>
+              <span className="text-base font-semibold text-destructive tabular-nums">
+                {formatMoneda(totalDeuda)}
+              </span>
+            </div>
+
+            {filtrados.map((d) => {
+              const variasCitas = d.cobros.length > 1
+              const abierto = expandido === d.pacienteId
+              const msgWa = renderDeuda(plantillas.deuda, {
+                nombre: d.nombre,
+                monto: formatMoneda(d.deudaTotal),
+                consultorio: consultorioNombre,
+              }, linkQRBase)
+              return (
+                <div key={d.pacienteId} className={cn(cardUI, 'p-4')}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">
+                        {d.nombre} {d.apellido}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Última cita {formatFecha(d.ultimaCitaFecha)}
+                        {!variasCitas && d.ultimoServicio ? ` · ${d.ultimoServicio}` : ''}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground/80">
+                        {d.ultimoPago ? `Último pago ${formatFecha(d.ultimoPago)}` : 'Sin pagos'}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-lg font-semibold text-destructive tabular-nums">
+                      {formatMoneda(d.deudaTotal)}
+                    </span>
+                  </div>
+
+                  {variasCitas && (
+                    <button
+                      onClick={() => setExpandido(abierto ? null : d.pacienteId)}
+                      aria-expanded={abierto}
+                      aria-label={abierto ? 'Ocultar detalle por cita' : 'Ver detalle por cita'}
+                      className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                    >
+                      {d.cobros.length} citas
+                      {abierto ? (
+                        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </button>
+                  )}
+
+                  {abierto && variasCitas && (
+                    <div className="mt-3 space-y-1.5 border-t pt-3">
+                      {d.cobros.map((cobro) => (
+                        <div
+                          key={cobro.id}
+                          className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm text-foreground truncate">
+                              {cobro.cita.servicio?.nombre}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFecha(cobro.cita.fechaHora)} &middot; Total{' '}
+                              {formatMoneda(Number(cobro.total))}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-0.5">
+                            <span className="text-sm font-semibold text-destructive tabular-nums">
+                              {formatMoneda(Number(cobro.saldoPendiente))}
+                            </span>
+                            <button
+                              onClick={() => setCitaCobro(cobro.cita)}
+                              className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                            >
+                              Cobrar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex gap-2">
+                    {d.telefono && (
+                      <a
+                        href={buildWhatsAppUrl(d.telefono, msgWa, d.pais)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          abrirWhatsApp(d.telefono!, msgWa, d.pais)
+                        }}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-accent/10 text-accent text-sm font-medium cursor-pointer hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        aria-label="Enviar recordatorio por WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                        WhatsApp
+                      </a>
+                    )}
+                    <button
+                      onClick={() => cobrarDeudor(d)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-primary/10 text-primary text-sm font-medium cursor-pointer hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                    >
+                      <DollarSign className="h-4 w-4" aria-hidden="true" />
+                      {variasCitas ? 'Ver citas' : 'Cobrar'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          </>
         )}
       </div>
 
