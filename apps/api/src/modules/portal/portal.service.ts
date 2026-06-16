@@ -292,7 +292,7 @@ export class PortalService {
       where: { consultorioId: c.id, portalToken: token, deletedAt: null },
       include: { doctor: true, servicio: true, paciente: true },
     })
-    if (!cita || cita.deletedAt) throw new NotFoundException('Link no disponible')
+    if (!cita) throw new NotFoundException('Link no disponible')
     if (!['PENDIENTE', 'CONFIRMADA', 'SOLICITADA'].includes(cita.estado)) {
       throw new NotFoundException('Esta cita ya no se puede reprogramar')
     }

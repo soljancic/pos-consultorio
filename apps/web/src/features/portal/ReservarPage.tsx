@@ -62,7 +62,7 @@ export function ReservarPage() {
     doctores: Array<{ id: number; nombre: string; especialidad: string | null; colorAgenda: string }>
     paciente: { nombre?: string }
   }
-  const { data: ctxReprog, isError: errReprog } = useQuery<CtxReprog>({
+  const { data: ctxReprog, isError: errReprog, isLoading: cargandoReprog } = useQuery<CtxReprog>({
     queryKey: ['portal-reprog', slug, tokenReprog],
     queryFn: () => api.get(`/public/${slug}/reprogramar/${tokenReprog}`).then((r) => r.data),
     enabled: esReprogramacion,
@@ -177,7 +177,7 @@ export function ReservarPage() {
     },
   })
 
-  if (isLoading) {
+  if (isLoading || (esReprogramacion && cargandoReprog)) {
     return <div className="min-h-dvh flex items-center justify-center bg-background text-muted-foreground">Cargando...</div>
   }
   if (isError || !info || (esReprogramacion && errReprog)) {

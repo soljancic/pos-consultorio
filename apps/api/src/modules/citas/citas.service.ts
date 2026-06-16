@@ -66,6 +66,14 @@ const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
   EstadoCita.LLEGO,
 ]
 
+// El portal permite mover citas aun en SOLICITADA (link reusable); no LLEGO
+// (el paciente ya esta en el consultorio).
+const ESTADOS_REPROGRAMABLES_PORTAL: EstadoCita[] = [
+  EstadoCita.PENDIENTE,
+  EstadoCita.CONFIRMADA,
+  EstadoCita.SOLICITADA,
+]
+
 @Injectable()
 export class CitasService {
   constructor(
@@ -539,7 +547,7 @@ export class CitasService {
       select: { id: true, estado: true, portalToken: true },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
-    if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
+    if (!ESTADOS_REPROGRAMABLES_PORTAL.includes(cita.estado)) {
       throw new BadRequestException(
         `No se puede reprogramar una cita en estado ${cita.estado}`,
       )
@@ -568,7 +576,7 @@ export class CitasService {
       include: { doctor: true, servicio: true },
     })
     if (!cita) throw new NotFoundException('Link no disponible')
-    if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
+    if (!ESTADOS_REPROGRAMABLES_PORTAL.includes(cita.estado)) {
       throw new ConflictException('Esta cita ya no se puede reprogramar')
     }
 
