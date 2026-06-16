@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
+import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
-import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma } from '@prisma/client'
+import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
 
 export class CreateCitaDto {
@@ -69,6 +70,7 @@ export class CitasService {
   constructor(
     private prisma: PrismaService,
     private mail: MailService,
+    private notificaciones: NotificacionesService,
   ) {}
 
   async findByFecha(
@@ -168,6 +170,17 @@ export class CitasService {
         saldoPendiente: precio,
       },
     })
+
+    // Centro de notificaciones: una reserva del portal (SOLICITADA) avisa a la
+    // bandeja admin. Fire-and-forget: nunca bloquea la creacion de la cita.
+    if (origen === OrigenCita.PORTAL) {
+      void this.notificaciones.emitirEventoCita(
+        consultorioId,
+        cita.id,
+        TipoNotificacion.NUEVA_CITA,
+        { admin: true, doctor: false },
+      )
+    }
 
     return cita
   }
@@ -334,6 +347,24 @@ export class CitasService {
       return actualizada
     })
 
+    // Centro de notificaciones (fire-and-forget): cancelacion avisa a admin +
+    // doctor de la cita; "llego" avisa solo al doctor (paciente en espera).
+    if (dto.estado === EstadoCita.CANCELADA) {
+      void this.notificaciones.emitirEventoCita(
+        consultorioId,
+        citaId,
+        TipoNotificacion.CITA_CANCELADA,
+        { admin: true, doctor: true },
+      )
+    } else if (dto.estado === EstadoCita.LLEGO) {
+      void this.notificaciones.emitirEventoCita(
+        consultorioId,
+        citaId,
+        TipoNotificacion.PACIENTE_EN_ESPERA,
+        { admin: false, doctor: true },
+      )
+    }
+
     // Reserva del portal aceptada (SOLICITADA -> PENDIENTE): se avisa al
     // paciente por email. Fire-and-forget: el envio nunca bloquea ni rompe
     // el cambio de estado (MailService loguea sus propios errores).
@@ -430,7 +461,7 @@ export class CitasService {
       if (ov) precioServicioNuevo = ov.precio
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const reprogramada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },
         data: {
@@ -485,6 +516,17 @@ export class CitasService {
 
       return actualizada
     })
+
+    // Centro de notificaciones (fire-and-forget): reprogramacion avisa a admin +
+    // doctor de la cita.
+    void this.notificaciones.emitirEventoCita(
+      consultorioId,
+      citaId,
+      TipoNotificacion.CITA_REPROGRAMADA,
+      { admin: true, doctor: true },
+    )
+
+    return reprogramada
   }
 
   // Calendario de Atencion (E2.5a): bloqueos siempre rechazan; si el doctor
