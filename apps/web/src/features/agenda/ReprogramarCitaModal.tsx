@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { AlertCircle, CalendarClock, Calendar, Clock, UserRound, Stethoscope } from 'lucide-react'
+import { AlertCircle, CalendarClock, Calendar, Clock, UserRound, Stethoscope, MessageCircle } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatHora, cn } from '../../lib/utils'
+import { formatHora, abrirWhatsApp, cn } from '../../lib/utils'
+import { usePlantillasWhatsApp } from '../../lib/whatsapp'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
@@ -25,6 +26,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
   const [doctorId, setDoctorId] = useState(String(cita.doctorId))
   const [servicioId, setServicioId] = useState(String(cita.servicioId))
   const [error, setError] = useState('')
+  const { consultorioNombre } = usePlantillasWhatsApp()
 
   const { data: doctores = [] } = useQuery<Doctor[]>({
     queryKey: ['doctores'],
@@ -57,6 +59,14 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
     e.preventDefault()
     setError('')
     reprogramar.mutate()
+  }
+
+  // Consultar al paciente que nueva fecha/hora prefiere, por WhatsApp.
+  function handleWhatsApp() {
+    const tel = cita.paciente?.telefono
+    if (!tel) return
+    const msg = `Hola ${cita.paciente?.nombre ?? ''}, necesitamos reprogramar tu cita en ${consultorioNombre}. ¿Qué nueva fecha y horario te quedan bien?`
+    abrirWhatsApp(tel, msg, cita.paciente?.pais)
   }
 
   return (
@@ -127,6 +137,17 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
           <p className="text-xs text-muted-foreground">
             La cita vuelve a estado Pendiente: confirmar de nuevo con el paciente.
           </p>
+
+          {cita.paciente?.telefono && (
+            <button
+              type="button"
+              onClick={handleWhatsApp}
+              className={cn(btnOutlineUI, 'w-full text-accent hover:bg-accent/10')}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Consultar nueva fecha por WhatsApp
+            </button>
+          )}
 
           {error && (
             <p role="alert" className={errorUI}>
