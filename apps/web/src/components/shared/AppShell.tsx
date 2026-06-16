@@ -28,6 +28,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
 import { cn, setMonedaActual } from '../../lib/utils'
 import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
+import { NotificacionesBell } from '../../features/notificaciones/NotificacionesBell'
 
 const NAV_ITEMS = [
   { to: '/inicio', icon: LayoutDashboard, label: 'Inicio', end: true },
@@ -340,6 +341,7 @@ export function AppShell() {
 
       {/* Columna principal */}
       <div className="flex-1 flex flex-col min-w-0">
+        <NotificacionesBell />
         {/* Topbar movil */}
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-teal-950 text-white shrink-0">
           <button
