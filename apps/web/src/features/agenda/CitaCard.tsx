@@ -38,9 +38,12 @@ interface CitaCardProps {
   onReprogramar: () => void
   onCancelar: () => void
   onNoAsistio: () => void
+  // En el modal de detalle (PC) se apilan las acciones abajo (como en celular)
+  // para que el nombre del paciente use todo el ancho y se lea mejor.
+  apilado?: boolean
 }
 
-export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio }: CitaCardProps) {
+export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio, apilado }: CitaCardProps) {
   const user = useAuthStore((s) => s.user)
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
@@ -90,6 +93,16 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       t !== EstadoCita.COBRADO,
   )
 
+  // SOLICITADA -> PENDIENTE es "aceptar" la solicitud del portal: el boton se
+  // muestra como "Aceptar" aunque por dentro deje la cita en PENDIENTE (le da
+  // logica al usuario: aceptar la solicitud).
+  const labelProximaTransicion =
+    cita.estado === EstadoCita.SOLICITADA && proximaTransicion === EstadoCita.PENDIENTE
+      ? 'Aceptar'
+      : proximaTransicion
+        ? LABEL_ESTADO[proximaTransicion]
+        : ''
+
   // El telefono del paciente sirve tambien para WhatsApp (decision owner)
   const telefonoWhatsApp = cita.paciente?.telefono
 
@@ -119,7 +132,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       {/* En mobile las acciones bajan a su propia fila: asi el nombre del paciente
           (lo mas importante) usa el ancho completo y no se corta. En sm+ vuelven a
           la derecha del contenido. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className={cn('flex flex-col gap-3', !apilado && 'sm:flex-row sm:items-start')}>
         <div className="flex items-start gap-3 min-w-0 flex-1">
       {/* Hora */}
       <div className="text-center min-w-[48px]">
@@ -165,7 +178,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
         </div>
 
         {/* Acciones: en mobile fila propia (a la derecha); en sm+ a la derecha del contenido */}
-        <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+        <div className={cn('flex items-center gap-1 shrink-0 self-end', !apilado && 'sm:self-auto')}>
         {telefonoWhatsApp && (
           <button
             onClick={handleWhatsApp}
@@ -204,7 +217,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
             onClick={() => onCambiarEstado(proximaTransicion)}
             className="flex items-center gap-1 text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/70 px-2.5 py-2 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
           >
-            {LABEL_ESTADO[proximaTransicion]}
+            {labelProximaTransicion}
             <ChevronRight className="h-3 w-3" aria-hidden="true" />
           </button>
         )}
