@@ -8,6 +8,7 @@ import { inputUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 // E2-M3: feed de la tabla logs (solo ADMIN). Solo lectura.
 
@@ -76,9 +77,12 @@ export function ActividadPage() {
           </span>
           Actividad
         </h1>
-        <span className="text-sm text-muted-foreground tabular-nums">
-          {data?.total ?? 0} registro{(data?.total ?? 0) !== 1 ? 's' : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {data?.total ?? 0} registro{(data?.total ?? 0) !== 1 ? 's' : ''}
+          </span>
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto space-y-4 max-w-4xl mx-auto w-full">

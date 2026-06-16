@@ -87,9 +87,9 @@ export class MailService {
   }) {
     return `
 <div style="font-family:Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b">
-  <h2 style="color:#0e7490;margin-bottom:4px">¡Tu reserva fue aceptada!</h2>
+  <h2 style="color:#0e7490;margin-bottom:4px">¡Tu cita fue aceptada!</h2>
   <p style="font-size:14px;line-height:1.6">
-    Hola ${datos.nombre}: ${datos.consultorio} aceptó tu reserva.
+    Hola ${datos.nombre}: ${datos.consultorio} aceptó tu cita.
   </p>
   <table style="font-size:14px;line-height:1.8;border-collapse:collapse">
     <tr><td style="color:#64748b;padding-right:12px">Fecha</td><td style="font-weight:bold">${datos.fecha}</td></tr>

@@ -28,6 +28,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
 import { cn, setMonedaActual } from '../../lib/utils'
 import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
+import { NotificacionesBell } from '../../features/notificaciones/NotificacionesBell'
 
 const NAV_ITEMS = [
   { to: '/inicio', icon: LayoutDashboard, label: 'Inicio', end: true },
@@ -340,7 +341,8 @@ export function AppShell() {
 
       {/* Columna principal */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar movil */}
+        {/* Topbar solo en celular/tablet (<lg): en pc no hay barra arriba; la
+            campana vive en el header de cada pagina (o flotante en Inicio/Ayuda). */}
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-teal-950 text-white shrink-0">
           <button
             onClick={() => setAbiertoMovil(true)}
@@ -352,9 +354,11 @@ export function AppShell() {
           <span className="bg-white rounded-md p-1 shrink-0 flex items-center">
             <img src="/brand/isotipo.png" alt="" className="h-4 w-auto" />
           </span>
-          <span className="text-sm font-semibold truncate">
+          <span className="flex-1 min-w-0 text-sm font-semibold truncate">
             {user?.consultorioNombre || 'ConsulTech'}
           </span>
+          {/* Campana de notificaciones: a la derecha de la topbar (celular/tablet) */}
+          <NotificacionesBell className="h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
         </header>
 
         <main className="flex-1 overflow-auto">

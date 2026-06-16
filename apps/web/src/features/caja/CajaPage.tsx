@@ -12,6 +12,7 @@ import { CerrarCajaModal } from './CerrarCajaModal'
 import { RevisarCajaModal, type CajaRevisable } from './RevisarCajaModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 export function CajaPage() {
@@ -80,6 +81,7 @@ export function CajaPage() {
             ))}
           </div>
         </div>
+        <div className="flex items-center gap-2">
         {tab === 'hoy' && data && !caja && (
           <button onClick={() => setModalAbrir(true)} className={btnPrimaryUI}>
             <Unlock className="h-4 w-4" aria-hidden="true" />
@@ -106,6 +108,8 @@ export function CajaPage() {
             )}
           </span>
         )}
+        <CampanaHeader />
+        </div>
       </div>
 
       {tab === 'hoy' && (

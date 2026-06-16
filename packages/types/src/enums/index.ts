@@ -59,6 +59,14 @@ export enum EstadoMensaje {
   OMITIDO = 'OMITIDO',
 }
 
+// Centro de notificaciones: tipo de evento que genero la notificacion.
+export enum TipoNotificacion {
+  NUEVA_CITA = 'NUEVA_CITA',
+  CITA_CANCELADA = 'CITA_CANCELADA',
+  CITA_REPROGRAMADA = 'CITA_REPROGRAMADA',
+  PACIENTE_EN_ESPERA = 'PACIENTE_EN_ESPERA',
+}
+
 export enum AccionLog {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',

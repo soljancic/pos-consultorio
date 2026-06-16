@@ -9,6 +9,7 @@ import { CobroModal } from '../agenda/CobroModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import type { Cita } from '@pos/types'
 
 type CobroDeudor = {
@@ -72,13 +73,16 @@ export function DeudoresPage() {
           </span>
           Deudores
         </h1>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre..."
-          aria-label="Buscar deudores"
-          className={cn(inputUI, 'w-56')}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre..."
+            aria-label="Buscar deudores"
+            className={cn(inputUI, 'w-56')}
+          />
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">

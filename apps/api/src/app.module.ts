@@ -25,6 +25,7 @@ import { MailModule } from './modules/mail/mail.module'
 import { ReportesModule } from './modules/reportes/reportes.module'
 import { PlantillasModule } from './modules/plantillas/plantillas.module'
 import { MensajesModule } from './modules/mensajes/mensajes.module'
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module'
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { MensajesModule } from './modules/mensajes/mensajes.module'
     ReportesModule,
     PlantillasModule,
     MensajesModule,
+    NotificacionesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

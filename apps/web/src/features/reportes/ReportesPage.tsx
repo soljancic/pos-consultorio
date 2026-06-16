@@ -13,6 +13,7 @@ import { DataTable } from './components/DataTable'
 import { ExportButtons } from './components/ExportButtons'
 import { MetaBreakdown } from './components/MetaBreakdown'
 import { REPORTS } from './reports'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 export function ReportesPage() {
   const rol = useAuthStore((s) => s.user?.rol)
@@ -71,7 +72,10 @@ export function ReportesPage() {
             ))}
           </div>
         </div>
-        <ExportButtons filename={`reporte-${tab}-${filtros.desde}`} loadAll={loadAll} />
+        <div className="flex items-center gap-2">
+          <ExportButtons filename={`reporte-${tab}-${filtros.desde}`} loadAll={loadAll} />
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5 max-w-6xl mx-auto w-full">

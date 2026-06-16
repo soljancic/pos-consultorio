@@ -13,6 +13,7 @@ import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
@@ -113,6 +114,7 @@ export function CatalogoPage() {
             ))}
           </div>
         </div>
+        <CampanaHeader />
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6 max-w-4xl mx-auto w-full">

@@ -102,6 +102,7 @@ model Consultorio {
   plantillasHorario PlantillaHorario[]
   mensajesPendientes MensajePendiente[]
   logs       Log[]
+  notificaciones Notificacion[]
 
   @@map("consultorios")
 }
@@ -129,6 +130,7 @@ model Usuario {
   doctor           Doctor?
   passwordTokens   PasswordToken[]
   mensajesResueltos MensajePendiente[] @relation("MensajeResueltoPor")
+  notificaciones Notificacion[]
 
   @@unique([email, consultorioId])
   @@index([consultorioId])
@@ -302,6 +304,7 @@ model Cita {
   atencion Atencion?
   mensajesPendientes MensajePendiente[]
   cobro    Cobro?
+  notificaciones Notificacion[]
 
   @@index([consultorioId, fechaHora])
   @@index([consultorioId, doctorId, fechaHora])
@@ -607,4 +610,36 @@ model Log {
   @@index([consultorioId, entidad, entidadId])
   @@index([consultorioId, createdAt])
   @@map("logs")
+}
+
+// ─── NOTIFICACIONES ──────────────────────────────────────────────────────────
+
+enum TipoNotificacion {
+  NUEVA_CITA
+  CITA_CANCELADA
+  CITA_REPROGRAMADA
+  PACIENTE_EN_ESPERA
+}
+
+// Centro de notificaciones (in-app). Una fila por evento:
+// destinoUsuarioId = null  -> bandeja admin compartida (estado leido global)
+// destinoUsuarioId seteado -> fila propia de ese doctor (su Usuario.id)
+// Efimeras: borrado real (sin deletedAt); el cron purga las leidas > 7 dias.
+model Notificacion {
+  id               Int       @id @default(autoincrement())
+  consultorioId    Int
+  consultorio      Consultorio @relation(fields: [consultorioId], references: [id])
+  tipo             TipoNotificacion
+  titulo           String
+  mensaje          String
+  citaId           Int?
+  cita             Cita?     @relation(fields: [citaId], references: [id])
+  destinoUsuarioId Int?
+  destinoUsuario   Usuario?  @relation(fields: [destinoUsuarioId], references: [id])
+  leidaAt          DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([consultorioId, destinoUsuarioId, leidaAt])
+  @@index([consultorioId, createdAt])
+  @@map("notificaciones")
 }

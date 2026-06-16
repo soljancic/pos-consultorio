@@ -21,7 +21,7 @@ interface Props {
 export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg lg:max-w-xl">
         <ModalHeader
           icon={CalendarDays}
           title={formatFecha(cita.fechaHora, "EEEE d 'de' MMMM")}
@@ -30,6 +30,7 @@ export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, 
         <div className="p-4">
           <CitaCard
             cita={cita}
+            apilado
             onCambiarEstado={onCambiarEstado}
             onCobrar={onCobrar}
             onAtencion={onAtencion}
