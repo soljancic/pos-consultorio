@@ -17,6 +17,9 @@ export function reproducirBip() {
   try {
     const AC = window.AudioContext ?? (window as any).webkitAudioContext
     if (!AC) return
+    // Algunos navegadores moviles cierran el contexto al pasar a segundo plano:
+    // si quedo 'closed' lo recreamos para que el bip vuelva a sonar.
+    if (ctx?.state === 'closed') ctx = null
     ctx = ctx ?? new AC()
     if (ctx.state === 'suspended') void ctx.resume()
     const osc = ctx.createOscillator()
