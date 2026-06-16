@@ -554,6 +554,81 @@ export class CitasService {
     return { token: actualizada.portalToken }
   }
 
+  // Reprogramacion iniciada por el paciente desde el link publico. El token
+  // identifica la cita exacta; servicio queda fijo (misma cita), solo cambia
+  // doctor + fecha/hora. Vuelve a SOLICITADA: la secretaria reconfirma.
+  // El caller (PortalService) ya valido que el doctor atiende el servicio.
+  async reprogramarPorToken(
+    consultorioId: number,
+    token: string,
+    dto: { doctorId: number; fecha: string; hora: string },
+  ) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { consultorioId, portalToken: token, deletedAt: null },
+      include: { doctor: true, servicio: true },
+    })
+    if (!cita) throw new NotFoundException('Link no disponible')
+    if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
+      throw new ConflictException('Esta cita ya no se puede reprogramar')
+    }
+
+    const fechaHora = new Date(`${dto.fecha.slice(0, 10)}T${dto.hora}:00`)
+    const fechaFin = new Date(fechaHora.getTime() + cita.duracionMin * 60 * 1000)
+    await this.verificarDisponibilidad(consultorioId, dto.doctorId, fechaHora, fechaFin, cita.id)
+    await this.verificarHorarioAtencion(consultorioId, dto.doctorId, fechaHora, fechaFin)
+
+    const reprogramada = await this.prisma.$transaction(async (tx) => {
+      const actualizada = await tx.cita.update({
+        where: { id: cita.id },
+        data: {
+          fechaHora,
+          doctorId: dto.doctorId,
+          // pedido del paciente: vuelve a SOLICITADA para que la secretaria lo acepte
+          estado: EstadoCita.SOLICITADA,
+        },
+        include: { doctor: true, servicio: true },
+      })
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId: cita.createdById,
+          entidad: 'Cita',
+          entidadId: cita.id,
+          accion: 'UPDATE',
+          payloadAntes: {
+            fechaHora: cita.fechaHora.toISOString(),
+            doctorId: cita.doctorId,
+            estado: cita.estado,
+          },
+          payloadDespues: {
+            fechaHora: fechaHora.toISOString(),
+            doctorId: dto.doctorId,
+            estado: EstadoCita.SOLICITADA,
+            motivo: 'reprogramacion-portal',
+          },
+        },
+      })
+
+      return actualizada
+    })
+
+    // Avisa a admin + doctor que el paciente pidio reprogramar
+    void this.notificaciones.emitirEventoCita(
+      consultorioId,
+      cita.id,
+      TipoNotificacion.CITA_REPROGRAMADA,
+      { admin: true, doctor: true },
+    )
+
+    return {
+      fecha: dto.fecha.slice(0, 10),
+      hora: dto.hora,
+      doctor: reprogramada.doctor?.nombre,
+      servicio: reprogramada.servicio?.nombre,
+    }
+  }
+
   // Calendario de Atencion (E2.5a): bloqueos siempre rechazan; si el doctor
   // tiene horarios DISPONIBLE configurados, la cita debe caer dentro de uno.
   // Doctor sin calendario = modo legacy (acepta cualquier horario).
