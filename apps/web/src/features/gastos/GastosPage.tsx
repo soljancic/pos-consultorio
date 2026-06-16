@@ -11,6 +11,7 @@ import { GastoModal, type GastoEditable } from './GastoModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 interface TipoGasto { id: number; nombre: string }
 
@@ -62,10 +63,13 @@ export function GastosPage() {
           </span>
           Gastos
         </h1>
-        <button onClick={() => { setGastoEdit(null); setModalAbierto(true) }} className={btnPrimaryUI}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo gasto
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setGastoEdit(null); setModalAbierto(true) }} className={btnPrimaryUI}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo gasto
+          </button>
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto space-y-4">

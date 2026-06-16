@@ -10,6 +10,7 @@ import { PacienteModal } from './PacienteModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import type { Paciente } from '@pos/types'
 
 export function PacientesPage() {
@@ -40,10 +41,13 @@ export function PacientesPage() {
           </span>
           Pacientes
         </h1>
-        <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nuevo paciente
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo paciente
+          </button>
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto">

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
 import { cardUI, chipIconUI } from '../../lib/ui'
 import { AYUDA } from './contenido'
+import { CampanaFlotante } from '../notificaciones/CampanaFlotante'
 
 // Manual de usuario in-app, organizado por rol. Preselecciona el rol del usuario;
 // cualquiera puede explorar las demas secciones (el contenido de ayuda no es
@@ -54,6 +55,7 @@ export function AyudaPage() {
 
   return (
     <div className="flex flex-col h-full">
+      <CampanaFlotante />
       <div className="px-4 sm:px-6 py-4 border-b bg-card">
         <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <span className={chipIconUI}>

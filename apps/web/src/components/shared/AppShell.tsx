@@ -341,26 +341,24 @@ export function AppShell() {
 
       {/* Columna principal */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar: visible en todas las medidas. La campana va a la derecha
-            (celular, tablet y pc). En pc el sidebar ya muestra logo/nombre, asi
-            que aca se ocultan (junto al hamburguesa, que no hace falta sin drawer)
-            y queda solo la campana a la derecha. */}
-        <header className="flex items-center gap-3 px-4 py-3 bg-teal-950 text-white shrink-0">
+        {/* Topbar solo en celular/tablet (<lg): en pc no hay barra arriba; la
+            campana vive en el header de cada pagina (o flotante en Inicio/Ayuda). */}
+        <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-teal-950 text-white shrink-0">
           <button
             onClick={() => setAbiertoMovil(true)}
             aria-label="Abrir menu"
-            className="lg:hidden p-2 -ml-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="p-2 -ml-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <span className="lg:hidden bg-white rounded-md p-1 shrink-0 flex items-center">
+          <span className="bg-white rounded-md p-1 shrink-0 flex items-center">
             <img src="/brand/isotipo.png" alt="" className="h-4 w-auto" />
           </span>
-          <span className="lg:hidden flex-1 min-w-0 text-sm font-semibold truncate">
+          <span className="flex-1 min-w-0 text-sm font-semibold truncate">
             {user?.consultorioNombre || 'ConsulTech'}
           </span>
-          {/* Campana de notificaciones: siempre a la derecha de la topbar */}
-          <NotificacionesBell className="ml-auto h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
+          {/* Campana de notificaciones: a la derecha de la topbar (celular/tablet) */}
+          <NotificacionesBell className="h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
         </header>
 
         <main className="flex-1 overflow-auto">

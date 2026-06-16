@@ -9,6 +9,7 @@ import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { CardListSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 type Mensaje = {
   id: number
@@ -105,14 +106,17 @@ export function MensajesPage() {
             ))}
           </div>
         </div>
-        <button
-          onClick={() => generar.mutate()}
-          disabled={generar.isPending}
-          className={btnOutlineUI}
-        >
-          <RefreshCw className={cn('h-4 w-4', generar.isPending && 'animate-spin')} aria-hidden="true" />
-          {generar.isPending ? 'Generando...' : 'Generar cola'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => generar.mutate()}
+            disabled={generar.isPending}
+            className={btnOutlineUI}
+          >
+            <RefreshCw className={cn('h-4 w-4', generar.isPending && 'animate-spin')} aria-hidden="true" />
+            {generar.isPending ? 'Generando...' : 'Generar cola'}
+          </button>
+          <CampanaHeader />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-3">

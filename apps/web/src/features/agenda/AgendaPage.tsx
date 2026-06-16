@@ -21,6 +21,7 @@ import { CitaDetalleModal } from './CitaDetalleModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { Skeleton, CardListSkeleton } from '../../components/shared/Skeleton'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import type { Cita, Doctor } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 
@@ -500,6 +501,7 @@ export function AgendaPage() {
             <Plus className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Nueva cita</span>
           </button>
+          <CampanaHeader />
         </div>
       </div>
 

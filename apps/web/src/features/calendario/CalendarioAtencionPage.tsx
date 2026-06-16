@@ -10,6 +10,7 @@ import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { btnIconUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
@@ -99,6 +100,7 @@ export function CalendarioAtencionPage() {
             className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150">
             Hoy
           </button>
+          <CampanaHeader />
         </div>
       </div>
 

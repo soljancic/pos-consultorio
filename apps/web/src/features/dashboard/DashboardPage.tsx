@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
+import { CampanaFlotante } from '../notificaciones/CampanaFlotante'
 import {
   CalendarDays,
   Clock,
@@ -166,6 +167,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 max-w-5xl mx-auto w-full">
+      <CampanaFlotante />
       <div>
         <h1 className="text-2xl font-bold text-foreground">
           Buen día{user?.nombre ? `, ${user.nombre}` : ''}

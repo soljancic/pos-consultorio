@@ -5,6 +5,7 @@ import { api } from '../../lib/api-client'
 import { cn, publicBaseUrl, setMonedaActual } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
 import { UsuarioModal } from './UsuarioModal'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 const MONEDAS = ['ARS', 'USD', 'UYU', 'CLP', 'PEN', 'COP', 'MXN', 'BOB', 'BRL']
 const TIMEZONES = [
@@ -148,6 +149,7 @@ export function ConfiguracionPage() {
             ))}
           </div>
         </div>
+        <CampanaHeader />
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-3xl mx-auto w-full">

@@ -19,6 +19,7 @@ import { Skeleton, TableSkeleton } from '../../components/shared/Skeleton'
 import { NuevaCitaModal } from '../agenda/NuevaCitaModal'
 import { PacienteModal } from './PacienteModal'
 import { HistoriaClinicaTimeline } from './HistoriaClinicaTimeline'
+import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
 const LABEL_ESTADO: Record<EstadoCita, string> = {
   SOLICITADA: 'Solicitada',
@@ -185,6 +186,7 @@ export function PacienteDetallePage() {
               Archivar
             </button>
           )}
+          <CampanaHeader />
         </div>
       </div>
 
