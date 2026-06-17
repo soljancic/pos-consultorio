@@ -10,7 +10,7 @@ import { MailService } from '../mail/mail.service'
 import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
 import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
-import { IsString, IsInt, IsOptional, IsISO8601, IsEnum } from 'class-validator'
+import { IsString, IsInt, IsOptional, IsISO8601, IsEnum, IsBoolean } from 'class-validator'
 
 export class CreateCitaDto {
   @IsInt()
@@ -27,6 +27,12 @@ export class CreateCitaDto {
 
   @IsString() @IsOptional()
   notasSecretaria?: string
+
+  // Cita manual: enviar al paciente el email de confirmacion. El front lo
+  // marca por defecto si la cita es a futuro (>1h) y lo desmarca para
+  // walk-ins (<=1h). Sin email del paciente, el envio simplemente no ocurre.
+  @IsBoolean() @IsOptional()
+  enviarConfirmacion?: boolean
 }
 
 export class CambiarEstadoDto {
@@ -193,6 +199,13 @@ export class CitasService {
         TipoNotificacion.NUEVA_CITA,
         { admin: true, doctor: false },
       )
+    }
+
+    // Cita manual con confirmacion pedida: avisamos al paciente por email
+    // (mismo correo que la aceptacion del portal). Fire-and-forget: nunca
+    // bloquea la creacion; si el paciente no tiene email, no envia nada.
+    if (origen === OrigenCita.INTERNO && dto.enviarConfirmacion) {
+      void this.notificarReservaAceptada(cita.id)
     }
 
     return cita

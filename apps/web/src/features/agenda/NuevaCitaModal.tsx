@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, abrirWhatsApp, publicBaseUrl } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
@@ -27,6 +27,7 @@ type PacienteBusqueda = Pick<Paciente, 'id' | 'nombre' | 'apellido'> & {
   deudaTotal?: number
   telefono?: string | null
   pais?: string
+  email?: string | null
 }
 
 export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pacienteInicial, onClose }: Props) {
@@ -43,7 +44,10 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   const [notas, setNotas] = useState('')
   const [error, setError] = useState('')
   const [modalNuevoPaciente, setModalNuevoPaciente] = useState(false)
+  const [enviarConfirmacion, setEnviarConfirmacion] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  // El usuario tocó el check: dejamos de re-sugerir segun la fecha/hora
+  const tocoConfirmacion = useRef(false)
 
   const { data: pacientesResultado = [] } = useQuery<PacienteBusqueda[]>({
     queryKey: ['pacientes-search', pacienteQuery],
@@ -98,6 +102,16 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Sugerencia del check "Enviar correo de confirmación": citas a futuro
+  // (más de 1 hora) por defecto SÍ; para "ahorita" o menos de 1 hora (walk-in)
+  // por defecto NO. Se respeta apenas el usuario lo toca.
+  useEffect(() => {
+    if (tocoConfirmacion.current) return
+    const cuando = new Date(`${fecha}T${hora}:00`).getTime()
+    const aFuturo = !Number.isNaN(cuando) && cuando - Date.now() > 60 * 60 * 1000
+    setEnviarConfirmacion(aFuturo)
+  }, [fecha, hora])
 
   function seleccionarPaciente(p: PacienteBusqueda) {
     setPacienteSeleccionado(p)
@@ -160,6 +174,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
       // hora local y toISOString la convierte al instante UTC correcto.
       fechaHora: new Date(`${fecha}T${hora}:00`).toISOString(),
       notasSecretaria: notas || undefined,
+      // Solo tiene sentido si el paciente tiene email cargado
+      enviarConfirmacion: !!pacienteSeleccionado.email && enviarConfirmacion,
     })
   }
 
@@ -338,6 +354,36 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
             onChange={(e) => setNotas(e.target.value)}
             rows={2}
           />
+
+          {/* Enviar correo de confirmación: solo si el paciente tiene email.
+              Marcado por defecto para citas a futuro; desmarcado para walk-ins. */}
+          {pacienteSeleccionado?.email ? (
+            <label className="flex items-start gap-3 rounded-xl border border-input bg-card px-4 py-3 cursor-pointer hover:border-muted-foreground/30 transition-colors duration-150">
+              <input
+                type="checkbox"
+                checked={enviarConfirmacion}
+                onChange={(e) => {
+                  tocoConfirmacion.current = true
+                  setEnviarConfirmacion(e.target.checked)
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/45 rounded"
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  <Mail className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                  Enviar correo de confirmación
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5 truncate">
+                  A {pacienteSeleccionado.email}
+                </span>
+              </span>
+            </label>
+          ) : pacienteSeleccionado && 'email' in pacienteSeleccionado ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Agregá un email al paciente para enviarle la confirmación.
+            </p>
+          ) : null}
 
           {error && (
             <p role="alert" className={errorUI}>
