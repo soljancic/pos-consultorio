@@ -16,6 +16,15 @@ export class UpdateConsultorioDto {
   @IsString() @IsOptional()
   direccion?: string
 
+  // Link de Google Maps del consultorio (lo pega el admin). '' lo limpia.
+  @IsString() @IsOptional() @MaxLength(500)
+  ubicacionUrl?: string
+
+  // Pais del consultorio (ISO alfa-2): prefijo del WhatsApp propio
+  @Matches(/^[A-Z]{2}$/, { message: 'pais debe ser codigo ISO de 2 letras' })
+  @IsOptional()
+  pais?: string
+
   @IsString() @IsOptional()
   moneda?: string
 
@@ -58,6 +67,8 @@ const CONSULTORIO_SELECT = {
   logoUrl: true,
   telefono: true,
   direccion: true,
+  ubicacionUrl: true,
+  pais: true,
   moneda: true,
   timezone: true,
   plan: true,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe } from 'lucide-react'
 import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, abrirWhatsApp, cn } from '../../lib/utils'
-import { usePlantillasWhatsApp, renderPlantilla } from '../../lib/whatsapp'
+import { usePlantillasWhatsApp, renderRecordatorio } from '../../lib/whatsapp'
 import { btnIconUI, cardUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 
@@ -106,16 +106,16 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   // El telefono del paciente sirve tambien para WhatsApp (decision owner)
   const telefonoWhatsApp = cita.paciente?.telefono
 
-  const { plantillas, consultorioNombre } = usePlantillasWhatsApp()
+  const { plantillas, consultorioNombre, direccion, ubicacionUrl } = usePlantillasWhatsApp()
 
   function handleWhatsApp() {
     if (!telefonoWhatsApp) return
-    const msg = renderPlantilla(plantillas.recordatorio, {
+    const msg = renderRecordatorio(plantillas.recordatorio, {
       nombre: cita.paciente?.nombre ?? '',
       hora: formatHora(cita.fechaHora),
       fecha: new Date(cita.fechaHora).toLocaleDateString('es-BO'),
       consultorio: consultorioNombre,
-    })
+    }, { direccion, linkGoogleMaps: ubicacionUrl })
     abrirWhatsApp(telefonoWhatsApp, msg, cita.paciente?.pais)
   }
 

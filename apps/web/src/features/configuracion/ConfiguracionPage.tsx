@@ -4,6 +4,8 @@ import { Plus, Pencil, Settings, Check } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, publicBaseUrl, setMonedaActual } from '../../lib/utils'
 import { inputUI, textareaUI, btnPrimaryUI, btnIconUI, cardUI, chipIconUI } from '../../lib/ui'
+import { PAIS_DEFAULT } from '../../lib/paises'
+import { SelectorPais } from '../../components/shared/SelectorPais'
 import { UsuarioModal } from './UsuarioModal'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
 
@@ -26,6 +28,7 @@ const ROL_LABEL: Record<string, string> = {
 type Consultorio = {
   id: number; nombre: string; logoUrl: string | null
   telefono: string | null; direccion: string | null
+  ubicacionUrl: string | null; pais: string | null
   moneda: string; timezone: string
   slug: string | null; portalActivo: boolean
   msjRecordatorio: string | null; msjDeuda: string | null; msjContacto: string | null
@@ -42,6 +45,7 @@ export function ConfiguracionPage() {
   const [guardado, setGuardado] = useState(false)
   const [consForm, setConsForm] = useState({
     nombre: '', logoUrl: '', telefono: '', direccion: '',
+    ubicacionUrl: '', pais: PAIS_DEFAULT,
     moneda: 'ARS', timezone: 'America/Argentina/Buenos_Aires',
     slug: '', portalActivo: false,
     msjRecordatorio: '', msjDeuda: '', msjContacto: '',
@@ -66,6 +70,8 @@ export function ConfiguracionPage() {
         logoUrl: consultorio.logoUrl ?? '',
         telefono: consultorio.telefono ?? '',
         direccion: consultorio.direccion ?? '',
+        ubicacionUrl: consultorio.ubicacionUrl ?? '',
+        pais: consultorio.pais ?? PAIS_DEFAULT,
         moneda: consultorio.moneda,
         timezone: consultorio.timezone,
         slug: consultorio.slug ?? '',
@@ -106,6 +112,9 @@ export function ConfiguracionPage() {
         logoUrl: data.logoUrl || undefined,
         telefono: data.telefono || undefined,
         direccion: data.direccion || undefined,
+        // '' viaja tal cual para poder limpiar la ubicacion
+        ubicacionUrl: data.ubicacionUrl,
+        pais: data.pais || undefined,
         slug: data.slug || undefined,
         // El string vacio viaja tal cual: significa "volver al default"
         msjRecordatorio: data.msjRecordatorio,
@@ -239,17 +248,32 @@ export function ConfiguracionPage() {
                 </p>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Teléfono</label>
+              <div className="flex items-stretch">
+                <SelectorPais
+                  value={consForm.pais}
+                  onChange={(codigo) => setConsForm((f) => ({ ...f, pais: codigo }))}
+                  buttonClassName="h-11 rounded-l-lg rounded-r-none border-r-0"
+                />
                 <input type="tel" value={consForm.telefono} onChange={(e) => setConsForm((f) => ({ ...f, telefono: e.target.value }))}
-                  className={inputUI} />
+                  className={cn(inputUI, 'rounded-l-none')} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Dirección</label>
-                <input value={consForm.direccion} onChange={(e) => setConsForm((f) => ({ ...f, direccion: e.target.value }))}
-                  className={inputUI} />
-              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">El país define el prefijo internacional del WhatsApp del consultorio.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Dirección</label>
+              <input value={consForm.direccion} onChange={(e) => setConsForm((f) => ({ ...f, direccion: e.target.value }))}
+                className={inputUI} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Ubicación en Google Maps</label>
+              <input type="url" inputMode="url" placeholder="https://maps.app.goo.gl/..."
+                value={consForm.ubicacionUrl} onChange={(e) => setConsForm((f) => ({ ...f, ubicacionUrl: e.target.value }))}
+                className={inputUI} />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Pegá el enlace de tu consultorio en Google Maps. Aparece como “Ver en Maps” en el correo de confirmación y en el WhatsApp de la cita.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -366,12 +390,12 @@ export function ConfiguracionPage() {
             <div className="border-t pt-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Mensajes de WhatsApp</h3>
               <p className="text-xs text-muted-foreground">
-                Variables disponibles: {'{nombre} {hora} {fecha} {monto} {consultorio}'} y {'{linkQR}'}
-                {' '}en el recordatorio de deuda (link a la página de pago con QR; vacío si no hay QR
+                Variables disponibles: {'{nombre} {hora} {fecha} {monto} {consultorio} {direccion} {linkGoogleMaps}'}
+                {' '}y {'{linkQR}'} en el recordatorio de deuda (link a la página de pago con QR; vacío si no hay QR
                 cargado). Si dejás un mensaje vacío se usa el texto por defecto del sistema.
               </p>
               {([
-                ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora}.'],
+                ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora} en {consultorio}. Te esperamos en {direccion} {linkGoogleMaps}'],
                 ['msjDeuda', 'Recordatorio de deuda', 'Hola {nombre}, le recordamos que tiene un saldo pendiente de {monto} en {consultorio}. ¡Gracias!'],
                 ['msjContacto', 'Contacto general', 'Hola {nombre}, le contactamos desde {consultorio}.'],
               ] as const).map(([campo, label, placeholder]) => (

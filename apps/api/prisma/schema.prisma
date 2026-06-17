@@ -68,6 +68,11 @@ model Consultorio {
   logoUrl   String?
   telefono  String?
   direccion String?
+  // Link de Google Maps del consultorio (lo pega el admin); va en el boton
+  // "Ver ubicacion" del email y en el WhatsApp de la cita
+  ubicacionUrl String?
+  // Pais del consultorio (ISO alfa-2): prefijo internacional del WhatsApp propio
+  pais      String?
   moneda    String   @default("ARS")
   timezone  String   @default("America/Argentina/Buenos_Aires")
   plan      String   @default("free")

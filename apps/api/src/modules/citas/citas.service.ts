@@ -211,20 +211,42 @@ export class CitasService {
     return cita
   }
 
-  // Email de "reserva aceptada" para el paciente del portal. Privado y
-  // tolerante: sin email cargado no hace nada.
-  private async notificarReservaAceptada(citaId: number) {
-    const cita = await this.prisma.cita.findUnique({
+  // Datos comunes que necesitan los emails de cita (confirmacion /
+  // reprogramacion / cancelacion).
+  private datosEmailCita(citaId: number) {
+    return this.prisma.cita.findUnique({
       where: { id: citaId },
       include: {
         paciente: { select: { nombre: true, email: true } },
         doctor: { select: { nombre: true } },
-        servicio: { select: { nombre: true } },
+        servicio: { select: { nombre: true, duracionMin: true } },
         consultorio: {
-          select: { nombre: true, direccion: true, telefono: true, slug: true, timezone: true },
+          select: {
+            nombre: true, direccion: true, telefono: true, slug: true,
+            timezone: true, ubicacionUrl: true, pais: true,
+          },
         },
       },
     })
+  }
+
+  // Fecha/hora en la zona horaria del consultorio (no la del server)
+  private fechaHoraLocal(d: Date, tz: string) {
+    const f = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz })
+    return {
+      fecha: f.charAt(0).toUpperCase() + f.slice(1),
+      hora: d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }),
+    }
+  }
+
+  // Email de confirmacion ('confirmada') o de reprogramacion ('reprogramada')
+  // al paciente, con un .ics adjunto para agregar la cita al calendario.
+  // Privado y tolerante: sin email cargado no hace nada.
+  private async notificarReservaAceptada(
+    citaId: number,
+    modo: 'confirmada' | 'reprogramada' = 'confirmada',
+  ) {
+    const cita = await this.datosEmailCita(citaId)
     if (!cita?.paciente.email) return
 
     // El email ofrece reprogramar/cancelar por link: aseguramos un token opaco
@@ -235,30 +257,69 @@ export class CitasService {
       await this.prisma.cita.update({ where: { id: citaId }, data: { portalToken: token } })
     }
 
-    // Fecha/hora en la zona horaria del consultorio (no la del server)
-    const tz = cita.consultorio.timezone
-    const fechaLarga = cita.fechaHora.toLocaleDateString('es-AR', {
-      weekday: 'long', day: 'numeric', month: 'long', timeZone: tz,
-    })
-    const fecha = fechaLarga.charAt(0).toUpperCase() + fechaLarga.slice(1)
-    const hora = cita.fechaHora.toLocaleTimeString('es-AR', {
-      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
+    const { fecha, hora } = this.fechaHoraLocal(cita.fechaHora, cita.consultorio.timezone)
+
+    const ics = this.mail.buildICS({
+      citaId: cita.id,
+      consultorio: cita.consultorio.nombre,
+      servicio: cita.servicio.nombre,
+      doctor: cita.doctor.nombre,
+      inicio: cita.fechaHora,
+      duracionMin: cita.duracionMin,
+      direccion: cita.consultorio.direccion,
+      ubicacionUrl: cita.consultorio.ubicacionUrl,
+      attendeeEmail: cita.paciente.email,
+      attendeeNombre: cita.paciente.nombre,
+      // al reprogramar subimos SEQUENCE para que el calendario actualice el evento
+      secuencia: modo === 'reprogramada' ? 1 : 0,
     })
 
     await this.mail.enviar(
       cita.paciente.email,
-      `Tu cita en ${cita.consultorio.nombre} está confirmada`,
+      modo === 'reprogramada'
+        ? `Tu cita en ${cita.consultorio.nombre} fue reprogramada`
+        : `Tu cita en ${cita.consultorio.nombre} está confirmada`,
       this.mail.htmlReservaAceptada({
         nombre: cita.paciente.nombre,
         consultorio: cita.consultorio.nombre,
         direccion: cita.consultorio.direccion,
         telefono: cita.consultorio.telefono,
+        ubicacionUrl: cita.consultorio.ubicacionUrl,
+        pais: cita.consultorio.pais,
         fecha,
         hora,
         servicio: cita.servicio.nombre,
         doctor: cita.doctor.nombre,
         slug: cita.consultorio.slug,
         token,
+        modo,
+      }),
+      cita.consultorio.nombre,
+      [{ filename: 'invite.ics', content: Buffer.from(ics, 'utf-8'), contentType: 'text/calendar; charset=utf-8; method=REQUEST' }],
+    )
+  }
+
+  // Aviso al paciente de que su cita se cancelo (consultorio o portal). Sin
+  // .ics (la version simple no remueve el evento del calendario).
+  private async notificarCitaCancelada(citaId: number) {
+    const cita = await this.datosEmailCita(citaId)
+    if (!cita?.paciente.email) return
+    const { fecha, hora } = this.fechaHoraLocal(cita.fechaHora, cita.consultorio.timezone)
+    await this.mail.enviar(
+      cita.paciente.email,
+      `Tu cita en ${cita.consultorio.nombre} fue cancelada`,
+      this.mail.htmlCitaCancelada({
+        nombre: cita.paciente.nombre,
+        consultorio: cita.consultorio.nombre,
+        direccion: cita.consultorio.direccion,
+        telefono: cita.consultorio.telefono,
+        ubicacionUrl: cita.consultorio.ubicacionUrl,
+        pais: cita.consultorio.pais,
+        fecha,
+        hora,
+        servicio: cita.servicio.nombre,
+        doctor: cita.doctor.nombre,
+        slug: cita.consultorio.slug,
       }),
       cita.consultorio.nombre,
     )
@@ -406,6 +467,8 @@ export class CitasService {
         TipoNotificacion.CITA_CANCELADA,
         { admin: true, doctor: true },
       )
+      // Aviso al paciente por email (fire-and-forget)
+      void this.notificarCitaCancelada(citaId)
     } else if (dto.estado === EstadoCita.LLEGO) {
       void this.notificaciones.emitirEventoCita(
         consultorioId,
@@ -576,6 +639,9 @@ export class CitasService {
       { admin: true, doctor: true },
     )
 
+    // Aviso al paciente con la nueva fecha/hora + .ics actualizado
+    void this.notificarReservaAceptada(citaId, 'reprogramada')
+
     return reprogramada
   }
 
@@ -739,6 +805,9 @@ export class CitasService {
       TipoNotificacion.CITA_CANCELADA,
       { admin: true, doctor: true },
     )
+
+    // Confirmacion de la cancelacion al paciente por email
+    void this.notificarCitaCancelada(cita.id)
 
     return {
       cancelada: true,

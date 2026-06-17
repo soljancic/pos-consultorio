@@ -1,6 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Resend } from 'resend'
 
+// Prefijos internacionales por pais (ISO alfa-2) para armar el wa.me del
+// consultorio cuando el telefono no trae el codigo. Espejo de apps/web paises.ts.
+const DIAL_PAIS: Record<string, string> = {
+  DE: '49', AR: '54', BO: '591', BR: '55', CA: '1', CL: '56', CN: '86',
+  CO: '57', CR: '506', CU: '53', EC: '593', SV: '503', ES: '34', US: '1',
+  FR: '33', GT: '502', HN: '504', IT: '39', JP: '81', MX: '52', NI: '505',
+  PA: '507', PY: '595', PE: '51', PT: '351', GB: '44', DO: '1', UY: '598', VE: '58',
+}
+
 // E2-M10: envio de emails de cuenta via Resend. El envio nunca bloquea ni
 // rompe el flujo que lo dispara: si falla queda en el log del server.
 @Injectable()
@@ -26,7 +35,13 @@ export class MailService {
     return nombre ? `"${nombre}" <${this.direccionRemitente()}>` : this.from
   }
 
-  async enviar(para: string, asunto: string, html: string, remitente?: string) {
+  async enviar(
+    para: string,
+    asunto: string,
+    html: string,
+    remitente?: string,
+    adjuntos?: { filename: string; content: Buffer; contentType?: string }[],
+  ) {
     if (!this.resend) {
       this.logger.warn(`RESEND_API_KEY no configurada; email "${asunto}" a ${para} omitido`)
       return
@@ -37,6 +52,7 @@ export class MailService {
         to: para,
         subject: asunto,
         html,
+        ...(adjuntos?.length ? { attachments: adjuntos } : {}),
       })
       if (error) this.logger.error(`Resend rechazo el email a ${para}: ${error.message}`)
       else this.logger.log(`Email "${asunto}" enviado a ${para}`)
@@ -59,10 +75,14 @@ export class MailService {
     return `${this.webBase()}/reservar/${slug}?${accion}=${token}`
   }
 
-  // WhatsApp del consultorio a partir del telefono cargado (debe traer codigo
-  // de pais). Sin digitos validos no se arma el link.
-  private linkWhatsApp(telefono?: string | null) {
-    const num = (telefono ?? '').replace(/\D/g, '')
+  // WhatsApp del consultorio: si el telefono ya viene en internacional (+...)
+  // se respeta; si no, se antepone el prefijo del pais del consultorio (default
+  // Bolivia, igual que el front). Sin digitos validos no se arma el link.
+  private linkWhatsApp(telefono?: string | null, pais?: string | null) {
+    const t = (telefono ?? '').trim()
+    if (!t) return null
+    const intl = t.startsWith('+') ? t : `+${DIAL_PAIS[pais ?? ''] ?? DIAL_PAIS.BO} ${t}`
+    const num = intl.replace(/\D/g, '')
     return num ? `https://wa.me/${num}` : null
   }
 
@@ -107,48 +127,81 @@ export class MailService {
     consultorio: string
     direccion?: string | null
     telefono?: string | null
+    ubicacionUrl?: string | null
+    pais?: string | null
     fecha: string
     hora: string
     servicio: string
     doctor: string
     slug?: string | null
     token?: string | null
+    // 'reprogramada' cambia titulo/intro; el resto del layout es identico
+    modo?: 'confirmada' | 'reprogramada'
   }) {
+    const esReprog = datos.modo === 'reprogramada'
+    const titulo = esReprog ? 'Tu cita fue reprogramada' : 'Tu reserva fue confirmada'
+    const intro = esReprog
+      ? `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, actualizamos tu cita. Esta es tu nueva fecha y hora.`
+      : `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, nos alegra confirmar tu cita. Te esperamos.`
     const linkReprogramar =
       datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'reprogramar') : null
     const linkCancelar =
       datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'cancelar') : null
-    const linkWa = this.linkWhatsApp(datos.telefono)
-    const linkUbicacion = this.linkMapa(datos.direccion)
+    const linkWa = this.linkWhatsApp(datos.telefono, datos.pais)
+    // El link de ubicacion: el de Google Maps cargado a mano, o uno armado de
+    // la direccion en texto como fallback.
+    const linkUbicacion = datos.ubicacionUrl?.trim() || this.linkMapa(datos.direccion)
 
-    // Boton de ancho completo, "a prueba de balas" (display:block + padding).
+    // Boton de accion: fondo y borde van en el <td> (Outlook no dibuja bien
+    // border/border-radius sobre <a>), y el <a display:block> da el area clickeable.
     const boton = (href: string, texto: string, bg: string, color: string, borde: string) =>
-      `<tr><td style="padding-bottom:10px">
-        <a href="${href}" style="display:block;text-align:center;background-color:${bg};color:${color};border:1px solid ${borde};text-decoration:none;padding:13px 20px;border-radius:10px;font-size:15px;font-weight:600">${texto}</a>
-      </td></tr>`
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr>
+        <td style="background-color:${bg};border:1px solid ${borde};border-radius:10px;text-align:center">
+          <a href="${href}" style="display:block;padding:13px 8px;color:${color};text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap">${texto}</a>
+        </td>
+      </tr></table>`
 
-    // Fila de la tarjeta de datos: emoji + etiqueta + valor
-    const filaDato = (emoji: string, etiqueta: string, valor: string) =>
+    // Link chico inline (ej. "Ver en Maps", "WhatsApp") al lado de un dato
+    const linkInline = (href: string, texto: string, color: string) =>
+      `<a href="${href}" style="color:${color};font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">${texto} &rsaquo;</a>`
+
+    // Fila de la tarjeta de datos: emoji + etiqueta + valor (con link opcional)
+    const filaDato = (emoji: string, etiqueta: string, valor: string, extra = '') =>
       `<tr>
-        <td style="padding:5px 10px 5px 0;width:24px;font-size:18px;vertical-align:top">${emoji}</td>
-        <td style="padding:5px 12px 5px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">${etiqueta}</td>
-        <td style="padding:5px 0;color:#0f172a;font-size:15px;font-weight:600;text-align:right;vertical-align:top">${valor}</td>
+        <td style="padding:6px 10px 6px 0;width:24px;font-size:18px;vertical-align:top">${emoji}</td>
+        <td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">${etiqueta}</td>
+        <td style="padding:6px 0;color:#0f172a;font-size:15px;font-weight:600;text-align:right;vertical-align:top">${valor}${extra}</td>
       </tr>`
 
-    const filaConsultorio = datos.direccion ? filaDato('📍', 'Dirección', datos.direccion) : ''
+    // Dirección: muestra el texto y, al lado, el link a Maps (o solo el link
+    // si hay ubicación cargada pero no hay dirección escrita)
+    const filaConsultorio = datos.direccion
+      ? filaDato('📍', 'Dirección', datos.direccion,
+          linkUbicacion ? `<br><span style="font-weight:400">${linkInline(linkUbicacion, 'Ver en Maps', '#0e7490')}</span>` : '')
+      : linkUbicacion
+      ? filaDato('📍', 'Ubicación', linkInline(linkUbicacion, 'Ver en Maps', '#0e7490'))
+      : ''
+
+    // Teléfono: tappable (tel:) y, debajo, el link de WhatsApp
     const filaTelefono = datos.telefono
       ? `<tr>
-          <td style="padding:5px 10px 5px 0;width:24px;font-size:18px;vertical-align:top">📞</td>
-          <td style="padding:5px 12px 5px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">Teléfono</td>
-          <td style="padding:5px 0;text-align:right;vertical-align:top"><a href="tel:${datos.telefono}" style="color:#0e7490;font-size:15px;font-weight:600;text-decoration:none">${datos.telefono}</a></td>
+          <td style="padding:6px 10px 6px 0;width:24px;font-size:18px;vertical-align:top">📞</td>
+          <td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">Teléfono</td>
+          <td style="padding:6px 0;text-align:right;vertical-align:top">
+            <a href="tel:${datos.telefono}" style="color:#0f172a;font-size:15px;font-weight:600;text-decoration:none">${datos.telefono}</a>
+            ${linkWa ? `<br>${linkInline(linkWa, 'WhatsApp', '#15803d')}` : ''}
+          </td>
         </tr>`
       : ''
 
-    const botones =
-      (linkReprogramar ? boton(linkReprogramar, 'Reprogramar cita', '#0891b2', '#ffffff', '#0891b2') : '') +
-      (linkCancelar ? boton(linkCancelar, 'Cancelar cita', '#ffffff', '#b91c1c', '#fecaca') : '') +
-      (linkUbicacion ? boton(linkUbicacion, 'Ver ubicación', '#ffffff', '#334155', '#e2e8f0') : '') +
-      (linkWa ? boton(linkWa, 'Escribir por WhatsApp', '#ffffff', '#15803d', '#bbf7d0') : '')
+    // Solo dos acciones, lado a lado: reprogramar y cancelar (vienen juntas:
+    // ambas necesitan slug + token del portal).
+    const acciones = linkReprogramar && linkCancelar
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="50%" style="padding-right:5px">${boton(linkReprogramar, 'Reprogramar cita', '#0891b2', '#ffffff', '#0891b2')}</td>
+          <td width="50%" style="padding-left:5px">${boton(linkCancelar, 'Cancelar cita', '#ffffff', '#b91c1c', '#fecaca')}</td>
+        </tr></table>`
+      : ''
 
     return `
 <div style="margin:0;padding:0;background-color:#f1f5f9">
@@ -162,13 +215,13 @@ export class MailService {
               <span style="font-size:34px;line-height:64px;color:#16a34a;font-weight:700">&#10003;</span>
             </td>
           </tr></table>
-          <h1 style="margin:18px 0 4px;font-size:22px;line-height:1.3;color:#ffffff;font-weight:700">Tu reserva fue confirmada</h1>
+          <h1 style="margin:18px 0 4px;font-size:22px;line-height:1.3;color:#ffffff;font-weight:700">${titulo}</h1>
           <p style="margin:0;font-size:13px;color:#cffafe">${datos.consultorio}</p>
         </td></tr>
 
         <tr><td style="padding:28px 32px">
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155">
-            Hola <strong style="color:#0f172a">${datos.nombre}</strong>, nos alegra confirmar tu cita. Te esperamos.
+            ${intro}
           </p>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ecfeff;border:1px solid #a5f3fc;border-radius:14px;margin:0 0 16px">
@@ -207,7 +260,163 @@ export class MailService {
             Si no vas a poder asistir, cancelá o reprogramá tu cita para liberar el horario a otra persona.
           </p>
 
-          ${botones ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${botones}</table>` : ''}
+          ${acciones}
+        </td></tr>
+
+        <tr><td style="padding:20px 32px 28px;border-top:1px solid #e2e8f0;text-align:center">
+          <p style="margin:0 0 6px;font-size:13px;color:#475569">Gracias por confiar en <strong>${datos.consultorio}</strong>.</p>
+          <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5">Este es un mensaje automático. Ante cualquier consulta, comunicate con nosotros con los datos de contacto de arriba.</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</div>`
+  }
+
+  // .ics (iCalendar) como INVITACION real (METHOD:REQUEST con ORGANIZER +
+  // ATTENDEE): asi Outlook/Gmail lo reconocen y lo agregan al calendario (no
+  // queda como archivo inerte). Tiempos en UTC; UID estable por cita y
+  // SEQUENCE para que al reprogramar el evento se actualice en vez de duplicar.
+  buildICS(datos: {
+    citaId: number
+    consultorio: string
+    servicio: string
+    doctor: string
+    inicio: Date
+    duracionMin: number
+    direccion?: string | null
+    ubicacionUrl?: string | null
+    attendeeEmail: string
+    attendeeNombre: string
+    secuencia?: number
+  }) {
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+    const esc = (s: string) =>
+      (s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+    // CN va entre comillas (admite comas/espacios); se quitan las comillas internas
+    const cn = (s: string) => `"${(s ?? '').replace(/"/g, '')}"`
+    const fin = new Date(datos.inicio.getTime() + datos.duracionMin * 60 * 1000)
+    const host = this.webBase().replace(/^https?:\/\//, '').replace(/[/:].*$/, '') || 'consultech'
+    const organizador = this.direccionRemitente()
+    const lugar = datos.direccion?.trim() || datos.ubicacionUrl?.trim() || ''
+    const desc = [
+      `Profesional: ${datos.doctor}`,
+      `Consultorio: ${datos.consultorio}`,
+      ...(datos.ubicacionUrl?.trim() ? [`Ubicación: ${datos.ubicacionUrl.trim()}`] : []),
+    ].join('\n')
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Consultech//Citas//ES',
+      'CALSCALE:GREGORIAN',
+      'METHOD:REQUEST',
+      'BEGIN:VEVENT',
+      `UID:cita-${datos.citaId}@${host}`,
+      `SEQUENCE:${datos.secuencia ?? 0}`,
+      `DTSTAMP:${fmt(new Date())}`,
+      `DTSTART:${fmt(datos.inicio)}`,
+      `DTEND:${fmt(fin)}`,
+      `SUMMARY:${esc(`${datos.servicio} - ${datos.consultorio}`)}`,
+      ...(lugar ? [`LOCATION:${esc(lugar)}`] : []),
+      `DESCRIPTION:${esc(desc)}`,
+      `ORGANIZER;CN=${cn(datos.consultorio)}:mailto:${organizador}`,
+      `ATTENDEE;CN=${cn(datos.attendeeNombre)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${datos.attendeeEmail}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n')
+  }
+
+  // Aviso al paciente cuando su cita se cancela (por el consultorio o por el
+  // propio paciente desde el link). Mismo estilo de marca; sin acciones de
+  // reprogramar: ofrece volver a reservar y deja a mano el contacto.
+  htmlCitaCancelada(datos: {
+    nombre: string
+    consultorio: string
+    direccion?: string | null
+    telefono?: string | null
+    ubicacionUrl?: string | null
+    pais?: string | null
+    fecha: string
+    hora: string
+    servicio: string
+    doctor: string
+    slug?: string | null
+  }) {
+    const linkWa = this.linkWhatsApp(datos.telefono, datos.pais)
+    const linkUbicacion = datos.ubicacionUrl?.trim() || this.linkMapa(datos.direccion)
+    const linkReservar = datos.slug ? `${this.webBase()}/reservar/${datos.slug}` : null
+
+    const linkInline = (href: string, texto: string, color: string) =>
+      `<a href="${href}" style="color:${color};font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">${texto} &rsaquo;</a>`
+    const fila = (emoji: string, etiqueta: string, valor: string, extra = '') =>
+      `<tr>
+        <td style="padding:6px 10px 6px 0;width:24px;font-size:18px;vertical-align:top">${emoji}</td>
+        <td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">${etiqueta}</td>
+        <td style="padding:6px 0;color:#0f172a;font-size:15px;font-weight:600;text-align:right;vertical-align:top">${valor}${extra}</td>
+      </tr>`
+
+    const filaDir = datos.direccion
+      ? fila('📍', 'Dirección', datos.direccion,
+          linkUbicacion ? `<br><span style="font-weight:400">${linkInline(linkUbicacion, 'Ver en Maps', '#0e7490')}</span>` : '')
+      : ''
+    const filaTel = datos.telefono
+      ? `<tr>
+          <td style="padding:6px 10px 6px 0;width:24px;font-size:18px;vertical-align:top">📞</td>
+          <td style="padding:6px 12px 6px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">Teléfono</td>
+          <td style="padding:6px 0;text-align:right;vertical-align:top">
+            <a href="tel:${datos.telefono}" style="color:#0f172a;font-size:15px;font-weight:600;text-decoration:none">${datos.telefono}</a>
+            ${linkWa ? `<br>${linkInline(linkWa, 'WhatsApp', '#15803d')}` : ''}
+          </td>
+        </tr>`
+      : ''
+
+    return `
+<div style="margin:0;padding:0;background-color:#f1f5f9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9">
+    <tr><td align="center" style="padding:24px 12px">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
+
+        <tr><td style="background-color:#0e7490;background-image:linear-gradient(135deg,#0e7490,#0891b2);padding:30px 32px;text-align:center">
+          <table role="presentation" align="center" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:64px;height:64px;background-color:#ffffff;border-radius:50%;text-align:center;vertical-align:middle">
+              <span style="font-size:30px;line-height:64px;color:#dc2626;font-weight:700">&#10005;</span>
+            </td>
+          </tr></table>
+          <h1 style="margin:18px 0 4px;font-size:22px;line-height:1.3;color:#ffffff;font-weight:700">Tu cita fue cancelada</h1>
+          <p style="margin:0;font-size:13px;color:#cffafe">${datos.consultorio}</p>
+        </td></tr>
+
+        <tr><td style="padding:28px 32px">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155">
+            Hola <strong style="color:#0f172a">${datos.nombre}</strong>, tu cita quedó cancelada. Si fue un error o querés otro horario, podés reservar de nuevo cuando gustes.
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:14px;margin:0 0 18px">
+            <tr><td style="padding:16px 20px;text-align:center">
+              <p style="margin:0 0 4px;font-size:13px;color:#b91c1c;font-weight:600">Cita cancelada</p>
+              <p style="margin:0;font-size:16px;line-height:1.4;color:#0f172a;font-weight:600"><span style="text-decoration:line-through;color:#64748b">${datos.fecha} · ${datos.hora}</span></p>
+              <p style="margin:6px 0 0;font-size:13px;color:#64748b">${datos.servicio} con ${datos.doctor}</p>
+            </td></tr>
+          </table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:14px;margin:0 0 20px">
+            <tr><td style="padding:16px 20px">
+              <p style="margin:0 0 8px;font-size:13px;color:#64748b;font-weight:600">Información del consultorio</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${fila('🏥', 'Consultorio', datos.consultorio)}
+                ${filaDir}
+                ${filaTel}
+              </table>
+            </td></tr>
+          </table>
+
+          ${linkReservar ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr>
+            <td style="background-color:#0891b2;border:1px solid #0891b2;border-radius:10px;text-align:center">
+              <a href="${linkReservar}" style="display:block;padding:13px 12px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600">Reservar otra cita</a>
+            </td>
+          </tr></table>` : ''}
         </td></tr>
 
         <tr><td style="padding:20px 32px 28px;border-top:1px solid #e2e8f0;text-align:center">

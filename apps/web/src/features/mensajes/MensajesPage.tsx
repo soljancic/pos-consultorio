@@ -4,7 +4,7 @@ import { MessageCircle, RefreshCw, Check, X, CalendarClock, CircleDollarSign } f
 import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, buildWhatsAppUrl, abrirWhatsApp, cn } from '../../lib/utils'
-import { usePlantillasWhatsApp, renderPlantilla, renderDeuda } from '../../lib/whatsapp'
+import { usePlantillasWhatsApp, renderRecordatorio, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
@@ -39,7 +39,7 @@ const LABEL_ESTADO: Record<Mensaje['estado'], string> = {
 export function MensajesPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'pendientes' | 'resueltos'>('pendientes')
-  const { plantillas, consultorioNombre, linkQRBase } = usePlantillasWhatsApp()
+  const { plantillas, consultorioNombre, linkQRBase, direccion, ubicacionUrl } = usePlantillasWhatsApp()
 
   const { data: mensajes = [], isLoading, isError, refetch } = useQuery<Mensaje[]>({
     queryKey: ['mensajes', tab],
@@ -68,12 +68,12 @@ export function MensajesPage() {
 
   function mensajeDe(m: Mensaje) {
     if (m.tipo === 'RECORDATORIO' && m.cita) {
-      return renderPlantilla(plantillas.recordatorio, {
+      return renderRecordatorio(plantillas.recordatorio, {
         nombre: m.paciente.nombre,
         hora: formatHora(m.cita.fechaHora),
         fecha: new Date(m.cita.fechaHora).toLocaleDateString('es-BO'),
         consultorio: consultorioNombre,
-      })
+      }, { direccion, linkGoogleMaps: ubicacionUrl })
     }
     return renderDeuda(plantillas.deuda, {
       nombre: m.paciente.nombre,
