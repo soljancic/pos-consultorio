@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths } from 'date-fns'
-import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight, UserRound, User, Mail, FileText } from 'lucide-react'
+import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight, UserRound, User, Mail, FileText, Phone, MessageCircle, CalendarX2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatDia, cn } from '../../lib/utils'
-import { btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
+import { formatDia, formatHora, abrirWhatsApp, cn } from '../../lib/utils'
+import { btnPrimaryUI, btnOutlineUI, btnDestructiveUI, cardUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT, PAISES } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
 import { FloatingInput } from '../../components/shared/FloatingInput'
@@ -30,7 +30,11 @@ export function ReservarPage() {
   const doctorFijo = params.get('doctor')
   const tokenPaciente = params.get('p')
   const tokenReprog = params.get('reprogramar')
+  const tokenCancelar = params.get('cancelar')
   const esReprogramacion = !!tokenReprog
+  const esCancelacion = !!tokenCancelar
+  // Reprogramar y cancelar comparten el mismo token opaco de la cita
+  const tokenCita = tokenReprog ?? tokenCancelar
 
   const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
   const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
@@ -47,6 +51,9 @@ export function ReservarPage() {
   const [actualizarDatos, setActualizarDatos] = useState(true)
   const [error, setError] = useState('')
   const [confirmacion, setConfirmacion] = useState<any | null>(null)
+  // Flujo de cancelacion (link del email): confirmada o "mantener la cita"
+  const [cancelado, setCancelado] = useState(false)
+  const [mantenida, setMantenida] = useState(false)
   // Al revelar el formulario, bajamos el scroll para que se vea la sgte parte
   const datosRef = useRef<HTMLDivElement>(null)
 
@@ -56,16 +63,29 @@ export function ReservarPage() {
     retry: 1,
   })
 
-  type CtxReprog = {
+  type CtxCita = {
+    consultorio: { nombre: string; logoUrl: string | null; telefono: string | null; direccion: string | null }
     cita: { fechaHoraActual: string; doctorActual: { id: number; nombre?: string } }
     servicio: { id: number; nombre?: string; duracionMin?: number }
     doctores: Array<{ id: number; nombre: string; especialidad: string | null; colorAgenda: string }>
     paciente: { nombre?: string }
   }
-  const { data: ctxReprog, isError: errReprog, isLoading: cargandoReprog } = useQuery<CtxReprog>({
-    queryKey: ['portal-reprog', slug, tokenReprog],
-    queryFn: () => api.get(`/public/${slug}/reprogramar/${tokenReprog}`).then((r) => r.data),
-    enabled: esReprogramacion,
+  // Mismo endpoint de contexto para reprogramar y cancelar (token de la cita)
+  const { data: ctxCita, isError: errCita, isLoading: cargandoCita } = useQuery<CtxCita>({
+    queryKey: ['portal-cita', slug, tokenCita],
+    queryFn: () => api.get(`/public/${slug}/reprogramar/${tokenCita}`).then((r) => r.data),
+    enabled: esReprogramacion || esCancelacion,
+    retry: false,
+  })
+
+  // Datos de contacto del consultorio para la pantalla de error: si el enlace
+  // falla, el paciente igual puede llamar o escribir por WhatsApp. Solo se pide
+  // cuando algo falla (no en el camino feliz de reserva).
+  const huboError = isError || errCita
+  const { data: contacto } = useQuery<{ nombre: string; telefono: string | null; direccion: string | null }>({
+    queryKey: ['portal-contacto', slug],
+    queryFn: () => api.get(`/public/${slug}/contacto`).then((r) => r.data),
+    enabled: !!slug && huboError,
     retry: false,
   })
 
@@ -95,10 +115,10 @@ export function ReservarPage() {
 
   // En reprogramacion el servicio es fijo (de la cita); el doctor arranca en el actual
   useEffect(() => {
-    if (!ctxReprog) return
-    setServicioId(String(ctxReprog.servicio.id))
-    setDoctorId(String(ctxReprog.cita.doctorActual.id))
-  }, [ctxReprog])
+    if (!ctxCita || !esReprogramacion) return
+    setServicioId(String(ctxCita.servicio.id))
+    setDoctorId(String(ctxCita.cita.doctorActual.id))
+  }, [ctxCita, esReprogramacion])
 
   // El cliente toco algo de lo precargado: recien ahi se ofrece el check
   // "Actualizar mis datos" (sin cambios no hay nada que sincronizar)
@@ -177,16 +197,52 @@ export function ReservarPage() {
     },
   })
 
-  if (isLoading || (esReprogramacion && cargandoReprog)) {
+  const cancelar = useMutation({
+    mutationFn: () => api.post(`/public/${slug}/cancelar/${tokenCancelar}`),
+    onSuccess: () => setCancelado(true),
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo cancelar, intente de nuevo')
+    },
+  })
+
+  if (isLoading || ((esReprogramacion || esCancelacion) && cargandoCita)) {
     return <div className="min-h-dvh flex items-center justify-center bg-background text-muted-foreground">Cargando...</div>
   }
-  if (isError || !info || (esReprogramacion && errReprog)) {
+  if (isError || !info || ((esReprogramacion || esCancelacion) && errCita)) {
+    const tel = contacto?.telefono
+    const nombreC = contacto?.nombre
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-        <div className={cn(cardUI, 'p-8 text-center max-w-sm')}>
+        <div className={cn(cardUI, 'p-8 text-center max-w-sm w-full space-y-4')}>
+          <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          </div>
           <p className="text-sm text-muted-foreground">
-            Este portal de reservas no está disponible. Verifique el enlace con el consultorio.
+            No pudimos abrir este enlace.{' '}
+            {nombreC
+              ? `Comunicate con ${nombreC} y con gusto te ayudamos.`
+              : 'Verificá el enlace con el consultorio.'}
           </p>
+          {tel && (
+            <div className="space-y-2.5 pt-1">
+              <a
+                href={`tel:${tel}`}
+                className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-foreground tabular-nums hover:text-primary transition-colors duration-150"
+              >
+                <Phone className="h-4 w-4 text-primary" aria-hidden="true" />
+                {tel}
+              </a>
+              <button
+                type="button"
+                onClick={() => abrirWhatsApp(tel, `Hola${nombreC ? `, ${nombreC}` : ''}: necesito ayuda con mi cita.`)}
+                className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                Escribir por WhatsApp
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -195,7 +251,7 @@ export function ReservarPage() {
   // Calendario f2: con servicio elegido, solo profesionales que lo atienden
   // (lista vacia = atiende todos)
   const doctores = esReprogramacion
-    ? (ctxReprog?.doctores ?? [])
+    ? (ctxCita?.doctores ?? [])
     : (doctorFijo
         ? info.doctores.filter((d) => String(d.id) === doctorFijo)
         : info.doctores
@@ -221,13 +277,95 @@ export function ReservarPage() {
           </span>
           <div>
             <h1 className="text-lg font-semibold leading-tight">{info.consultorio.nombre}</h1>
-            <p className="text-xs text-cyan-50/90">Reserve su cita en línea</p>
+            <p className="text-xs text-cyan-50/90">
+              {esCancelacion ? 'Gestioná tu cita' : esReprogramacion ? 'Reprogramá tu cita' : 'Reserve su cita en línea'}
+            </p>
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto p-4 sm:p-6">
-        {confirmacion ? (
+        {esCancelacion ? (
+          cancelado ? (
+            <div className={cn(cardUI, 'p-6 space-y-4 text-center')}>
+              <CheckCircle2 className="h-12 w-12 text-accent mx-auto" aria-hidden="true" />
+              <h2 className="text-xl font-bold text-foreground">Tu cita fue cancelada</h2>
+              <p className="text-sm text-foreground">Liberamos el horario. ¡Gracias por avisar a tiempo!</p>
+              <div className="flex flex-col gap-2.5 pt-1">
+                <a href={`/reservar/${slug}`} className={cn(btnPrimaryUI, 'w-full')}>
+                  <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+                  Reservar otra cita
+                </a>
+                {ctxCita?.consultorio.telefono && (
+                  <button
+                    type="button"
+                    onClick={() => abrirWhatsApp(ctxCita.consultorio.telefono!, `Hola ${ctxCita.consultorio.nombre}: acabo de cancelar mi cita.`)}
+                    className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    Escribir por WhatsApp
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : mantenida ? (
+            <div className={cn(cardUI, 'p-6 space-y-4 text-center')}>
+              <CheckCircle2 className="h-12 w-12 text-accent mx-auto" aria-hidden="true" />
+              <h2 className="text-xl font-bold text-foreground">Tu cita sigue en pie</h2>
+              {ctxCita && (
+                <p className="text-sm text-foreground">
+                  {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} a las{' '}
+                  <span className="font-semibold tabular-nums">{formatHora(ctxCita.cita.fechaHoraActual)}</span>
+                  <br />
+                  {ctxCita.servicio.nombre} con {ctxCita.cita.doctorActual.nombre}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">No cambiamos nada. ¡Te esperamos!</p>
+            </div>
+          ) : (
+            <div className={cn(cardUI, 'p-6 space-y-5')}>
+              <div className="text-center space-y-2">
+                <div className="mx-auto h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <CalendarX2 className="h-6 w-6 text-destructive" aria-hidden="true" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">¿Querés cancelar tu cita?</h2>
+                <p className="text-sm text-muted-foreground">
+                  Si la cancelás, el horario queda libre para otra persona. Podés reservar de nuevo cuando quieras.
+                </p>
+              </div>
+              {ctxCita && (
+                <div className="rounded-lg border bg-muted/30 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-foreground tabular-nums">
+                    {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} · {formatHora(ctxCita.cita.fechaHoraActual)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {ctxCita.servicio.nombre} con {ctxCita.cita.doctorActual.nombre}
+                  </p>
+                </div>
+              )}
+              {error && (
+                <p role="alert" className={errorUI}>
+                  <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {error}
+                </p>
+              )}
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setError(''); cancelar.mutate() }}
+                  disabled={cancelar.isPending}
+                  className={cn(btnDestructiveUI, 'w-full')}
+                >
+                  <CalendarX2 className="h-4 w-4" aria-hidden="true" />
+                  {cancelar.isPending ? 'Cancelando...' : 'Sí, cancelar mi cita'}
+                </button>
+                <button type="button" onClick={() => setMantenida(true)} className={cn(btnOutlineUI, 'w-full')}>
+                  No, mantener la cita
+                </button>
+              </div>
+            </div>
+          )
+        ) : confirmacion ? (
           <div className={cn(cardUI, 'p-6 space-y-4 text-center')}>
             <CheckCircle2 className="h-12 w-12 text-accent mx-auto" aria-hidden="true" />
             <h2 className="text-xl font-bold text-foreground">
@@ -250,14 +388,14 @@ export function ReservarPage() {
             onSubmit={(e) => { e.preventDefault(); setError(''); (esReprogramacion ? reprogramar : reservar).mutate() }}
             className={cn(cardUI, 'p-5 sm:p-6 space-y-4')}
           >
-            {esReprogramacion && ctxReprog && (
+            {esReprogramacion && ctxCita && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
                 <p className="text-sm font-medium text-foreground">
-                  Reprogramando tu cita de {ctxReprog.servicio.nombre}
+                  Reprogramando tu cita de {ctxCita.servicio.nombre}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Actual: {formatDia(ctxReprog.cita.fechaHoraActual, "EEEE d 'de' MMMM")} con{' '}
-                  {ctxReprog.cita.doctorActual.nombre}. Elegi tu nuevo dia y horario.
+                  Actual: {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} con{' '}
+                  {ctxCita.cita.doctorActual.nombre}. Elegi tu nuevo dia y horario.
                 </p>
               </div>
             )}

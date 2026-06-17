@@ -45,9 +45,31 @@ export class MailService {
     }
   }
 
+  private webBase() {
+    return (process.env.WEB_URL ?? 'http://localhost:5173').replace(/\/$/, '')
+  }
+
   linkEstablecerPassword(token: string) {
-    const base = process.env.WEB_URL ?? 'http://localhost:5173'
-    return `${base}/establecer-password?token=${token}`
+    return `${this.webBase()}/establecer-password?token=${token}`
+  }
+
+  // Links del portal publico para el email de confirmacion: el paciente
+  // gestiona su propia cita (mismo slug + token opaco que ya usa la agenda).
+  private linkPortalCita(slug: string, token: string, accion: 'reprogramar' | 'cancelar') {
+    return `${this.webBase()}/reservar/${slug}?${accion}=${token}`
+  }
+
+  // WhatsApp del consultorio a partir del telefono cargado (debe traer codigo
+  // de pais). Sin digitos validos no se arma el link.
+  private linkWhatsApp(telefono?: string | null) {
+    const num = (telefono ?? '').replace(/\D/g, '')
+    return num ? `https://wa.me/${num}` : null
+  }
+
+  // Ubicacion en Google Maps a partir de la direccion en texto libre
+  private linkMapa(direccion?: string | null) {
+    const d = (direccion ?? '').trim()
+    return d ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d)}` : null
   }
 
   private layout(titulo: string, cuerpo: string, link: string, cta: string) {
@@ -75,31 +97,127 @@ export class MailService {
     )
   }
 
-  // E2.5b: aviso al paciente cuando la secretaria acepta su reserva del
-  // portal (SOLICITADA -> PENDIENTE). Sin CTA: es puramente informativo.
+  // E2.5b: confirmacion al paciente cuando la secretaria acepta su reserva del
+  // portal (SOLICITADA -> PENDIENTE). Email transaccional, mobile-first y con
+  // tablas (lo unico confiable entre clientes); colores de la marca (cyan),
+  // tarjetas para los datos, fecha y hora como heroe, y acciones de
+  // autogestion (reprogramar / cancelar / ubicacion) si hay slug + token.
   htmlReservaAceptada(datos: {
     nombre: string
     consultorio: string
+    direccion?: string | null
+    telefono?: string | null
     fecha: string
     hora: string
     servicio: string
     doctor: string
+    slug?: string | null
+    token?: string | null
   }) {
+    const linkReprogramar =
+      datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'reprogramar') : null
+    const linkCancelar =
+      datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'cancelar') : null
+    const linkWa = this.linkWhatsApp(datos.telefono)
+    const linkUbicacion = this.linkMapa(datos.direccion)
+
+    // Boton de ancho completo, "a prueba de balas" (display:block + padding).
+    const boton = (href: string, texto: string, bg: string, color: string, borde: string) =>
+      `<tr><td style="padding-bottom:10px">
+        <a href="${href}" style="display:block;text-align:center;background-color:${bg};color:${color};border:1px solid ${borde};text-decoration:none;padding:13px 20px;border-radius:10px;font-size:15px;font-weight:600">${texto}</a>
+      </td></tr>`
+
+    // Fila de la tarjeta de datos: emoji + etiqueta + valor
+    const filaDato = (emoji: string, etiqueta: string, valor: string) =>
+      `<tr>
+        <td style="padding:5px 10px 5px 0;width:24px;font-size:18px;vertical-align:top">${emoji}</td>
+        <td style="padding:5px 12px 5px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">${etiqueta}</td>
+        <td style="padding:5px 0;color:#0f172a;font-size:15px;font-weight:600;text-align:right;vertical-align:top">${valor}</td>
+      </tr>`
+
+    const filaConsultorio = datos.direccion ? filaDato('📍', 'Dirección', datos.direccion) : ''
+    const filaTelefono = datos.telefono
+      ? `<tr>
+          <td style="padding:5px 10px 5px 0;width:24px;font-size:18px;vertical-align:top">📞</td>
+          <td style="padding:5px 12px 5px 0;color:#64748b;font-size:14px;vertical-align:top;white-space:nowrap">Teléfono</td>
+          <td style="padding:5px 0;text-align:right;vertical-align:top"><a href="tel:${datos.telefono}" style="color:#0e7490;font-size:15px;font-weight:600;text-decoration:none">${datos.telefono}</a></td>
+        </tr>`
+      : ''
+
+    const botones =
+      (linkReprogramar ? boton(linkReprogramar, 'Reprogramar cita', '#0891b2', '#ffffff', '#0891b2') : '') +
+      (linkCancelar ? boton(linkCancelar, 'Cancelar cita', '#ffffff', '#b91c1c', '#fecaca') : '') +
+      (linkUbicacion ? boton(linkUbicacion, 'Ver ubicación', '#ffffff', '#334155', '#e2e8f0') : '') +
+      (linkWa ? boton(linkWa, 'Escribir por WhatsApp', '#ffffff', '#15803d', '#bbf7d0') : '')
+
     return `
-<div style="font-family:Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1e293b">
-  <h2 style="color:#0e7490;margin-bottom:4px">¡Tu cita fue aceptada!</h2>
-  <p style="font-size:14px;line-height:1.6">
-    Hola ${datos.nombre}: ${datos.consultorio} aceptó tu cita.
-  </p>
-  <table style="font-size:14px;line-height:1.8;border-collapse:collapse">
-    <tr><td style="color:#64748b;padding-right:12px">Fecha</td><td style="font-weight:bold">${datos.fecha}</td></tr>
-    <tr><td style="color:#64748b;padding-right:12px">Hora</td><td style="font-weight:bold">${datos.hora}</td></tr>
-    <tr><td style="color:#64748b;padding-right:12px">Servicio</td><td>${datos.servicio}</td></tr>
-    <tr><td style="color:#64748b;padding-right:12px">Profesional</td><td>${datos.doctor}</td></tr>
+<div style="margin:0;padding:0;background-color:#f1f5f9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9">
+    <tr><td align="center" style="padding:24px 12px">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
+
+        <tr><td style="background-color:#0e7490;background-image:linear-gradient(135deg,#0e7490,#0891b2);padding:30px 32px;text-align:center">
+          <table role="presentation" align="center" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:64px;height:64px;background-color:#ffffff;border-radius:50%;text-align:center;vertical-align:middle">
+              <span style="font-size:34px;line-height:64px;color:#16a34a;font-weight:700">&#10003;</span>
+            </td>
+          </tr></table>
+          <h1 style="margin:18px 0 4px;font-size:22px;line-height:1.3;color:#ffffff;font-weight:700">Tu reserva fue confirmada</h1>
+          <p style="margin:0;font-size:13px;color:#cffafe">${datos.consultorio}</p>
+        </td></tr>
+
+        <tr><td style="padding:28px 32px">
+          <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155">
+            Hola <strong style="color:#0f172a">${datos.nombre}</strong>, nos alegra confirmar tu cita. Te esperamos.
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ecfeff;border:1px solid #a5f3fc;border-radius:14px;margin:0 0 16px">
+            <tr><td style="padding:20px 24px;text-align:center">
+              <p style="margin:0 0 6px;font-size:13px;color:#0e7490;font-weight:600">Tu cita</p>
+              <p style="margin:0 0 4px;font-size:18px;line-height:1.3;color:#0f172a;font-weight:600">${datos.fecha}</p>
+              <p style="margin:0;font-size:36px;line-height:1.1;color:#0e7490;font-weight:800">${datos.hora}</p>
+            </td></tr>
+          </table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:14px;margin:0 0 14px">
+            <tr><td style="padding:16px 20px">
+              <p style="margin:0 0 8px;font-size:13px;color:#64748b;font-weight:600">Detalles de la cita</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${filaDato('🩺', 'Servicio', datos.servicio)}
+                ${filaDato('👨‍⚕️', 'Profesional', datos.doctor)}
+              </table>
+            </td></tr>
+          </table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:14px;margin:0 0 20px">
+            <tr><td style="padding:16px 20px">
+              <p style="margin:0 0 8px;font-size:13px;color:#64748b;font-weight:600">Información del consultorio</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${filaDato('🏥', 'Consultorio', datos.consultorio)}
+                ${filaConsultorio}
+                ${filaTelefono}
+              </table>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#334155">
+            Te recomendamos llegar <strong>10 minutos antes</strong> de tu hora.
+          </p>
+          <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#334155">
+            Si no vas a poder asistir, cancelá o reprogramá tu cita para liberar el horario a otra persona.
+          </p>
+
+          ${botones ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${botones}</table>` : ''}
+        </td></tr>
+
+        <tr><td style="padding:20px 32px 28px;border-top:1px solid #e2e8f0;text-align:center">
+          <p style="margin:0 0 6px;font-size:13px;color:#475569">Gracias por confiar en <strong>${datos.consultorio}</strong>.</p>
+          <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5">Este es un mensaje automático. Ante cualquier consulta, comunicate con nosotros con los datos de contacto de arriba.</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
   </table>
-  <p style="font-size:12px;color:#64748b;line-height:1.5;margin-top:24px">
-    Si no podés asistir, avisá al consultorio para reprogramar.
-  </p>
 </div>`
   }
 

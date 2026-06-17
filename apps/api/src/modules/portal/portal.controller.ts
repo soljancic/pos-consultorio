@@ -28,6 +28,14 @@ export class PortalController {
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @Get(':slug/contacto')
+  @ApiOperation({ summary: 'Datos de contacto del consultorio (telefono) para la pantalla de error' })
+  contacto(@Param('slug') slug: string) {
+    return this.service.contacto(slug)
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Get(':slug/qr')
   @ApiOperation({ summary: 'QR de pagos del consultorio (para ver y descargar)' })
   qr(@Param('slug') slug: string) {
@@ -81,5 +89,13 @@ export class PortalController {
     @Body() dto: ReprogramarPublicoDto,
   ) {
     return this.service.reprogramarPorToken(slug, token, dto)
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post(':slug/cancelar/:token')
+  @ApiOperation({ summary: 'Cancelar la cita del token (libera el horario al instante)' })
+  cancelarPorToken(@Param('slug') slug: string, @Param('token') token: string) {
+    return this.service.cancelarPorToken(slug, token)
   }
 }

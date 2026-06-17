@@ -147,6 +147,26 @@ export class PortalService {
     return paciente
   }
 
+  // Datos de contacto publicos para la pantalla de error del portal: si el
+  // link falla (slug mal, portal apagado, token vencido), el paciente igual
+  // puede llamar o escribir por WhatsApp. No exige portalActivo a proposito;
+  // solo que el consultorio exista y este activo.
+  async contacto(slug: string) {
+    const c = await this.prisma.consultorio.findUnique({
+      where: { slug },
+      select: { nombre: true, telefono: true, direccion: true, activo: true },
+    })
+    if (!c || !c.activo) throw new NotFoundException('Consultorio no disponible')
+    return { nombre: c.nombre, telefono: c.telefono, direccion: c.direccion }
+  }
+
+  // Cancelacion publica por token (link del email de confirmacion): cancela al
+  // instante y libera el horario. Deriva el consultorio del slug (regla critica).
+  async cancelarPorToken(slug: string, token: string) {
+    const c = await this.consultorioPorSlug(slug)
+    return this.citas.cancelarPorToken(c.id, token)
+  }
+
   // Pagina publica de pago con QR (/qr/:slug): no exige portalActivo, solo
   // que el consultorio este activo y tenga el QR cargado en Configuracion
   async qr(slug: string) {
@@ -311,7 +331,12 @@ export class PortalService {
       .map(({ servicios, ...d }) => d)
 
     return {
-      consultorio: { nombre: c.nombre, logoUrl: c.logoUrl },
+      consultorio: {
+        nombre: c.nombre,
+        logoUrl: c.logoUrl,
+        telefono: c.telefono,
+        direccion: c.direccion,
+      },
       cita: {
         fechaHoraActual: cita.fechaHora.toISOString(),
         doctorActual: { id: cita.doctorId, nombre: cita.doctor?.nombre },

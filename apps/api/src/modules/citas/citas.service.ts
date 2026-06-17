@@ -74,6 +74,10 @@ const ESTADOS_REPROGRAMABLES_PORTAL: EstadoCita[] = [
   EstadoCita.SOLICITADA,
 ]
 
+// El paciente puede cancelar desde el link mientras la cita siga "viva":
+// los mismos estados que admiten reprogramacion por el portal.
+const ESTADOS_CANCELABLES_PORTAL = ESTADOS_REPROGRAMABLES_PORTAL
+
 @Injectable()
 export class CitasService {
   constructor(
@@ -203,21 +207,45 @@ export class CitasService {
         paciente: { select: { nombre: true, email: true } },
         doctor: { select: { nombre: true } },
         servicio: { select: { nombre: true } },
-        consultorio: { select: { nombre: true } },
+        consultorio: {
+          select: { nombre: true, direccion: true, telefono: true, slug: true, timezone: true },
+        },
       },
     })
     if (!cita?.paciente.email) return
 
+    // El email ofrece reprogramar/cancelar por link: aseguramos un token opaco
+    // (perezoso, igual que tokenReprogramacion) si la cita aun no tenia uno.
+    let token = cita.portalToken
+    if (!token && cita.consultorio.slug) {
+      token = randomBytes(18).toString('base64url')
+      await this.prisma.cita.update({ where: { id: citaId }, data: { portalToken: token } })
+    }
+
+    // Fecha/hora en la zona horaria del consultorio (no la del server)
+    const tz = cita.consultorio.timezone
+    const fechaLarga = cita.fechaHora.toLocaleDateString('es-AR', {
+      weekday: 'long', day: 'numeric', month: 'long', timeZone: tz,
+    })
+    const fecha = fechaLarga.charAt(0).toUpperCase() + fechaLarga.slice(1)
+    const hora = cita.fechaHora.toLocaleTimeString('es-AR', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
+    })
+
     await this.mail.enviar(
       cita.paciente.email,
-      `Tu cita en ${cita.consultorio.nombre} fue aceptada`,
+      `Tu cita en ${cita.consultorio.nombre} está confirmada`,
       this.mail.htmlReservaAceptada({
         nombre: cita.paciente.nombre,
         consultorio: cita.consultorio.nombre,
-        fecha: cita.fechaHora.toLocaleDateString('es-BO'),
-        hora: cita.fechaHora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        direccion: cita.consultorio.direccion,
+        telefono: cita.consultorio.telefono,
+        fecha,
+        hora,
         servicio: cita.servicio.nombre,
         doctor: cita.doctor.nombre,
+        slug: cita.consultorio.slug,
+        token,
       }),
       cita.consultorio.nombre,
     )
@@ -634,6 +662,77 @@ export class CitasService {
       hora: dto.hora,
       doctor: reprogramada.doctor?.nombre,
       servicio: reprogramada.servicio?.nombre,
+    }
+  }
+
+  // Cancelacion iniciada por el paciente desde el link del email. El token
+  // identifica la cita exacta; cancela al instante (estado CANCELADA), libera
+  // el horario y avisa al consultorio. El caller (PortalService) ya derivo el
+  // consultorio del slug. Idempotente solo en el sentido de fallar limpio si
+  // la cita ya no se puede cancelar.
+  async cancelarPorToken(consultorioId: number, token: string) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { consultorioId, portalToken: token, deletedAt: null },
+      include: { doctor: true, servicio: true, cobro: { select: { estado: true } } },
+    })
+    if (!cita) throw new NotFoundException('Link no disponible')
+    if (!ESTADOS_CANCELABLES_PORTAL.includes(cita.estado)) {
+      throw new ConflictException('Esta cita ya no se puede cancelar')
+    }
+    if (!transicionValida(cita.estado, EstadoCita.CANCELADA)) {
+      throw new ConflictException('Esta cita ya no se puede cancelar')
+    }
+
+    // Con pagos registrados el dinero ya entro a la caja: el paciente no puede
+    // cancelar solo, debe coordinar con el consultorio (anular pagos primero).
+    const pagos = await this.prisma.pago.count({ where: { cobro: { citaId: cita.id } } })
+    if (pagos > 0) {
+      throw new ConflictException(
+        'La cita tiene un pago registrado: comunicate con el consultorio para cancelarla',
+      )
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.cita.update({
+        where: { id: cita.id },
+        data: { estado: EstadoCita.CANCELADA },
+      })
+
+      // El cobro de una cita cancelada no es deuda ni cuenta abierta
+      if (cita.cobro && cita.cobro.estado !== EstadoCobro.ANULADO) {
+        await tx.cobro.update({
+          where: { citaId: cita.id },
+          data: { estado: EstadoCobro.ANULADO },
+        })
+      }
+
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId: cita.createdById,
+          entidad: 'Cita',
+          entidadId: cita.id,
+          accion: 'STATE_CHANGE',
+          payloadAntes: { estado: cita.estado },
+          payloadDespues: { estado: EstadoCita.CANCELADA, motivo: 'cancelacion-portal' },
+        },
+      })
+    })
+
+    // Avisa a admin + doctor que el paciente cancelo desde el link
+    void this.notificaciones.emitirEventoCita(
+      consultorioId,
+      cita.id,
+      TipoNotificacion.CITA_CANCELADA,
+      { admin: true, doctor: true },
+    )
+
+    return {
+      cancelada: true,
+      // ISO; el frontend la formatea con su locale/timezone (igual que el contexto)
+      fechaHora: cita.fechaHora.toISOString(),
+      doctor: cita.doctor?.nombre,
+      servicio: cita.servicio?.nombre,
     }
   }
 
