@@ -3,8 +3,10 @@ import * as Sentry from '@sentry/react'
 // Sin VITE_SENTRY_DSN el SDK queda deshabilitado (no rompe nada en local).
 // App medica: Session Replay enmascara TODO el texto y bloquea media para no
 // filtrar datos de pacientes; solo se graba alrededor de errores, no sesiones al azar.
+// enabled solo en build de produccion: `vite dev` (local) nunca envia eventos.
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: import.meta.env.PROD,
   environment: import.meta.env.MODE,
   integrations: [
     Sentry.browserTracingIntegration(),
