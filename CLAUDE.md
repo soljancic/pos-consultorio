@@ -49,11 +49,14 @@
 - **El manifest NO es un archivo estatico**: para cambiar nombre/iconos/colores se
   edita el objeto `manifest` en `vite.config.ts`. Iconos en `apps/web/public/brand/`
   (incluye `maskable-512x512.png` con padding para la mascara de Android).
-- **Actualizacion = prompt, NO auto-reload** (`registerType: 'prompt'`):
-  `components/shared/PwaUpdatePrompt.tsx` (usa `useRegisterSW`) muestra "Actualizar"
-  y el usuario decide cuando recargar. Tras un cambio, el usuario lo ve recien
-  DESPUES de deployar (y al tocar Actualizar). Registro del SW + chequeo cada 60s
-  viven en ese componente; no recargar la app por codigo.
+- **Actualizacion = autoUpdate** (`registerType: 'autoUpdate'`, decision owner
+  2026-06-18 tras un white screen por SW viejo): el SW nuevo entra solo
+  (`skipWaiting` + `clientsClaim` en workbox) y la app recarga a los assets
+  frescos. `components/shared/PwaUpdatePrompt.tsx` (usa `useRegisterSW`) ya NO
+  muestra aviso "Actualizar"; solo registra el SW y chequea updates cada 60s para
+  pestañas abiertas mucho rato. Motivo: con `prompt` un SW viejo podia servir un
+  `index.html` cacheado apuntando a hashes de assets que ya no existen (tras
+  varios deploys) → pantalla en blanco; autoUpdate lo evita.
 - **Cache**: app-shell (js/css/html) precacheado + `navigateFallback` a index.html
   (offline la SPA arranca). API: `NetworkFirst` solo en GET (cacheName
   `consultech-api`); POST/PUT NUNCA se cachean; imagenes `StaleWhileRevalidate`.

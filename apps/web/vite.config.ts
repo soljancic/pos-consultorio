@@ -7,11 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // prompt: ante un deploy nuevo NO se recarga solo; PwaUpdatePrompt muestra
-      // un aviso "Actualizar" y el usuario decide cuando recargar (no pierde lo
-      // que esta haciendo). El registro del SW lo hace useRegisterSW (main.tsx),
-      // que ademas chequea updates cada 60s para pestañas abiertas mucho rato.
-      registerType: 'prompt',
+      // autoUpdate: ante un deploy nuevo el SW entra solo (skipWaiting +
+      // clientsClaim) y la app recarga a los assets frescos. Evita que un SW
+      // viejo sirva un index.html cacheado apuntando a hashes que ya no existen
+      // (white screen). El registro lo hace useRegisterSW (PwaUpdatePrompt), que
+      // ademas chequea updates cada 60s para pestañas abiertas mucho rato.
+      registerType: 'autoUpdate',
       injectRegister: null,
       manifestFilename: 'manifest.json',
       includeAssets: ['brand/favicon.ico', 'brand/apple-touch-icon.png'],
@@ -44,6 +45,10 @@ export default defineConfig({
         importScripts: ['/sw-push.js'],
         // Limpia caches viejos de versiones anteriores del SW
         cleanupOutdatedCaches: true,
+        // Con autoUpdate el SW nuevo toma control de inmediato (sin esperar a
+        // cerrar todas las pestañas) y reclama los clientes existentes.
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             // API (otro origen): NetworkFirst en GET. Online siempre trae fresco
