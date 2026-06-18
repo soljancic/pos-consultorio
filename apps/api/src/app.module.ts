@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_FILTER, APP_GUARD } from '@nestjs/core'
+import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { ScheduleModule } from '@nestjs/schedule'
 import { PrismaModule } from './prisma/prisma.module'
@@ -29,6 +30,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     // Limite global generoso; /auth/login y /register tienen limites estrictos propios
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 200 }]),
@@ -57,6 +59,10 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
     NotificacionesModule,
   ],
   controllers: [HealthController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    // Captura en Sentry las excepciones no manejadas (debe ir antes de otros filtros)
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

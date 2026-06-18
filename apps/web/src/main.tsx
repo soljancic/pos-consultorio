@@ -1,5 +1,9 @@
+// Debe ser el PRIMER import: inicializa Sentry antes que el resto de la app
+import './instrument'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { reactErrorHandler } from '@sentry/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -34,7 +38,11 @@ const appContent = (
   </QueryClientProvider>
 )
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  // React 19: reporta a Sentry los errores que React captura en el render
+  onUncaughtError: reactErrorHandler(),
+  onCaughtError: reactErrorHandler(),
+}).render(
   <StrictMode>
     {googleClientId ? (
       <GoogleOAuthProvider clientId={googleClientId} locale="es">

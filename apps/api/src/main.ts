@@ -1,3 +1,6 @@
+// Debe ser el PRIMER import: arranca Sentry antes que cualquier otro modulo
+import './instrument'
+
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
@@ -21,6 +24,9 @@ async function bootstrap() {
   validarSecretsProduccion()
 
   const app = await NestFactory.create(AppModule)
+
+  // Permite que Sentry vacie eventos pendientes al apagar el proceso
+  app.enableShutdownHooks()
 
   app.use(helmet())
 
