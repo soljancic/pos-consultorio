@@ -67,13 +67,20 @@ jobs:
           B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
         run: |
           set -euo pipefail
+          # Normaliza el endpoint: AWS CLI exige esquema. Si el secret vino sin
+          # http(s)://, se lo agregamos.
+          ENDPOINT="$B2_S3_ENDPOINT"
+          case "$ENDPOINT" in
+            http://*|https://*) ;;
+            *) ENDPOINT="https://$ENDPOINT" ;;
+          esac
           # Diario siempre
           aws s3 cp "$FILE" "s3://${B2_BUCKET}/daily/${FILE}" \
-            --endpoint-url "$B2_S3_ENDPOINT" --sse AES256
+            --endpoint-url "$ENDPOINT" --sse AES256
           echo "Subido a daily/${FILE}"
           # Domingo (date -u +%u == 7): además al prefijo semanal
           if [ "$(date -u +%u)" = "7" ]; then
             aws s3 cp "$FILE" "s3://${B2_BUCKET}/weekly/${FILE}" \
-              --endpoint-url "$B2_S3_ENDPOINT" --sse AES256
+              --endpoint-url "$ENDPOINT" --sse AES256
             echo "Subido a weekly/${FILE}"
           fi
