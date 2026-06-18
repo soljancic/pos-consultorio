@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { Rol } from '@pos/types'
 import { Roles } from '../../common/decorators/roles.decorator'
-import { DoctoresService, CreateDoctorDto, UpdateDoctorDto, CreateHorarioDto, SetServiciosDto } from './doctores.service'
+import { DoctoresService, CreateDoctorDto, UpdateDoctorDto, SetServiciosDto } from './doctores.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Doctores')
@@ -49,11 +49,6 @@ export class DoctoresController {
   ) {
     if (!archivo) throw new BadRequestException('Falta el archivo de la foto')
     return this.service.subirFoto(user.consultorioId, id, archivo)
-  }
-
-  @Post(':id/horarios')
-  addHorario(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number, @Body() dto: CreateHorarioDto) {
-    return this.service.addHorario(user.consultorioId, id, dto)
   }
 
   @Get(':id/disponibilidad')

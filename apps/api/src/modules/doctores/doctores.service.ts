@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { v2 as cloudinary } from 'cloudinary'
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, Matches, IsArray, ValidateNested } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, IsArray, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita, TipoDisponibilidad } from '@prisma/client'
@@ -48,17 +48,6 @@ export class SetServiciosDto {
   precios?: PrecioServicioDto[]
 }
 
-export class CreateHorarioDto {
-  @IsInt() @Min(0) @Max(6)
-  diaSemana: number
-
-  @Matches(/^\d{2}:\d{2}$/)
-  horaInicio: string
-
-  @Matches(/^\d{2}:\d{2}$/)
-  horaFin: string
-}
-
 @Injectable()
 export class DoctoresService {
   constructor(private prisma: PrismaService) {}
@@ -67,7 +56,6 @@ export class DoctoresService {
     return this.prisma.doctor.findMany({
       where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
       include: {
-        horarios: { where: { activo: true }, orderBy: { diaSemana: 'asc' } },
         servicios: { select: { id: true } },
         preciosServicio: { select: { servicioId: true, precio: true } },
       },
@@ -195,12 +183,6 @@ export class DoctoresService {
     const d = await this.prisma.doctor.findFirst({ where: { id, consultorioId } })
     if (!d) throw new NotFoundException()
     return this.prisma.doctor.update({ where: { id }, data: dto })
-  }
-
-  async addHorario(consultorioId: number, doctorId: number, dto: CreateHorarioDto) {
-    const doctor = await this.prisma.doctor.findFirst({ where: { id: doctorId, consultorioId } })
-    if (!doctor) throw new NotFoundException()
-    return this.prisma.horarioAtencion.create({ data: { ...dto, doctorId } })
   }
 
   // Reescrito sobre el Calendario de Atencion (E2.5a): slots concretos a

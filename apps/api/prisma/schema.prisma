@@ -197,7 +197,6 @@ model Doctor {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  horarios HorarioAtencion[]
   citas    Cita[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
@@ -226,19 +225,6 @@ model DoctorServicioPrecio {
   @@unique([doctorId, servicioId])
   @@index([doctorId])
   @@map("doctor_servicio_precios")
-}
-
-model HorarioAtencion {
-  id         Int      @id @default(autoincrement())
-  doctorId   Int
-  doctor     Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  diaSemana  Int     // 0=domingo ... 6=sabado
-  horaInicio String  // "08:00"
-  horaFin    String  // "18:00"
-  activo     Boolean @default(true)
-
-  @@index([doctorId])
-  @@map("horarios_atencion")
 }
 
 // ─── PACIENTES ───────────────────────────────────────────────────────────────
@@ -443,7 +429,6 @@ model CajaDiaria {
 // ─── CALENDARIO DE ATENCION (E2.5a) ──────────────────────────────────────────
 // Horarios reales del doctor. Las series materializan sus ocurrencias hasta
 // la fecha limite (simplifica solapes, excepciones y "editar desde aca").
-// Reemplaza al modelo simple HorarioAtencion (que queda legacy).
 
 model SerieDisponibilidad {
   id            Int      @id @default(autoincrement())

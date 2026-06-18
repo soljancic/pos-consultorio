@@ -72,21 +72,6 @@ async function main() {
     },
   })
 
-  // Horarios del doctor (lunes a viernes 8-17)
-  for (let dia = 1; dia <= 5; dia++) {
-    await prisma.horarioAtencion.upsert({
-      where: { id: `horario-${doctor.id}-${dia}` },
-      update: {},
-      create: {
-        id: `horario-${doctor.id}-${dia}`,
-        doctorId: doctor.id,
-        diaSemana: dia,
-        horaInicio: '08:00',
-        horaFin: '17:00',
-      },
-    })
-  }
-
   // Servicios
   const servicios = [
     { nombre: 'Consulta General', duracionMin: 30, precioBase: 5000 },
