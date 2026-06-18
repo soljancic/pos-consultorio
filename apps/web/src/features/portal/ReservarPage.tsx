@@ -259,6 +259,18 @@ export function ReservarPage() {
         (d) => !servicioId || d.servicioIds.length === 0 || d.servicioIds.includes(Number(servicioId)),
       )
 
+  // El link puede traer ?doctor= emparejado con un ?servicio= que ese
+  // profesional no atiende: el select queda vacio y bloqueado. Avisamos por que
+  // (sino el paciente no entiende que no puede elegirlo) y como resolverlo.
+  const doctorDelLink = doctorFijo ? info.doctores.find((d) => String(d.id) === doctorFijo) : undefined
+  const linkDoctorNoAtiendeServicio = !!(
+    doctorFijo &&
+    servicioId &&
+    doctorDelLink &&
+    doctorDelLink.servicioIds.length > 0 &&
+    !doctorDelLink.servicioIds.includes(Number(servicioId))
+  )
+
   // Grilla del mini calendario (lunes primero), mes controlado por mesCal
   const primeroMes = new Date(Number(mesCal.slice(0, 4)), Number(mesCal.slice(5, 7)) - 1, 1)
   const diasGrilla = eachDayOfInterval({
@@ -439,6 +451,20 @@ export function ReservarPage() {
                 <option key={d.id} value={d.id}>{d.nombre}{d.especialidad ? ` — ${d.especialidad}` : ''}</option>
               ))}
             </FloatingSelect>
+
+            {linkDoctorNoAtiendeServicio && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <span>
+                  {doctorDelLink?.nombre ?? 'El profesional del enlace'} no atiende el servicio seleccionado.
+                  Elegí otro servicio para reservar con este profesional.
+                </span>
+              </p>
+            )}
 
             {puedeVerCalendario && (
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 border-t pt-4">
