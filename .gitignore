@@ -35,3 +35,6 @@ graphify-out/
 
 # Adjuntos de historia clinica (disco local, E2-M4 f2)
 apps/api/uploads/
+
+# Dumps de backup descargados para restore local (contienen datos de pacientes)
+*.dump

@@ -1,0 +1,68 @@
+name: DB Backup to Backblaze B2
+
+# Respaldo periódico de la base Postgres de producción (Railway) hacia un bucket
+# privado de Backblaze B2. Solo lectura sobre la DB (pg_dump): no borra ni
+# modifica datos de producción.
+# Spec: docs/superpowers/specs/2026-06-18-db-backup-backblaze-design.md
+# Restore: docs/BACKUPS.md
+
+on:
+  schedule:
+    # 06:00 UTC = 02:00 America/La_Paz (UTC-4, sin horario de verano)
+    - cron: '0 6 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Instalar cliente Postgres (PGDG, última versión)
+        run: |
+          set -euo pipefail
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pg_dump --version
+
+      - name: Crear dump
+        env:
+          DATABASE_PUBLIC_URL: ${{ secrets.DATABASE_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +%Y%m%d-%H%M%S)"
+          FILE="consultech-${STAMP}.dump"
+          echo "FILE=$FILE" >> "$GITHUB_ENV"
+          pg_dump -Fc --no-owner --no-privileges "$DATABASE_PUBLIC_URL" -f "$FILE"
+          SIZE="$(stat -c%s "$FILE")"
+          echo "Dump generado: $FILE (${SIZE} bytes)"
+          # Guard: un dump sano nunca pesa < 1 KB; abortar antes de subir basura
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "ERROR: dump sospechosamente pequeño (${SIZE} bytes). Aborto." >&2
+            exit 1
+          fi
+
+      - name: Subir a Backblaze B2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.B2_REGION }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          B2_S3_ENDPOINT: ${{ secrets.B2_S3_ENDPOINT }}
+        run: |
+          set -euo pipefail
+          # Diario siempre
+          aws s3 cp "$FILE" "s3://${B2_BUCKET}/daily/${FILE}" \
+            --endpoint-url "$B2_S3_ENDPOINT" --sse AES256
+          echo "Subido a daily/${FILE}"
+          # Domingo (date -u +%u == 7): además al prefijo semanal
+          if [ "$(date -u +%u)" = "7" ]; then
+            aws s3 cp "$FILE" "s3://${B2_BUCKET}/weekly/${FILE}" \
+              --endpoint-url "$B2_S3_ENDPOINT" --sse AES256
+            echo "Subido a weekly/${FILE}"
+          fi
