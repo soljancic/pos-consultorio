@@ -21,13 +21,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Instalar cliente Postgres (PGDG, última versión)
+      - name: Instalar cliente Postgres
+        # Debe coincidir (o ser mayor) que el server. Railway corre Postgres 18.
+        # Si Railway sube de major, cambiar PG_MAJOR.
+        env:
+          PG_MAJOR: '18'
         run: |
           set -euo pipefail
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          # Explicito (no el meta-paquete): el runner ya trae client-16 y el meta
+          # se queda en 16. Forzamos la major del server.
+          sudo apt-get install -y "postgresql-client-${PG_MAJOR}"
           pg_dump --version
 
       - name: Crear dump
