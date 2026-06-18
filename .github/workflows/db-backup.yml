@@ -44,7 +44,12 @@ jobs:
           STAMP="$(date -u +%Y%m%d-%H%M%S)"
           FILE="consultech-${STAMP}.dump"
           echo "FILE=$FILE" >> "$GITHUB_ENV"
-          pg_dump -Fc --no-owner --no-privileges "$DATABASE_PUBLIC_URL" -f "$FILE"
+          # /usr/bin/pg_dump del runner es 16 y no se puede sacar; usamos el binario
+          # versionado mas nuevo que instalamos (18) por ruta absoluta.
+          PG_DUMP="$(ls -d /usr/lib/postgresql/*/bin/pg_dump | sort -V | tail -1)"
+          echo "Usando $PG_DUMP"
+          "$PG_DUMP" --version
+          "$PG_DUMP" -Fc --no-owner --no-privileges "$DATABASE_PUBLIC_URL" -f "$FILE"
           SIZE="$(stat -c%s "$FILE")"
           echo "Dump generado: $FILE (${SIZE} bytes)"
           # Guard: un dump sano nunca pesa < 1 KB; abortar antes de subir basura
