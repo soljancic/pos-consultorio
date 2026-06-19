@@ -71,6 +71,13 @@ export interface Paciente {
   requierePrepago?: boolean
   // Archivar: activo:false sale del grid por defecto pero se conserva/reactiva
   activo?: boolean
+  // Seguro (F2)
+  tieneSeguro?: boolean
+  aseguradoraId?: number | null
+  categoriaSeguroId?: number | null
+  codigoSeguro?: string | null
+  aseguradora?: { id: number; nombre: string } | null
+  categoriaSeguro?: { id: number; nombre: string; aseguradoraId: number } | null
   createdAt: Date
 }
 

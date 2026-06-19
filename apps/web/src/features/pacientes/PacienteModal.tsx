@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, UserPlus, User, IdCard, Cake, PersonStanding, Mail, MapPin, FileText } from 'lucide-react'
+import { AlertCircle, AlertTriangle, UserPlus, User, IdCard, Cake, PersonStanding, Mail, MapPin, FileText, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
@@ -10,6 +10,7 @@ import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
+import { useAuthStore } from '../../stores/auth.store'
 import type { Paciente } from '@pos/types'
 
 interface Props {
@@ -24,6 +25,7 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
   const qc = useQueryClient()
   const editando = !!paciente?.id
   const [error, setError] = useState('')
+  const trabajaConAseguradoras = useAuthStore((s) => s.user?.trabajaConAseguradoras)
 
   const [form, setForm] = useState({
     nombre: paciente?.nombre ?? '',
@@ -40,17 +42,39 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
     notas: paciente?.notas ?? '',
     // E3 item 11: alerta de prepago (auto al 3er no-show, editable a mano)
     requierePrepago: paciente?.requierePrepago ?? false,
+    // F2: seguro
+    tieneSeguro: paciente?.tieneSeguro ?? false,
+    aseguradoraId: String(paciente?.aseguradora?.id ?? paciente?.aseguradoraId ?? ''),
+    categoriaSeguroId: String(paciente?.categoriaSeguro?.id ?? paciente?.categoriaSeguroId ?? ''),
+    codigoSeguro: paciente?.codigoSeguro ?? '',
   })
 
   const mutation = useMutation({
     // Opcionales vacios viajan como undefined: @IsEmail/@IsISO8601/@IsIn
     // del backend rechazan el string vacio.
     mutationFn: (data: typeof form) => {
-      const payload = Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, v === '' ? undefined : v])
+      // Paso 1: mapeo generico '' → undefined para los campos de texto
+      const { tieneSeguro, aseguradoraId, categoriaSeguroId, codigoSeguro, ...rest } = data
+      const payload: Record<string, unknown> = Object.fromEntries(
+        Object.entries(rest).map(([k, v]) => [k, v === '' ? undefined : v])
       )
       // El DTO de alta no acepta requierePrepago (solo se edita)
       if (!editando) delete payload.requierePrepago
+      // Paso 2: campos de seguro — manejo explicito para evitar que Number('')
+      // produzca 0 y para null-out cuando tieneSeguro es false.
+      if (trabajaConAseguradoras) {
+        if (tieneSeguro) {
+          payload.tieneSeguro = true
+          payload.aseguradoraId = aseguradoraId !== '' ? Number(aseguradoraId) : undefined
+          payload.categoriaSeguroId = categoriaSeguroId !== '' ? Number(categoriaSeguroId) : undefined
+          payload.codigoSeguro = codigoSeguro !== '' ? codigoSeguro : undefined
+        } else {
+          payload.tieneSeguro = false
+          payload.aseguradoraId = undefined
+          payload.categoriaSeguroId = undefined
+          payload.codigoSeguro = undefined
+        }
+      }
       return editando
         ? api.put(`/pacientes/${paciente!.id}`, payload)
         : api.post('/pacientes', payload)
@@ -72,6 +96,22 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
   function set(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
   }
+
+  // F2: datos para los selects de seguro (solo se consultan cuando el consultorio trabaja con aseguradoras)
+  const { data: aseguradoras = [] } = useQuery<{ id: number; nombre: string }[]>({
+    queryKey: ['aseguradoras', 'activas'],
+    queryFn: () => api.get('/aseguradoras/activas').then((r) => r.data),
+    enabled: !!trabajaConAseguradoras,
+  })
+
+  const { data: categoriasSeguro = [] } = useQuery<{ id: number; nombre: string }[]>({
+    queryKey: ['categorias-seguro', form.aseguradoraId, 'activas'],
+    queryFn: () =>
+      api
+        .get(`/categorias-seguro?aseguradoraId=${form.aseguradoraId}&soloActivas=true`)
+        .then((r) => r.data),
+    enabled: !!trabajaConAseguradoras && form.aseguradoraId !== '',
+  })
 
   // Avisos (no bloqueantes) de CI/telefono/correo ya usados por otro paciente.
   // Solo al crear. Se consulta con un pequeno debounce para no pegarle al backend
@@ -232,6 +272,117 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
               Requiere prepago al agendar
               <span className="text-xs text-muted-foreground">(se marca solo al tercer no-show)</span>
             </label>
+          )}
+
+          {/* Sección de seguro: solo visible si el consultorio trabaja con aseguradoras */}
+          {trabajaConAseguradoras && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pt-1">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <span className="text-sm font-medium text-foreground">Seguro médico</span>
+              </div>
+
+              {/* Toggle tieneSeguro */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.tieneSeguro}
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    tieneSeguro: !f.tieneSeguro,
+                    // Al apagar, limpiar los campos dependientes
+                    ...(!f.tieneSeguro ? {} : { aseguradoraId: '', categoriaSeguroId: '', codigoSeguro: '' }),
+                  }))
+                }
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  form.tieneSeguro
+                    ? 'border-input bg-card hover:bg-muted/40'
+                    : 'border-input bg-muted/40 hover:bg-muted/60',
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'h-2 w-2 shrink-0 rounded-full',
+                        form.tieneSeguro ? 'bg-emerald-500' : 'bg-muted-foreground/50',
+                      )}
+                    />
+                    {form.tieneSeguro ? 'Tiene seguro médico' : 'Sin seguro médico'}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {form.tieneSeguro
+                      ? 'Completá aseguradora y plan para asociar las coberturas.'
+                      : 'El paciente no tiene seguro registrado.'}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
+                    form.tieneSeguro ? 'bg-primary' : 'bg-muted-foreground/30',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                      form.tieneSeguro ? 'translate-x-[22px]' : 'translate-x-0.5',
+                    )}
+                  />
+                </span>
+              </button>
+
+              {/* Campos visibles solo cuando tieneSeguro es true */}
+              {form.tieneSeguro && (
+                <div className="space-y-4">
+                  <FloatingSelect
+                    label="Aseguradora"
+                    required
+                    value={form.aseguradoraId}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setForm((f) => ({ ...f, aseguradoraId: val, categoriaSeguroId: '' }))
+                    }}
+                  >
+                    <option value="">Seleccioná una aseguradora</option>
+                    {aseguradoras.map((a) => (
+                      <option key={a.id} value={String(a.id)}>
+                        {a.nombre}
+                      </option>
+                    ))}
+                  </FloatingSelect>
+
+                  <FloatingSelect
+                    label="Categoría / Plan"
+                    required
+                    value={form.categoriaSeguroId}
+                    onChange={(e) => set('categoriaSeguroId', e.target.value)}
+                    disabled={form.aseguradoraId === ''}
+                  >
+                    <option value="">
+                      {form.aseguradoraId === ''
+                        ? 'Primero elegí una aseguradora'
+                        : 'Seleccioná un plan'}
+                    </option>
+                    {categoriasSeguro.map((c) => (
+                      <option key={c.id} value={String(c.id)}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </FloatingSelect>
+
+                  <FloatingInput
+                    label="Código de asegurado"
+                    Icon={IdCard}
+                    value={form.codigoSeguro}
+                    onChange={(e) => set('codigoSeguro', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {error && (
