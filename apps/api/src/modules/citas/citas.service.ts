@@ -855,6 +855,32 @@ export class CitasService {
     return reprogramada
   }
 
+  // Detalle de una cita: expone campos de cobertura (usaSeguro, montoPaciente,
+  // montoAseguradora) ademas de cobro, paciente, doctor y servicio.
+  async findOne(consultorioId: number, citaId: number) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+      select: {
+        id: true,
+        fechaHora: true,
+        duracionMin: true,
+        estado: true,
+        notasSecretaria: true,
+        usaSeguro: true,
+        montoPaciente: true,
+        montoAseguradora: true,
+        codigoSeguro: true,
+        categoriaSeguroId: true,
+        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true, deudaTotal: true } },
+        doctor: { select: { id: true, nombre: true, colorAgenda: true } },
+        servicio: { select: { id: true, nombre: true, precioBase: true, duracionMin: true } },
+        cobro: { select: { id: true, total: true, saldoPendiente: true, estado: true } },
+      },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    return cita
+  }
+
   // Token opaco para el link de auto-reprogramacion (espejo de
   // pacientes.portalToken): perezoso e idempotente. Solo para citas que se
   // pueden mover; una cita atendida/cancelada no genera link.

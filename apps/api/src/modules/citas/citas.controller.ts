@@ -52,6 +52,15 @@ export class CitasController {
     return this.service.cambiarEstado(user.consultorioId, id, dto, user.sub)
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Detalle de una cita (incluye snapshot de cobertura: usaSeguro, montoPaciente, montoAseguradora)' })
+  findOne(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.findOne(user.consultorioId, id)
+  }
+
   @Get(':id/token-reprogramacion')
   @ApiOperation({ summary: 'Token para el link de auto-reprogramacion (lo crea si no existe)' })
   tokenReprogramacion(
