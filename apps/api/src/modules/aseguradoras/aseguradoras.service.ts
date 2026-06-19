@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
 import { PrismaService } from '../../prisma/prisma.service'
 
 export class CreateAseguradoraDto {
@@ -22,6 +23,31 @@ export class CreateAseguradoraDto {
 }
 
 export class UpdateAseguradoraDto extends PartialType(CreateAseguradoraDto) {
+  @IsBoolean() @IsOptional()
+  activa?: boolean
+}
+
+export class CreateCategoriaSeguroDto {
+  @Type(() => Number) @IsInt()
+  aseguradoraId: number
+
+  @IsString() @IsNotEmpty() @MaxLength(80)
+  nombre: string
+
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100)
+  porcentajeCobertura: number
+}
+
+// Base nombrada (sin aseguradoraId: la categoria no se mueve de aseguradora)
+export class CategoriaSeguroBaseDto {
+  @IsString() @IsNotEmpty() @MaxLength(80)
+  nombre: string
+
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100)
+  porcentajeCobertura: number
+}
+
+export class UpdateCategoriaSeguroDto extends PartialType(CategoriaSeguroBaseDto) {
   @IsBoolean() @IsOptional()
   activa?: boolean
 }
@@ -58,6 +84,48 @@ export class AseguradorasService {
       return { eliminado: false, enUso: true, aseguradora }
     }
     await this.prisma.aseguradora.delete({ where: { id } })
+    return { eliminado: true }
+  }
+
+  async findCategorias(consultorioId: number, aseguradoraId: number, soloActivas = false) {
+    return this.prisma.categoriaSeguro.findMany({
+      where: { consultorioId, aseguradoraId, ...(soloActivas ? { activa: true } : {}) },
+      orderBy: { nombre: 'asc' },
+    })
+  }
+
+  async createCategoria(consultorioId: number, dto: CreateCategoriaSeguroDto) {
+    // La aseguradora debe ser del mismo consultorio (no confiar en el body)
+    const aseg = await this.prisma.aseguradora.findFirst({
+      where: { id: dto.aseguradoraId, consultorioId },
+      select: { id: true },
+    })
+    if (!aseg) throw new NotFoundException('Aseguradora inexistente')
+    return this.prisma.categoriaSeguro.create({
+      data: {
+        consultorioId,
+        aseguradoraId: dto.aseguradoraId,
+        nombre: dto.nombre,
+        porcentajeCobertura: dto.porcentajeCobertura,
+      },
+    })
+  }
+
+  async updateCategoria(consultorioId: number, id: number, dto: UpdateCategoriaSeguroDto) {
+    const c = await this.prisma.categoriaSeguro.findFirst({ where: { id, consultorioId } })
+    if (!c) throw new NotFoundException()
+    return this.prisma.categoriaSeguro.update({ where: { id }, data: dto })
+  }
+
+  async removeCategoria(consultorioId: number, id: number) {
+    const c = await this.prisma.categoriaSeguro.findFirst({ where: { id, consultorioId } })
+    if (!c) throw new NotFoundException()
+    const conTarifas = await this.prisma.tarifaCobertura.count({ where: { categoriaSeguroId: id } })
+    if (conTarifas > 0) {
+      const categoria = await this.prisma.categoriaSeguro.update({ where: { id }, data: { activa: false } })
+      return { eliminado: false, enUso: true, categoria }
+    }
+    await this.prisma.categoriaSeguro.delete({ where: { id } })
     return { eliminado: true }
   }
 }
