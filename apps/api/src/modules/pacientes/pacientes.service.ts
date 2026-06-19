@@ -359,7 +359,12 @@ export class PacientesService {
   }
 
   async importXlsx(consultorioId: number, usuarioId: number, buffer: Buffer, actualizarExistentes: boolean) {
-    const filas = await parseWorkbook(buffer)
+    let filas: Awaited<ReturnType<typeof parseWorkbook>>
+    try {
+      filas = await parseWorkbook(buffer)
+    } catch {
+      throw new BadRequestException('El archivo no es un XLSX válido')
+    }
     let creados = 0, actualizados = 0, omitidos = 0
     const errores: Array<{ fila: number; motivo: string }> = []
 

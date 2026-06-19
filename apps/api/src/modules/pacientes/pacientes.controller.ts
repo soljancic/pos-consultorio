@@ -73,7 +73,7 @@ export class PacientesController {
 
   @Post('import')
   @Roles(Rol.ADMIN)
-  @UseInterceptors(FileInterceptor('archivo'))
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 5 * 1024 * 1024 } }))
   @ApiOperation({ summary: 'Importar pacientes desde XLSX (ADMIN)' })
   async import(
     @CurrentUser() user: JwtPayload,
