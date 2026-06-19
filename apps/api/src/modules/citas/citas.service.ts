@@ -33,6 +33,14 @@ export class CreateCitaDto {
   // walk-ins (<=1h). Sin email del paciente, el envio simplemente no ocurre.
   @IsBoolean() @IsOptional()
   enviarConfirmacion?: boolean
+
+  // Cobertura: usar el seguro del paciente en esta cita. La aseguradora/categoria
+  // se toman del paciente (no del body). codigoSeguro override opcional.
+  @IsBoolean() @IsOptional()
+  usaSeguro?: boolean
+
+  @IsString() @IsOptional()
+  codigoSeguro?: string
 }
 
 export class CambiarEstadoDto {
@@ -152,42 +160,107 @@ export class CitasService {
     await this.verificarDisponibilidad(consultorioId, dto.doctorId, fechaHora, fechaFin)
     await this.verificarHorarioAtencion(consultorioId, dto.doctorId, fechaHora, fechaFin)
 
-    const cita = await this.prisma.cita.create({
-      data: {
-        consultorioId,
-        pacienteId: dto.pacienteId,
-        doctorId: dto.doctorId,
-        servicioId: dto.servicioId,
-        fechaHora,
-        duracionMin: servicio.duracionMin,
-        notasSecretaria: dto.notasSecretaria,
-        createdById: usuarioId,
-        origen,
-        // Las reservas del portal nacen SOLICITADA: la secretaria revisa los
-        // datos y las acepta (PENDIENTE) o las cancela. Las manuales no.
-        estado: origen === OrigenCita.PORTAL ? EstadoCita.SOLICITADA : EstadoCita.PENDIENTE,
-      },
-      include: {
-        paciente: { select: { nombre: true, apellido: true } },
-        doctor: { select: { nombre: true } },
-        servicio: { select: { nombre: true, precioBase: true } },
-      },
+    // Cargar el consultorio para saber si trabaja con aseguradoras
+    const consultorio = await this.prisma.consultorio.findUnique({
+      where: { id: consultorioId },
+      select: { trabajaConAseguradoras: true },
     })
 
-    // Crear cobro pendiente asociado a la cita. El precio es el del servicio,
-    // salvo que el doctor tenga un precio override para ese servicio.
+    // Cargar el paciente para datos de seguro
+    const paciente = await this.prisma.paciente.findFirst({
+      where: { id: dto.pacienteId, consultorioId },
+      select: { tieneSeguro: true, aseguradoraId: true, categoriaSeguroId: true, codigoSeguro: true },
+    })
+    if (!paciente) throw new NotFoundException('Paciente no encontrado')
+
+    // Precio particular base (override del doctor o precioBase del servicio)
     const override = await this.prisma.doctorServicioPrecio.findUnique({
       where: { doctorId_servicioId: { doctorId: dto.doctorId, servicioId: dto.servicioId } },
       select: { precio: true },
     })
-    const precio = override?.precio ?? servicio.precioBase
-    await this.prisma.cobro.create({
-      data: {
-        citaId: cita.id,
-        consultorioId,
-        total: precio,
-        saldoPendiente: precio,
-      },
+    const precioParticular = override?.precio ?? servicio.precioBase
+
+    // ¿corresponde usar seguro? requiere flag on + consultorio + paciente con seguro + tarifa
+    let cobertura: {
+      categoriaSeguroId: number; aseguradoraId: number;
+      montoPaciente: Prisma.Decimal; montoAseguradora: Prisma.Decimal; codigoSeguro: string | null
+    } | null = null
+
+    if (dto.usaSeguro && consultorio?.trabajaConAseguradoras && paciente.tieneSeguro && paciente.categoriaSeguroId && paciente.aseguradoraId) {
+      const tarifa = await this.prisma.tarifaCobertura.findFirst({
+        where: { consultorioId, categoriaSeguroId: paciente.categoriaSeguroId, servicioId: dto.servicioId, activa: true },
+        select: { montoPaciente: true, montoAseguradora: true },
+      })
+      if (tarifa) {
+        cobertura = {
+          categoriaSeguroId: paciente.categoriaSeguroId,
+          aseguradoraId: paciente.aseguradoraId,
+          montoPaciente: tarifa.montoPaciente,
+          montoAseguradora: tarifa.montoAseguradora,
+          codigoSeguro: dto.codigoSeguro ?? paciente.codigoSeguro ?? null,
+        }
+      }
+      // sin tarifa => fallback particular (cobertura queda null)
+    }
+
+    const totalCobro = cobertura ? cobertura.montoPaciente : precioParticular
+
+    const cita = await this.prisma.$transaction(async (tx) => {
+      const c = await tx.cita.create({
+        data: {
+          consultorioId,
+          pacienteId: dto.pacienteId,
+          doctorId: dto.doctorId,
+          servicioId: dto.servicioId,
+          fechaHora,
+          duracionMin: servicio.duracionMin,
+          notasSecretaria: dto.notasSecretaria,
+          createdById: usuarioId,
+          origen,
+          // Las reservas del portal nacen SOLICITADA: la secretaria revisa los
+          // datos y las acepta (PENDIENTE) o las cancela. Las manuales no.
+          estado: origen === OrigenCita.PORTAL ? EstadoCita.SOLICITADA : EstadoCita.PENDIENTE,
+          ...(cobertura ? {
+            usaSeguro: true,
+            categoriaSeguroId: cobertura.categoriaSeguroId,
+            montoPaciente: cobertura.montoPaciente,
+            montoAseguradora: cobertura.montoAseguradora,
+            codigoSeguro: cobertura.codigoSeguro,
+          } : {}),
+        },
+        include: {
+          paciente: { select: { nombre: true, apellido: true } },
+          doctor: { select: { nombre: true } },
+          servicio: { select: { nombre: true, precioBase: true } },
+        },
+      })
+
+      await tx.cobro.create({
+        data: {
+          citaId: c.id,
+          consultorioId,
+          total: totalCobro,
+          saldoPendiente: totalCobro,
+        },
+      })
+
+      if (cobertura && cobertura.montoAseguradora.gt(0)) {
+        await tx.liquidacionItem.create({
+          data: {
+            consultorioId,
+            citaId: c.id,
+            aseguradoraId: cobertura.aseguradoraId,
+            categoriaSeguroId: cobertura.categoriaSeguroId,
+            pacienteId: dto.pacienteId,
+            servicioId: dto.servicioId,
+            fecha: fechaHora,
+            montoAseguradora: cobertura.montoAseguradora,
+            codigoSeguro: cobertura.codigoSeguro,
+          },
+        })
+      }
+
+      return c
     })
 
     // Centro de notificaciones: una reserva del portal (SOLICITADA) avisa a la
