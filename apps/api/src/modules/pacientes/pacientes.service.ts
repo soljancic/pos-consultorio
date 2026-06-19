@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto'
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, Matches } from 'class-validator'
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, IsInt, Matches, ValidateIf } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -38,6 +38,20 @@ export class CreatePacienteDto {
 
   @IsString() @IsOptional()
   notas?: string
+
+  @IsBoolean() @IsOptional()
+  tieneSeguro?: boolean
+
+  @ValidateIf((o) => o.tieneSeguro === true)
+  @IsInt()
+  aseguradoraId?: number
+
+  @ValidateIf((o) => o.tieneSeguro === true)
+  @IsInt()
+  categoriaSeguroId?: number
+
+  @IsString() @IsOptional()
+  codigoSeguro?: string
 }
 
 export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {
@@ -107,6 +121,8 @@ export class PacientesService {
             },
           },
         },
+        aseguradora: { select: { id: true, nombre: true } },
+        categoriaSeguro: { select: { id: true, nombre: true, aseguradoraId: true } },
       },
     })
     if (!paciente) throw new NotFoundException('Paciente no encontrado')
@@ -116,6 +132,21 @@ export class PacientesService {
       where: { pacienteId: id, consultorioId, deletedAt: null, estado: EstadoCita.NO_ASISTIO },
     })
     return { ...paciente, noShows }
+  }
+
+  private async validarCategoriaseguro(
+    consultorioId: number,
+    aseguradoraId: number,
+    categoriaSeguroId: number,
+  ) {
+    const cat = await this.prisma.categoriaSeguro.findFirst({
+      where: { id: categoriaSeguroId, consultorioId, aseguradoraId },
+    })
+    if (!cat) {
+      throw new BadRequestException(
+        'La categoria de seguro no corresponde a la aseguradora o al consultorio.',
+      )
+    }
   }
 
   async create(consultorioId: number, dto: CreatePacienteDto) {
@@ -138,13 +169,41 @@ export class PacientesService {
       throw new ConflictException('Ya existe un paciente con ese nombre y apellido.')
     }
 
+    // Seguro: validar pertenencia al consultorio + aseguradora
+    let seguroData: {
+      tieneSeguro?: boolean
+      aseguradoraId?: number | null
+      categoriaSeguroId?: number | null
+      codigoSeguro?: string | null
+    } = {}
+
+    if (dto.tieneSeguro === true) {
+      await this.validarCategoriaseguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
+      seguroData = {
+        tieneSeguro: true,
+        aseguradoraId: dto.aseguradoraId,
+        categoriaSeguroId: dto.categoriaSeguroId,
+        codigoSeguro: dto.codigoSeguro ?? null,
+      }
+    } else if (dto.tieneSeguro === false) {
+      seguroData = {
+        tieneSeguro: false,
+        aseguradoraId: null,
+        categoriaSeguroId: null,
+        codigoSeguro: null,
+      }
+    }
+
+    const { tieneSeguro: _ts, aseguradoraId: _aid, categoriaSeguroId: _csid, codigoSeguro: _cs, ...rest } = dto
+
     return this.prisma.paciente.create({
       data: {
-        ...dto,
+        ...rest,
         nombre,
         apellido,
         consultorioId,
         fechaNacimiento: dto.fechaNacimiento ? new Date(dto.fechaNacimiento) : undefined,
+        ...seguroData,
       },
     })
   }
@@ -202,13 +261,41 @@ export class PacientesService {
       throw new ConflictException('Ya existe un paciente con ese nombre y apellido.')
     }
 
+    // Seguro: validar pertenencia al consultorio + aseguradora
+    let seguroData: {
+      tieneSeguro?: boolean
+      aseguradoraId?: number | null
+      categoriaSeguroId?: number | null
+      codigoSeguro?: string | null
+    } = {}
+
+    if (dto.tieneSeguro === true) {
+      await this.validarCategoriaseguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
+      seguroData = {
+        tieneSeguro: true,
+        aseguradoraId: dto.aseguradoraId,
+        categoriaSeguroId: dto.categoriaSeguroId,
+        codigoSeguro: dto.codigoSeguro ?? null,
+      }
+    } else if (dto.tieneSeguro === false) {
+      seguroData = {
+        tieneSeguro: false,
+        aseguradoraId: null,
+        categoriaSeguroId: null,
+        codigoSeguro: null,
+      }
+    }
+
+    const { tieneSeguro: _ts, aseguradoraId: _aid, categoriaSeguroId: _csid, codigoSeguro: _cs, ...rest } = dto
+
     return this.prisma.paciente.update({
       where: { id },
       data: {
-        ...dto,
+        ...rest,
         ...(dto.nombre !== undefined && { nombre }),
         ...(dto.apellido !== undefined && { apellido }),
         fechaNacimiento: dto.fechaNacimiento ? new Date(dto.fechaNacimiento) : undefined,
+        ...seguroData,
       },
     })
   }
