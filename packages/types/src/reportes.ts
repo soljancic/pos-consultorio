@@ -1,4 +1,4 @@
-export type ReportTab = 'citas' | 'cobranzas' | 'gastos' | 'pacientes' | 'servicios'
+export type ReportTab = 'citas' | 'cobranzas' | 'gastos' | 'pacientes' | 'servicios' | 'aseguradoras' | 'cobertura'
 
 export type KpiFormat = 'money' | 'number' | 'percent'
 export type KpiTone = 'default' | 'success' | 'warning' | 'danger'
@@ -70,4 +70,20 @@ export interface ServicioReportRow {
   cantidadRealizada: number
   totalCobrado: number
   promedioCobrado: number
+}
+export interface AseguradoraReportRow {
+  aseguradoraId: number
+  aseguradora: string
+  atenciones: number
+  pacientes: number
+  montoTotal: number
+  pendiente: number
+  facturado: number
+  pagado: number
+  rechazado: number
+}
+export interface CoberturaReportRow {
+  aseguradoraId: number
+  aseguradora: string
+  pacientes: number
 }
