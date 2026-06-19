@@ -7,6 +7,7 @@ import { formatMoneda, cn } from '../../lib/utils'
 import { telefonoIntl } from '../../lib/paises'
 import { inputUI, btnPrimaryUI, cardUI, chipIconUI } from '../../lib/ui'
 import { PacienteModal } from './PacienteModal'
+import { ImportarPacientesModal } from './ImportarPacientesModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
@@ -24,9 +25,7 @@ export function PacientesPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [modalNuevo, setModalNuevo] = useState(false)
-  // modalImport state — read in Task 8 (ImportarPacientesModal)
   const [modalImport, setModalImport] = useState(false)
-  void modalImport
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
 
   function handleSearch(value: string) {
@@ -201,8 +200,7 @@ export function PacientesPage() {
       </div>
 
       {modalNuevo && <PacienteModal onClose={() => setModalNuevo(false)} />}
-      {/* Task 8: ImportarPacientesModal */}
-      {/* {modalImport && <ImportarPacientesModal onClose={() => setModalImport(false)} />} */}
+      {modalImport && <ImportarPacientesModal onClose={() => setModalImport(false)} />}
     </div>
   )
 }
