@@ -59,7 +59,7 @@ export function SplitButton({
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Mas acciones"
+        aria-label="Más acciones"
         onClick={() => setOpen((v) => !v)}
         className={cn(
           btnPrimaryUI,
@@ -75,9 +75,9 @@ export function SplitButton({
           role="menu"
           className="absolute right-0 top-full z-50 mt-1 min-w-44 overflow-hidden rounded-lg border bg-card shadow-lg"
         >
-          {items.map((it) => (
+          {items.map((it, idx) => (
             <button
-              key={it.label}
+              key={`${it.label}-${idx}`}
               type="button"
               role="menuitem"
               onClick={() => {
