@@ -53,4 +53,18 @@ export class ReportesController {
   servicios(@CurrentUser() u: JwtPayload, @Query() f: ReportFiltersDto) {
     return this.service.servicios(u.consultorioId, u.rol, u.sub, f)
   }
+
+  @Get('aseguradoras')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Reporte por aseguradora (atenciones, ingresos, estados).' })
+  aseguradoras(@CurrentUser() u: JwtPayload, @Query() f: ReportFiltersDto) {
+    return this.service.aseguradoras(u.consultorioId, f)
+  }
+
+  @Get('cobertura')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Reporte de cobertura: pacientes con/sin seguro.' })
+  cobertura(@CurrentUser() u: JwtPayload, @Query() f: ReportFiltersDto) {
+    return this.service.cobertura(u.consultorioId, f)
+  }
 }

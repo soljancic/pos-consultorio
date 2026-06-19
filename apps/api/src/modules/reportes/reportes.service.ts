@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import type { ReportPage, CitaReportRow, CobranzaReportRow, GastoReportRow, PacienteReportRow, ServicioReportRow } from '@pos/types'
+import type { ReportPage, CitaReportRow, CobranzaReportRow, GastoReportRow, PacienteReportRow, ServicioReportRow, AseguradoraReportRow, CoberturaReportRow } from '@pos/types'
 import { ReportFiltersDto } from './dto/report-filters.dto'
 
 // Item 29: reporte mensual + desglose por doctor (ADMIN).
@@ -386,6 +386,96 @@ export class ReportesService {
         { key: 'sin_movimiento', label: 'Sin movimiento', value: Math.max(0, serviciosActivos - conMovimiento), format: 'number', tone: 'warning' },
       ],
       rows: slice, page: f.page ?? 1, pageSize: f.pageSize ?? 25, total,
+    }
+  }
+
+  async aseguradoras(consultorioId: number, f: ReportFiltersDto): Promise<ReportPage<AseguradoraReportRow>> {
+    const { ini, fin } = this.rango(f.desde, f.hasta)
+    const items = await this.prisma.liquidacionItem.findMany({
+      where: { consultorioId, fecha: { gte: ini, lt: fin } },
+      select: { aseguradoraId: true, aseguradora: { select: { nombre: true } }, pacienteId: true, montoAseguradora: true, estado: true },
+    })
+
+    const grupos = new Map<number, AseguradoraReportRow & { _pac: Set<number> }>()
+    for (const it of items) {
+      let g = grupos.get(it.aseguradoraId)
+      if (!g) {
+        g = { aseguradoraId: it.aseguradoraId, aseguradora: it.aseguradora.nombre, atenciones: 0, pacientes: 0, montoTotal: 0, pendiente: 0, facturado: 0, pagado: 0, rechazado: 0, _pac: new Set() }
+        grupos.set(it.aseguradoraId, g)
+      }
+      const monto = Number(it.montoAseguradora)
+      g.atenciones++
+      g._pac.add(it.pacienteId)
+      g.montoTotal += monto
+      if (it.estado === 'PENDIENTE') g.pendiente += monto
+      else if (it.estado === 'FACTURADO') g.facturado += monto
+      else if (it.estado === 'PAGADO') g.pagado += monto
+      else if (it.estado === 'RECHAZADO') g.rechazado += monto
+    }
+    const rows: AseguradoraReportRow[] = [...grupos.values()].map(({ _pac, ...g }) => ({ ...g, pacientes: _pac.size }))
+    rows.sort((a, b) => b.montoTotal - a.montoTotal)
+
+    const totalMonto = rows.reduce((s, r) => s + r.montoTotal, 0)
+    const totalPend = rows.reduce((s, r) => s + r.pendiente, 0)
+    const totalPag = rows.reduce((s, r) => s + r.pagado, 0)
+    const totalRech = rows.reduce((s, r) => s + r.rechazado, 0)
+
+    const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
+    return {
+      kpis: [
+        { key: 'monto_total', label: 'Total a aseguradoras', value: totalMonto, format: 'money' },
+        { key: 'pendiente', label: 'Pendiente de cobro', value: totalPend, format: 'money', tone: 'warning' },
+        { key: 'pagado', label: 'Cobrado', value: totalPag, format: 'money', tone: 'success' },
+        { key: 'rechazado', label: 'Rechazado', value: totalRech, format: 'money', tone: 'danger' },
+      ],
+      rows: slice, page: f.page ?? 1, pageSize: f.pageSize ?? 25, total,
+    }
+  }
+
+  async cobertura(consultorioId: number, _f: ReportFiltersDto): Promise<ReportPage<CoberturaReportRow>> {
+    // Snapshot del padron activo (ignora el rango de fechas: es estado actual).
+    const basePac = { consultorioId, activo: true, deletedAt: null }
+    const [conSeguro, sinSeguro, porAseguradora, porCategoria] = await Promise.all([
+      this.prisma.paciente.count({ where: { ...basePac, tieneSeguro: true } }),
+      this.prisma.paciente.count({ where: { ...basePac, tieneSeguro: false } }),
+      this.prisma.paciente.findMany({
+        where: { ...basePac, tieneSeguro: true, aseguradoraId: { not: null } },
+        select: { aseguradoraId: true, aseguradora: { select: { nombre: true } } },
+      }),
+      this.prisma.paciente.findMany({
+        where: { ...basePac, tieneSeguro: true, categoriaSeguroId: { not: null } },
+        select: { categoriaSeguro: { select: { nombre: true } } },
+      }),
+    ])
+
+    const grupos = new Map<number, CoberturaReportRow>()
+    for (const p of porAseguradora) {
+      if (p.aseguradoraId == null) continue
+      let g = grupos.get(p.aseguradoraId)
+      if (!g) { g = { aseguradoraId: p.aseguradoraId, aseguradora: p.aseguradora?.nombre ?? '—', pacientes: 0 }; grupos.set(p.aseguradoraId, g) }
+      g.pacientes++
+    }
+    const rows = [...grupos.values()].sort((a, b) => b.pacientes - a.pacientes)
+
+    // meta: distribucion por categoria (para MetaBreakdown)
+    const catMap = new Map<string, number>()
+    for (const p of porCategoria) {
+      const n = p.categoriaSeguro?.nombre ?? '—'
+      catMap.set(n, (catMap.get(n) ?? 0) + 1)
+    }
+    const porCategoriaMeta = [...catMap.entries()].map(([nombre, total]) => ({ nombre, total })).sort((a, b) => b.total - a.total)
+
+    const total = conSeguro + sinSeguro
+    const pct = total ? Math.round((conSeguro / total) * 100) : 0
+    const { slice } = this.paginar(this.ordenar(rows, _f.sortBy, _f.sortDir), _f)
+    return {
+      kpis: [
+        { key: 'con_seguro', label: 'Con seguro', value: conSeguro, format: 'number' },
+        { key: 'sin_seguro', label: 'Sin seguro', value: sinSeguro, format: 'number' },
+        { key: 'cobertura_pct', label: '% con cobertura', value: pct, format: 'number' },
+      ],
+      rows: slice, page: _f.page ?? 1, pageSize: _f.pageSize ?? 25, total: rows.length,
+      meta: { porCategoria: porCategoriaMeta },
     }
   }
 
