@@ -54,6 +54,7 @@ export interface AuthUser {
   rol: string
   consultorioId: number
   consultorioNombre: string
+  trabajaConAseguradoras: boolean
 }
 
 // Citas
