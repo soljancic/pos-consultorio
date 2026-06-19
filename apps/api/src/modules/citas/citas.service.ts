@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
-import { EstadoCita, EstadoCobro, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
+import { EstadoCita, EstadoCobro, EstadoLiquidacion, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum, IsBoolean } from 'class-validator'
 
 export class CreateCitaDto {
@@ -406,7 +406,10 @@ export class CitasService {
   ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
-      include: { cobro: { select: { saldoPendiente: true } } },
+      include: {
+        cobro: { select: { saldoPendiente: true } },
+        liquidacion: { select: { id: true, estado: true } },
+      },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
 
@@ -473,6 +476,31 @@ export class CitasService {
           where: { citaId },
           data: { estado: EstadoCobro.PENDIENTE },
         })
+      }
+
+      // Al cancelar: si hay LiquidacionItem PENDIENTE, eliminarlo (el servicio
+      // no se presto; no se factura a la aseguradora). Si ya esta FACTURADO o
+      // PAGADO (caso de borde: no deberia ocurrir en un flujo normal) se deja
+      // intacto y se registra en el log para revision manual.
+      if (dto.estado === EstadoCita.CANCELADA && cita.liquidacion) {
+        if (cita.liquidacion.estado === EstadoLiquidacion.PENDIENTE) {
+          await tx.liquidacionItem.delete({ where: { id: cita.liquidacion.id } })
+        } else {
+          await tx.log.create({
+            data: {
+              consultorioId,
+              usuarioId,
+              entidad: 'LiquidacionItem',
+              entidadId: cita.liquidacion.id,
+              accion: 'UPDATE',
+              payloadDespues: {
+                motivo: 'cancelacion con liquidacion no-PENDIENTE',
+                estado: cita.liquidacion.estado,
+                citaId,
+              },
+            },
+          })
+        }
       }
 
       // Solo auditamos los cambios de estado con valor de auditoria: cancelacion
@@ -608,7 +636,10 @@ export class CitasService {
   ) {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
-      include: { cobro: true },
+      include: {
+        cobro: true,
+        liquidacion: { select: { id: true, estado: true, aseguradoraId: true } },
+      },
     })
     if (!cita) throw new NotFoundException('Cita no encontrada')
     if (!ESTADOS_REPROGRAMABLES.includes(cita.estado)) {
@@ -647,6 +678,17 @@ export class CitasService {
       if (ov) precioServicioNuevo = ov.precio
     }
 
+    // Si la cita usa seguro y hay cambio de servicio, necesitamos el aseguradoraId
+    // del paciente para poder crear un nuevo LiquidacionItem si no habia uno previo.
+    let pacienteAseguradoraId: number | null = null
+    if (servicioNuevo && cita.usaSeguro) {
+      const pac = await this.prisma.paciente.findUnique({
+        where: { id: cita.pacienteId },
+        select: { aseguradoraId: true },
+      })
+      pacienteAseguradoraId = pac?.aseguradoraId ?? null
+    }
+
     const reprogramada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },
@@ -664,17 +706,112 @@ export class CitasService {
       })
 
       if (servicioNuevo && cita.cobro && cita.cobro.estado !== EstadoCobro.ANULADO) {
-        const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
-        const nuevoSaldo = precioServicioNuevo!.minus(pagado)
-        if (nuevoSaldo.lt(0)) {
-          throw new BadRequestException(
-            'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
-          )
+        if (cita.usaSeguro && cita.categoriaSeguroId) {
+          // Cita con seguro: buscar tarifa para la nueva combinacion categoria + servicio
+          const tarifa = await tx.tarifaCobertura.findFirst({
+            where: {
+              consultorioId,
+              categoriaSeguroId: cita.categoriaSeguroId,
+              servicioId: servicioNuevo.id,
+              activa: true,
+            },
+            select: { montoPaciente: true, montoAseguradora: true },
+          })
+
+          if (tarifa) {
+            // Tarifa encontrada: recalcular con montos de cobertura
+            const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
+            const nuevoSaldo = tarifa.montoPaciente.minus(pagado)
+            if (nuevoSaldo.lt(0)) {
+              throw new BadRequestException(
+                'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+              )
+            }
+            await tx.cobro.update({
+              where: { citaId },
+              data: { total: tarifa.montoPaciente, saldoPendiente: nuevoSaldo },
+            })
+            // Actualizar snapshot de cobertura en la cita
+            await tx.cita.update({
+              where: { id: citaId },
+              data: {
+                montoPaciente: tarifa.montoPaciente,
+                montoAseguradora: tarifa.montoAseguradora,
+              },
+            })
+            // Upsert o delete del LiquidacionItem segun montoAseguradora
+            if (tarifa.montoAseguradora.gt(0)) {
+              if (cita.liquidacion) {
+                await tx.liquidacionItem.update({
+                  where: { id: cita.liquidacion.id },
+                  data: {
+                    montoAseguradora: tarifa.montoAseguradora,
+                    servicioId: servicioNuevo.id,
+                    fecha: fechaHora,
+                  },
+                })
+              } else if (pacienteAseguradoraId) {
+                // No habia item previo (montoAseguradora era 0 en la creacion): crear
+                await tx.liquidacionItem.create({
+                  data: {
+                    consultorioId,
+                    citaId,
+                    aseguradoraId: pacienteAseguradoraId,
+                    categoriaSeguroId: cita.categoriaSeguroId,
+                    pacienteId: cita.pacienteId,
+                    servicioId: servicioNuevo.id,
+                    fecha: fechaHora,
+                    montoAseguradora: tarifa.montoAseguradora,
+                    codigoSeguro: cita.codigoSeguro,
+                  },
+                })
+              }
+            } else if (cita.liquidacion) {
+              // Nueva tarifa tiene montoAseguradora=0: eliminar el item existente
+              await tx.liquidacionItem.delete({ where: { id: cita.liquidacion.id } })
+            }
+          } else {
+            // Sin tarifa para el nuevo servicio: revertir a particular
+            const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
+            const nuevoSaldo = precioServicioNuevo!.minus(pagado)
+            if (nuevoSaldo.lt(0)) {
+              throw new BadRequestException(
+                'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+              )
+            }
+            await tx.cobro.update({
+              where: { citaId },
+              data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
+            })
+            // Limpiar snapshot de seguro en la cita
+            await tx.cita.update({
+              where: { id: citaId },
+              data: {
+                usaSeguro: false,
+                categoriaSeguroId: null,
+                montoPaciente: null,
+                montoAseguradora: null,
+              },
+            })
+            // Eliminar LiquidacionItem si existe
+            if (cita.liquidacion) {
+              await tx.liquidacionItem.delete({ where: { id: cita.liquidacion.id } })
+            }
+          }
+        } else {
+          // Cita particular: logica original inalterada
+          const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
+          const nuevoSaldo = precioServicioNuevo!.minus(pagado)
+          if (nuevoSaldo.lt(0)) {
+            throw new BadRequestException(
+              'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+            )
+          }
+          await tx.cobro.update({
+            where: { citaId },
+            data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
+          })
         }
-        await tx.cobro.update({
-          where: { citaId },
-          data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
-        })
       }
 
       await tx.log.create({
@@ -825,7 +962,12 @@ export class CitasService {
   async cancelarPorToken(consultorioId: number, token: string) {
     const cita = await this.prisma.cita.findFirst({
       where: { consultorioId, portalToken: token, deletedAt: null },
-      include: { doctor: true, servicio: true, cobro: { select: { estado: true } } },
+      include: {
+        doctor: true,
+        servicio: true,
+        cobro: { select: { estado: true } },
+        liquidacion: { select: { id: true, estado: true } },
+      },
     })
     if (!cita) throw new NotFoundException('Link no disponible')
     if (!ESTADOS_CANCELABLES_PORTAL.includes(cita.estado)) {
@@ -856,6 +998,29 @@ export class CitasService {
           where: { citaId: cita.id },
           data: { estado: EstadoCobro.ANULADO },
         })
+      }
+
+      // LiquidacionItem PENDIENTE: eliminar (servicio no prestado).
+      // FACTURADO/PAGADO: dejar y loguear (caso de borde, revision manual).
+      if (cita.liquidacion) {
+        if (cita.liquidacion.estado === EstadoLiquidacion.PENDIENTE) {
+          await tx.liquidacionItem.delete({ where: { id: cita.liquidacion.id } })
+        } else {
+          await tx.log.create({
+            data: {
+              consultorioId,
+              usuarioId: cita.createdById,
+              entidad: 'LiquidacionItem',
+              entidadId: cita.liquidacion.id,
+              accion: 'UPDATE',
+              payloadDespues: {
+                motivo: 'cancelacion-portal con liquidacion no-PENDIENTE',
+                estado: cita.liquidacion.estado,
+                citaId: cita.id,
+              },
+            },
+          })
+        }
       }
 
       await tx.log.create({
