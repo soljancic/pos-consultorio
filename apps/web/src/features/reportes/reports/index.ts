@@ -3,6 +3,8 @@ import { cobranzasColumns, cobranzasExport } from './cobranzas.report'
 import { gastosColumns, gastosExport } from './gastos.report'
 import { pacientesColumns, pacientesExport } from './pacientes.report'
 import { serviciosColumns, serviciosExport } from './servicios.report'
+import { aseguradorasColumns, aseguradorasExport } from './aseguradoras.report'
+import { coberturaColumns, coberturaExport } from './cobertura.report'
 import type { ReportTab } from '@pos/types'
 
 export const REPORTS: Record<ReportTab, {
@@ -11,6 +13,7 @@ export const REPORTS: Record<ReportTab, {
   toExport: (rows: any[]) => { headers: string[]; rows: any[][] }
   searchPlaceholder: string
   soloAdmin?: boolean
+  requiereAseguradoras?: boolean
   rowKey: (r: any) => string | number
 }> = {
   citas: {
@@ -48,5 +51,23 @@ export const REPORTS: Record<ReportTab, {
     toExport: serviciosExport,
     searchPlaceholder: 'Buscar servicio...',
     rowKey: (r) => `${r.servicioId}-${r.doctorId}`,
+  },
+  aseguradoras: {
+    label: 'Aseguradoras',
+    columns: aseguradorasColumns,
+    toExport: aseguradorasExport,
+    searchPlaceholder: 'Buscar aseguradora...',
+    soloAdmin: true,
+    requiereAseguradoras: true,
+    rowKey: (r) => r.aseguradoraId,
+  },
+  cobertura: {
+    label: 'Cobertura',
+    columns: coberturaColumns,
+    toExport: coberturaExport,
+    searchPlaceholder: 'Buscar aseguradora...',
+    soloAdmin: true,
+    requiereAseguradoras: true,
+    rowKey: (r) => r.aseguradoraId,
   },
 }

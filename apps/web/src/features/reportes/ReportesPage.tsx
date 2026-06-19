@@ -18,7 +18,10 @@ import { CampanaHeader } from '../notificaciones/CampanaHeader'
 export function ReportesPage() {
   const rol = useAuthStore((s) => s.user?.rol)
   const esAdmin = rol === 'ADMIN'
-  const tabs = (Object.keys(REPORTS) as ReportTab[]).filter((t) => !REPORTS[t].soloAdmin || esAdmin)
+  const trabajaConAseguradoras = useAuthStore((s) => s.user?.trabajaConAseguradoras)
+  const tabs = (Object.keys(REPORTS) as ReportTab[]).filter(
+    (t) => (!REPORTS[t].soloAdmin || esAdmin) && (!REPORTS[t].requiereAseguradoras || trabajaConAseguradoras),
+  )
   const [tab, setTab] = useState<ReportTab>('citas')
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<string | undefined>()
@@ -111,6 +114,13 @@ export function ReportesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <MetaBreakdown title="Por categoría" items={meta.porCategoria ?? []} />
                 <MetaBreakdown title="Por forma de pago" items={meta.porFormaPago ?? []} />
+              </div>
+            )
+          }
+          if (tab === 'cobertura' && meta.porCategoria?.length) {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <MetaBreakdown title="Pacientes por categoría" items={meta.porCategoria} />
               </div>
             )
           }
