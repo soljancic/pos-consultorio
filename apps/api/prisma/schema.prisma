@@ -108,6 +108,7 @@ model Consultorio {
   aseguradoras     Aseguradora[]
   categoriasSeguro CategoriaSeguro[]
   tarifasCobertura TarifaCobertura[]
+  liquidaciones    LiquidacionItem[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
@@ -181,6 +182,7 @@ model Servicio {
   doctores Doctor[] @relation("DoctorServicios")
   preciosDoctor DoctorServicioPrecio[]
   tarifasCobertura TarifaCobertura[]
+  liquidaciones LiquidacionItem[]
 
   @@index([consultorioId])
   @@map("servicios")
@@ -258,6 +260,14 @@ model Paciente {
   // E3 item 11: pacientes con historial de no-shows pueden exigir prepago.
   // ALERTA al agendar, no bloquea (regla del proyecto: deudas alertan)
   requierePrepago Boolean     @default(false)
+  // Seguro del paciente (opcional). El paciente puede tener seguro y aun asi
+  // atenderse particular: la decision real se toma por cita.
+  tieneSeguro       Boolean @default(false)
+  aseguradoraId     Int?
+  aseguradora       Aseguradora?     @relation(fields: [aseguradoraId], references: [id])
+  categoriaSeguroId Int?
+  categoriaSeguro   CategoriaSeguro? @relation(fields: [categoriaSeguroId], references: [id])
+  codigoSeguro      String?
   // Archivar (activo:false): el paciente se mantiene y se puede ver/reactivar,
   // pero sale del grid por defecto (se mudo, limpiar la base). Distinto de
   // deletedAt (borrado real, no expuesto en la UI).
@@ -268,6 +278,7 @@ model Paciente {
 
   citas Cita[]
   mensajesPendientes MensajePendiente[]
+  liquidaciones LiquidacionItem[]
 
   @@index([consultorioId, apellido, nombre])
   @@index([consultorioId, dni])
@@ -302,11 +313,20 @@ model Cita {
   // (capability URL: /reservar/:slug?reprogramar=token). Aleatorio e
   // impredecible, se genera la primera vez que se pide el link.
   portalToken     String?     @unique
+  // Snapshot inmutable de la cobertura usada en ESTA atencion (no cambia si el
+  // paciente cambia de seguro despues). usaSeguro=false => atencion particular.
+  usaSeguro         Boolean @default(false)
+  categoriaSeguroId Int?
+  categoriaSeguro   CategoriaSeguro? @relation(fields: [categoriaSeguroId], references: [id])
+  montoPaciente     Decimal? @db.Decimal(10, 2)
+  montoAseguradora  Decimal? @db.Decimal(10, 2)
+  codigoSeguro      String?
 
   atencion Atencion?
   mensajesPendientes MensajePendiente[]
   cobro    Cobro?
   notificaciones Notificacion[]
+  liquidacion LiquidacionItem?
 
   @@index([consultorioId, fechaHora])
   @@index([consultorioId, doctorId, fechaHora])
@@ -645,7 +665,15 @@ model Notificacion {
   @@map("notificaciones")
 }
 
-// ─── ASEGURADORAS (F1) ───────────────────────────────────────────────────────
+// ─── ASEGURADORAS (F1 + F2) ──────────────────────────────────────────────────
+
+enum EstadoLiquidacion {
+  PENDIENTE
+  FACTURADO
+  PAGADO
+  RECHAZADO
+}
+
 
 model Aseguradora {
   id            Int      @id @default(autoincrement())
@@ -661,6 +689,8 @@ model Aseguradora {
   updatedAt     DateTime @updatedAt
 
   categorias CategoriaSeguro[]
+  pacientes  Paciente[]
+  liquidaciones LiquidacionItem[]
 
   @@index([consultorioId])
   @@map("aseguradoras")
@@ -679,6 +709,9 @@ model CategoriaSeguro {
   updatedAt           DateTime @updatedAt
 
   tarifas TarifaCobertura[]
+  pacientes Paciente[]
+  citas     Cita[]
+  liquidaciones LiquidacionItem[]
 
   @@index([consultorioId])
   @@index([aseguradoraId])
@@ -702,4 +735,35 @@ model TarifaCobertura {
   @@unique([categoriaSeguroId, servicioId])
   @@index([consultorioId])
   @@map("tarifas_cobertura")
+}
+
+// Cuenta por cobrar a la aseguradora. 1 por cita con seguro. Todo snapshot:
+// si el paciente cambia de seguro despues, esta fila no se toca.
+model LiquidacionItem {
+  id                Int      @id @default(autoincrement())
+  consultorioId     Int
+  consultorio       Consultorio @relation(fields: [consultorioId], references: [id])
+  citaId            Int      @unique
+  cita              Cita     @relation(fields: [citaId], references: [id])
+  aseguradoraId     Int
+  aseguradora       Aseguradora @relation(fields: [aseguradoraId], references: [id])
+  categoriaSeguroId Int
+  categoriaSeguro   CategoriaSeguro @relation(fields: [categoriaSeguroId], references: [id])
+  pacienteId        Int
+  paciente          Paciente @relation(fields: [pacienteId], references: [id])
+  servicioId        Int
+  servicio          Servicio @relation(fields: [servicioId], references: [id])
+  fecha             DateTime
+  montoAseguradora  Decimal  @db.Decimal(10, 2)
+  codigoSeguro      String?
+  estado            EstadoLiquidacion @default(PENDIENTE)
+  facturadoAt       DateTime?
+  pagadoAt          DateTime?
+  rechazoMotivo     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([consultorioId, aseguradoraId, estado])
+  @@index([consultorioId, fecha])
+  @@map("liquidacion_items")
 }

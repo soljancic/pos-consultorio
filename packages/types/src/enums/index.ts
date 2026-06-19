@@ -75,6 +75,14 @@ export enum AccionLog {
   PAYMENT = 'PAYMENT',
 }
 
+// Aseguradoras (F2): estado del item de liquidacion a cobrar a la aseguradora
+export enum EstadoLiquidacion {
+  PENDIENTE = 'PENDIENTE',
+  FACTURADO = 'FACTURADO',
+  PAGADO = 'PAGADO',
+  RECHAZADO = 'RECHAZADO',
+}
+
 // Colores de agenda por estado — fuente unica de verdad
 export const COLORES_ESTADO: Record<EstadoCita, string> = {
   [EstadoCita.SOLICITADA]: '#FB923C',   // naranja
