@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Info, Save } from 'lucide-react'
 import { api } from '../../lib/api-client'
@@ -46,29 +46,34 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
     enabled: categoriaSeguroId !== null,
   })
 
-  // Cuando lleguen las tarifas existentes, prellenar el estado local
+  // Prellenar desde las tarifas existentes. UN solo effect (no dos) para evitar
+  // una carrera de orden: al cambiar de categoria con datos ya cacheados,
+  // `tarifas` y `categoriaSeguroId` cambian en el mismo commit; con dos effects
+  // el de prefill llenaba y el de reset lo borraba justo despues (por eso "la
+  // 1era vez cargaba y al cambiar de categoria ya no"). Aca: si cambio la
+  // categoria reinicio desde cero; dentro de la misma categoria conservo las
+  // ediciones en curso.
+  const categoriaPrevia = useRef<number | null>(null)
   useEffect(() => {
-    if (tarifas.length === 0) return
+    const cambioCategoria = categoriaPrevia.current !== categoriaSeguroId
+    categoriaPrevia.current = categoriaSeguroId
+    if (cambioCategoria) {
+      setError('')
+      setGuardado(false)
+    }
     setMontos((prev) => {
-      const next = { ...prev }
+      const base = cambioCategoria ? {} : { ...prev }
       for (const t of tarifas) {
-        if (!next[t.servicioId]) {
-          next[t.servicioId] = {
+        if (cambioCategoria || !base[t.servicioId]) {
+          base[t.servicioId] = {
             montoPaciente: String(Number(t.montoPaciente)),
             montoAseguradora: String(Number(t.montoAseguradora)),
           }
         }
       }
-      return next
+      return base
     })
-  }, [tarifas])
-
-  // Resetear montos al cambiar de categoria
-  useEffect(() => {
-    setMontos({})
-    setError('')
-    setGuardado(false)
-  }, [categoriaSeguroId])
+  }, [tarifas, categoriaSeguroId])
 
   const mutation = useMutation({
     mutationFn: () => {

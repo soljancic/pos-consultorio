@@ -231,7 +231,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
-      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
         <ModalHeader icon={CalendarPlus} title="Nueva cita" onClose={onClose} />
 
         <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-5">
@@ -385,8 +385,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                 {/* Detalles de la cobertura cuando el toggle está ON */}
                 {usarSeguro && (
                   <div className="rounded-lg border border-input bg-muted/20 px-4 py-3 space-y-3">
-                    {/* Aseguradora y categoría (read-only) */}
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    {/* Aseguradora, categoría y código del paciente (read-only) */}
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
                       <div>
                         <span className="block text-xs text-muted-foreground mb-0.5">Aseguradora</span>
                         <span className="font-medium text-foreground">{pacienteSeguro.aseguradora?.nombre ?? '—'}</span>
@@ -395,14 +395,11 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                         <span className="block text-xs text-muted-foreground mb-0.5">Categoría</span>
                         <span className="font-medium text-foreground">{pacienteSeguro.categoriaSeguro?.nombre ?? '—'}</span>
                       </div>
+                      <div className="col-span-2">
+                        <span className="block text-xs text-muted-foreground mb-0.5">Código de asegurado</span>
+                        <span className="font-medium text-foreground tabular-nums">{codigoSeguro || '—'}</span>
+                      </div>
                     </div>
-
-                    {/* Código de asegurado (editable) */}
-                    <FloatingInput
-                      label="Código de asegurado"
-                      value={codigoSeguro}
-                      onChange={(e) => setCodigoSeguro(e.target.value)}
-                    />
 
                     {/* Preview de montos */}
                     {servicioId && (
