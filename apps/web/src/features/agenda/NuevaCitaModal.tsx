@@ -58,7 +58,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   const { data: pacientesResultado = [] } = useQuery<PacienteBusqueda[]>({
     queryKey: ['pacientes-search', pacienteQuery],
     queryFn: () =>
-      api.get(`/pacientes${pacienteQuery ? `?search=${pacienteQuery}` : ''}`).then((r) => r.data),
+      api.get(`/pacientes?limit=50${pacienteQuery ? `&search=${encodeURIComponent(pacienteQuery)}` : ''}`).then((r) => r.data.items),
     enabled: pacienteQuery.length >= 2 || showPacienteList,
   })
 

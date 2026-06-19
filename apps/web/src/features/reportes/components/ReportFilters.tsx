@@ -37,7 +37,7 @@ export function ReportFilters({ tab, filtros, esAdmin, onPreset, onPatch }: Prop
 
   const { data: pacienteMatches = [] } = useQuery<PacienteMatch[]>({
     queryKey: ['pacientes-search', debouncedSearch],
-    queryFn: () => api.get(`/pacientes?search=${encodeURIComponent(debouncedSearch)}`).then((r) => r.data),
+    queryFn: () => api.get(`/pacientes?limit=50&search=${encodeURIComponent(debouncedSearch)}`).then((r) => r.data.items),
     enabled: showTypeahead && debouncedSearch.length >= 2,
   })
 
