@@ -102,6 +102,48 @@ export function DoctorModal({ doctor, onClose }: Props) {
           onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
           className="p-6 sm:p-7 space-y-5"
         >
+          {/* Estado del doctor arriba: la lista de servicios puede ser larga y lo enterraria */}
+          {editando && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.activo}
+              onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                form.activo ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
+              )}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <span
+                    aria-hidden="true"
+                    className={cn('h-2 w-2 shrink-0 rounded-full', form.activo ? 'bg-emerald-500' : 'bg-muted-foreground/50')}
+                  />
+                  Doctor {form.activo ? 'activo' : 'inactivo'}
+                </span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {form.activo
+                    ? 'Aparece en la agenda y el portal de reservas.'
+                    : 'Oculto en la agenda y el portal; sus citas y datos se conservan.'}
+                </span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
+                  form.activo ? 'bg-primary' : 'bg-muted-foreground/30',
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                    form.activo ? 'translate-x-[22px]' : 'translate-x-0.5',
+                  )}
+                />
+              </span>
+            </button>
+          )}
           {/* Foto: se ve en la agenda dia y horarios; sin foto, el circulo de color */}
           <div className="flex items-center gap-3">
             {fotoPreview ? (
@@ -167,11 +209,18 @@ export function DoctorModal({ doctor, onClose }: Props) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Servicios que atiende</label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="block text-sm font-medium text-foreground">Servicios que atiende</label>
+              {servicios.length > 0 && (
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {serviciosSel.length === 0 ? 'Todos' : `${serviciosSel.length} de ${servicios.length}`}
+                </span>
+              )}
+            </div>
             {servicios.length === 0 ? (
               <p className="text-xs text-muted-foreground/70">Todavía no hay servicios en el catálogo</p>
             ) : (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto border rounded-md p-3">
+              <div className="space-y-1.5 max-h-60 overflow-y-auto border rounded-md p-3">
                 {servicios.map((s) => (
                   <div key={s.id} className="flex items-center gap-2">
                     <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer flex-1 min-w-0">
@@ -206,14 +255,6 @@ export function DoctorModal({ doctor, onClose }: Props) {
               El precio es opcional: vacío toma el precio del servicio; si lo cargás, la cita usa ese precio.
             </p>
           </div>
-          {editando && (
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input type="checkbox" checked={form.activo}
-                onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
-                className="rounded" />
-              Doctor activo
-            </label>
-          )}
           {error && (
             <p role="alert" className={errorUI}>
               <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
