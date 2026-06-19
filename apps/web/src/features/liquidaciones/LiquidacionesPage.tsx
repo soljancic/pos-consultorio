@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Receipt } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, cn } from '../../lib/utils'
@@ -10,6 +10,8 @@ import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { ExportButtons } from '../reportes/components/ExportButtons'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { RechazarLiquidacionModal } from './RechazarLiquidacionModal'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
 
@@ -101,6 +103,92 @@ function TotalesPanel({ totales }: { totales: TotalesLiquidacion | undefined }) 
   )
 }
 
+// ─── Tipos de estado de confirmación ─────────────────────────────────────────
+
+type AccionConfirmar = 'FACTURADO' | 'PAGADO' | 'PENDIENTE'
+
+interface ConfirmPendiente {
+  id: number
+  accion: AccionConfirmar
+  descripcion: string
+}
+
+interface RechazoPendiente {
+  id: number
+  descripcion: string
+}
+
+// ─── Botones de acción por fila ───────────────────────────────────────────────
+
+const BTN_SM_OUTLINE =
+  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-input bg-card text-xs font-medium text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
+
+const BTN_SM_DESTRUCTIVE =
+  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-destructive/40 bg-destructive/5 text-xs font-medium text-destructive cursor-pointer hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destructive/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
+
+interface AccionesCellProps {
+  row: FilaLiquidacion
+  mutando: boolean
+  onConfirmar: (accion: AccionConfirmar, descripcion: string) => void
+  onRechazar: (descripcion: string) => void
+}
+
+function AccionesCell({ row, mutando, onConfirmar, onRechazar }: AccionesCellProps) {
+  const desc = `${row.paciente.nombre} ${row.paciente.apellido} — ${row.aseguradora.nombre}`
+
+  if (row.estado === 'PAGADO') {
+    return <span className="text-muted-foreground/40 text-xs select-none">—</span>
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {row.estado === 'PENDIENTE' && (
+        <button
+          type="button"
+          disabled={mutando}
+          className={BTN_SM_OUTLINE}
+          onClick={() => onConfirmar('FACTURADO', desc)}
+        >
+          Facturar
+        </button>
+      )}
+
+      {row.estado === 'FACTURADO' && (
+        <button
+          type="button"
+          disabled={mutando}
+          className={BTN_SM_OUTLINE}
+          onClick={() => onConfirmar('PAGADO', desc)}
+        >
+          Marcar pagado
+        </button>
+      )}
+
+      {row.estado === 'RECHAZADO' && (
+        <button
+          type="button"
+          disabled={mutando}
+          className={BTN_SM_OUTLINE}
+          onClick={() => onConfirmar('PENDIENTE', desc)}
+        >
+          Reabrir
+        </button>
+      )}
+
+      {(row.estado === 'PENDIENTE' || row.estado === 'FACTURADO') && (
+        <button
+          type="button"
+          disabled={mutando}
+          className={BTN_SM_DESTRUCTIVE}
+          onClick={() => onRechazar(desc)}
+        >
+          Rechazar
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 25
@@ -111,6 +199,30 @@ export function LiquidacionesPage() {
   const [hasta, setHasta] = useState('')
   const [estado, setEstado] = useState('')
   const [page, setPage] = useState(1)
+
+  // Estado de modales de acción
+  const [confirmPendiente, setConfirmPendiente] = useState<ConfirmPendiente | null>(null)
+  const [rechazoPendiente, setRechazoPendiente] = useState<RechazoPendiente | null>(null)
+  const [errorAccion, setErrorAccion] = useState<string | null>(null)
+
+  const qc = useQueryClient()
+
+  const cambiarEstado = useMutation({
+    mutationFn: ({ id, estado: nuevoEstado, motivo }: { id: number; estado: EstadoLiquidacion; motivo?: string }) =>
+      api.patch(`/liquidaciones/${id}/estado`, { estado: nuevoEstado, ...(motivo ? { motivo } : {}) }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['liquidaciones'] })
+      setConfirmPendiente(null)
+      setRechazoPendiente(null)
+      setErrorAccion(null)
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Error al cambiar el estado. Intenta de nuevo.'
+      setErrorAccion(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    },
+  })
 
   // Aseguradoras para el filtro
   const { data: aseguradoras = [] } = useQuery<AseguradoraActiva[]>({
@@ -292,7 +404,18 @@ export function LiquidacionesPage() {
                       <td className="px-4 py-3">
                         <EstadoBadge estado={row.estado} />
                       </td>
-                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3">
+                        <AccionesCell
+                          row={row}
+                          mutando={cambiarEstado.isPending}
+                          onConfirmar={(accion, descripcion) =>
+                            setConfirmPendiente({ id: row.id, accion, descripcion })
+                          }
+                          onRechazar={(descripcion) =>
+                            setRechazoPendiente({ id: row.id, descripcion })
+                          }
+                        />
+                      </td>
                     </tr>
                   ))
                 )}
@@ -329,6 +452,66 @@ export function LiquidacionesPage() {
           </div>
         )}
       </div>
+
+      {/* Banner de error de acción */}
+      {errorAccion && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg max-w-sm text-center"
+        >
+          {errorAccion}
+          <button
+            className="ml-3 underline underline-offset-2 opacity-80 hover:opacity-100"
+            onClick={() => setErrorAccion(null)}
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Modal confirmar acción (Facturar / Marcar pagado / Reabrir) */}
+      {confirmPendiente && (
+        <ConfirmarModal
+          titulo={
+            confirmPendiente.accion === 'FACTURADO'
+              ? 'Facturar liquidación'
+              : confirmPendiente.accion === 'PAGADO'
+                ? 'Marcar como pagado'
+                : 'Reabrir liquidación'
+          }
+          mensaje={
+            confirmPendiente.accion === 'FACTURADO'
+              ? `¿Confirmas que se facturó esta liquidación?\n${confirmPendiente.descripcion}`
+              : confirmPendiente.accion === 'PAGADO'
+                ? `¿Confirmas que la aseguradora realizó el pago?\n${confirmPendiente.descripcion}`
+                : `¿Reabrir esta liquidación y devolverla a estado Pendiente?\n${confirmPendiente.descripcion}`
+          }
+          confirmLabel={
+            confirmPendiente.accion === 'FACTURADO'
+              ? 'Facturar'
+              : confirmPendiente.accion === 'PAGADO'
+                ? 'Marcar pagado'
+                : 'Reabrir'
+          }
+          pendiente={cambiarEstado.isPending}
+          onConfirm={() =>
+            cambiarEstado.mutate({ id: confirmPendiente.id, estado: confirmPendiente.accion })
+          }
+          onClose={() => setConfirmPendiente(null)}
+        />
+      )}
+
+      {/* Modal rechazar (requiere motivo) */}
+      {rechazoPendiente && (
+        <RechazarLiquidacionModal
+          descripcion={rechazoPendiente.descripcion}
+          pendiente={cambiarEstado.isPending}
+          onConfirm={(motivo) =>
+            cambiarEstado.mutate({ id: rechazoPendiente.id, estado: 'RECHAZADO', motivo })
+          }
+          onClose={() => setRechazoPendiente(null)}
+        />
+      )}
     </div>
   )
 }
