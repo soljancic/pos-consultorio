@@ -78,11 +78,11 @@ export function AseguradorasPanel() {
 
   const borrarCatMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/categorias-seguro/${id}`).then((r) => r.data),
-    onSuccess: (res: { eliminado: boolean }) => {
+    onSuccess: (res: { eliminado: boolean }, id: number) => {
       qc.invalidateQueries({ queryKey: ['categorias-seguro', gestion?.id] })
       setCatBorrar(null)
       // Si la categoria eliminada era la seleccionada para tarifario, limpiar
-      if (catBorrar && catSelId === catBorrar.id) {
+      if (catSelId === id) {
         setCatSelId(null)
         setCatSelNombre(undefined)
       }

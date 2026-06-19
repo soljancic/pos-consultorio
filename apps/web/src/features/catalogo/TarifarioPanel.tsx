@@ -89,6 +89,7 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
       })
     },
     onSuccess: () => {
+      setMontos({})
       qc.invalidateQueries({ queryKey: ['tarifas-cobertura', categoriaSeguroId] })
       setError('')
       setGuardado(true)
