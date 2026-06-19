@@ -18,6 +18,7 @@ import { CobrosModule } from './modules/cobros/cobros.module'
 import { CajaModule } from './modules/caja/caja.module'
 import { GastosModule } from './modules/gastos/gastos.module'
 import { TiposGastoModule } from './modules/tipos-gasto/tipos-gasto.module'
+import { AseguradorasModule } from './modules/aseguradoras/aseguradoras.module'
 import { TiposCuentaModule } from './modules/tipos-cuenta/tipos-cuenta.module'
 import { DisponibilidadesModule } from './modules/disponibilidades/disponibilidades.module'
 import { LogsModule } from './modules/logs/logs.module'
@@ -49,6 +50,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
     CajaModule,
     GastosModule,
     TiposGastoModule,
+    AseguradorasModule,
     TiposCuentaModule,
     DisponibilidadesModule,
     LogsModule,
