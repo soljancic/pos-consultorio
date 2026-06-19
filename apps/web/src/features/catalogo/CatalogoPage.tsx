@@ -9,6 +9,7 @@ import { ServicioModal } from './ServicioModal'
 import { DoctorModal } from './DoctorModal'
 import { TipoGastoModal } from './TipoGastoModal'
 import { TipoCuentaModal } from './TipoCuentaModal'
+import { AseguradorasPanel } from './AseguradorasPanel'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
@@ -18,12 +19,14 @@ import { CampanaHeader } from '../notificaciones/CampanaHeader'
 export function CatalogoPage() {
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
+  const trabajaConAseguradoras = useAuthStore((s) => s.user?.trabajaConAseguradoras)
 
-  // 2 tabs para que la pagina no quede larguisima (los tipos solo los ve ADMIN)
-  const [tab, setTab] = useState<'prestaciones' | 'finanzas'>('prestaciones')
+  // 2+ tabs (los tipos y aseguradoras solo los ve ADMIN)
+  const [tab, setTab] = useState<'prestaciones' | 'finanzas' | 'aseguradoras'>('prestaciones')
   const TABS = [
     { id: 'prestaciones' as const, label: 'Servicios y doctores' },
     ...(esAdmin ? [{ id: 'finanzas' as const, label: 'Tipos de gasto y cuenta' }] : []),
+    ...(esAdmin && trabajaConAseguradoras ? [{ id: 'aseguradoras' as const, label: 'Aseguradoras' }] : []),
   ]
 
   const [servicioEdit, setServicioEdit] = useState<any | null>(null)
@@ -216,6 +219,10 @@ export function CatalogoPage() {
       </section>
         </div>
       ))}
+
+      {tab === 'aseguradoras' && esAdmin && trabajaConAseguradoras && (
+        <AseguradorasPanel />
+      )}
 
       {tab === 'finanzas' && esAdmin && (errTG || errTC ? (
         <ErrorState onRetry={() => { refTG(); refTC() }} />
