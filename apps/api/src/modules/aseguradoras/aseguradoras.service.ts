@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max, ValidateNested, ArrayMaxSize } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -50,6 +50,25 @@ export class CategoriaSeguroBaseDto {
 export class UpdateCategoriaSeguroDto extends PartialType(CategoriaSeguroBaseDto) {
   @IsBoolean() @IsOptional()
   activa?: boolean
+}
+
+export class TarifaItemDto {
+  @Type(() => Number) @IsInt()
+  servicioId: number
+
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
+  montoPaciente: number
+
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
+  montoAseguradora: number
+}
+
+export class SetTarifasDto {
+  @Type(() => Number) @IsInt()
+  categoriaSeguroId: number
+
+  @ValidateNested({ each: true }) @Type(() => TarifaItemDto) @ArrayMaxSize(500)
+  tarifas: TarifaItemDto[]
 }
 
 @Injectable()
@@ -127,5 +146,37 @@ export class AseguradorasService {
     }
     await this.prisma.categoriaSeguro.delete({ where: { id } })
     return { eliminado: true }
+  }
+
+  findTarifas(consultorioId: number, categoriaSeguroId: number) {
+    return this.prisma.tarifaCobertura.findMany({
+      where: { consultorioId, categoriaSeguroId },
+      orderBy: { servicioId: 'asc' },
+    })
+  }
+
+  async setTarifas(consultorioId: number, dto: SetTarifasDto) {
+    const cat = await this.prisma.categoriaSeguro.findFirst({
+      where: { id: dto.categoriaSeguroId, consultorioId },
+      select: { id: true },
+    })
+    if (!cat) throw new NotFoundException('Categoria inexistente')
+    // Solo upsert de las celdas enviadas. Un upsert por servicio en transaccion.
+    await this.prisma.$transaction(
+      dto.tarifas.map((t) =>
+        this.prisma.tarifaCobertura.upsert({
+          where: { categoriaSeguroId_servicioId: { categoriaSeguroId: dto.categoriaSeguroId, servicioId: t.servicioId } },
+          create: {
+            consultorioId,
+            categoriaSeguroId: dto.categoriaSeguroId,
+            servicioId: t.servicioId,
+            montoPaciente: t.montoPaciente,
+            montoAseguradora: t.montoAseguradora,
+          },
+          update: { montoPaciente: t.montoPaciente, montoAseguradora: t.montoAseguradora, activa: true },
+        }),
+      ),
+    )
+    return this.findTarifas(consultorioId, dto.categoriaSeguroId)
   }
 }
