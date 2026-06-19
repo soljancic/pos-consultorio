@@ -1,7 +1,6 @@
 import { randomBytes } from 'crypto'
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, IsInt, Matches, ValidateIf } from 'class-validator'
-import { validateSync } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, IsInt, Matches, ValidateIf, validateSync } from 'class-validator'
 import { plainToInstance } from 'class-transformer'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita } from '@prisma/client'
@@ -379,12 +378,17 @@ export class PacientesService {
               select: { id: true },
             })
 
+        const data = {
+          ...dto,
+          ...(dto.fechaNacimiento ? { fechaNacimiento: new Date(dto.fechaNacimiento) } : {}),
+        }
+
         if (existente) {
           if (!actualizarExistentes) { omitidos++; continue }
-          await tx.paciente.update({ where: { id: existente.id }, data: { ...dto } })
+          await tx.paciente.update({ where: { id: existente.id }, data })
           actualizados++
         } else {
-          await tx.paciente.create({ data: { ...dto, consultorioId } })
+          await tx.paciente.create({ data: { ...data, consultorioId } })
           creados++
         }
       }
