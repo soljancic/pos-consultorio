@@ -4,9 +4,10 @@ import { formatMoneda, cn } from '../../../lib/utils'
 interface Props {
   title: string
   items: Array<{ nombre: string; total: number }>
+  format?: 'money' | 'number'
 }
 
-export function MetaBreakdown({ title, items }: Props) {
+export function MetaBreakdown({ title, items, format = 'money' }: Props) {
   if (items.length === 0) return null
   return (
     <div className={cn(cardUI, 'p-4')}>
@@ -15,7 +16,9 @@ export function MetaBreakdown({ title, items }: Props) {
         {items.map((item) => (
           <li key={item.nombre} className="flex items-center justify-between gap-2 text-sm">
             <span className="truncate text-foreground">{item.nombre}</span>
-            <span className="tabular-nums shrink-0 text-foreground font-medium">{formatMoneda(item.total)}</span>
+            <span className="tabular-nums shrink-0 text-foreground font-medium">
+              {format === 'number' ? String(item.total) : formatMoneda(item.total)}
+            </span>
           </li>
         ))}
       </ul>
