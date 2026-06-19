@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Users } from 'lucide-react'
+import { Search, Plus, Users, Upload, Download } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { telefonoIntl } from '../../lib/paises'
@@ -11,15 +11,22 @@ import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { TableSkeleton } from '../../components/shared/Skeleton'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
+import { SplitButton } from '../../components/shared/SplitButton'
+import { useAuthStore } from '../../stores/auth.store'
+import { descargarBlob } from '../../lib/descargas'
 import type { Paciente } from '@pos/types'
 
 const LIMIT = 50
 
 export function PacientesPage() {
   const navigate = useNavigate()
+  const esAdmin = useAuthStore((s) => s.user?.rol === 'ADMIN')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [modalNuevo, setModalNuevo] = useState(false)
+  // modalImport state — read in Task 8 (ImportarPacientesModal)
+  const [modalImport, setModalImport] = useState(false)
+  void modalImport
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
 
   function handleSearch(value: string) {
@@ -69,43 +76,51 @@ export function PacientesPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+      <div className="flex flex-col gap-3 px-4 sm:px-6 py-4 border-b bg-card sm:flex-row sm:items-center">
+        <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground shrink-0">
           <span className={chipIconUI}>
             <Users className="h-4 w-4" aria-hidden="true" />
           </span>
           Pacientes
         </h1>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Nuevo paciente
-          </button>
+        <div className="relative flex-1 sm:max-w-md sm:mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Buscar por nombre, CI, teléfono..."
+            aria-label="Buscar pacientes"
+            className={cn(inputUI, 'pl-9')}
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {esAdmin ? (
+            <SplitButton
+              label="Nuevo paciente"
+              icon={Plus}
+              onPrimary={() => setModalNuevo(true)}
+              items={[
+                { label: 'Importar XLSX', icon: Upload, onClick: () => setModalImport(true) },
+                { label: 'Exportar', icon: Download, onClick: () => descargarBlob('/pacientes/export', 'pacientes.xlsx') },
+              ]}
+            />
+          ) : (
+            <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> Nuevo paciente
+            </button>
+          )}
           <CampanaHeader />
         </div>
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative max-w-md flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
-              aria-hidden="true"
-            />
-            <input
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Buscar por nombre, CI, teléfono..."
-              aria-label="Buscar pacientes"
-              className={cn(inputUI, 'pl-9')}
-            />
-          </div>
-          {!isLoading && !isError && (
-            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+        {!isLoading && !isError && (
+          <div className="mb-4">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {total} paciente{total !== 1 ? 's' : ''}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {isLoading ? (
           <TableSkeleton cols={4} />
@@ -186,6 +201,8 @@ export function PacientesPage() {
       </div>
 
       {modalNuevo && <PacienteModal onClose={() => setModalNuevo(false)} />}
+      {/* Task 8: ImportarPacientesModal */}
+      {/* {modalImport && <ImportarPacientesModal onClose={() => setModalImport(false)} />} */}
     </div>
   )
 }
