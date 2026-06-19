@@ -59,6 +59,9 @@ export class UpdateConsultorioDto {
   @ValidateIf((o) => o.emailCierreCaja !== '')
   @IsEmail() @IsOptional()
   emailCierreCaja?: string
+
+  @IsBoolean() @IsOptional()
+  trabajaConAseguradoras?: boolean
 }
 
 const CONSULTORIO_SELECT = {
@@ -79,6 +82,7 @@ const CONSULTORIO_SELECT = {
   msjContacto: true,
   qrUrl: true,
   emailCierreCaja: true,
+  trabajaConAseguradoras: true,
 } as const
 
 // QR de pagos: solo imagenes chicas; Cloudinary lo normaliza a jpg
