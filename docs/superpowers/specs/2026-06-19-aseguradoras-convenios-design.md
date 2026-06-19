@@ -199,12 +199,17 @@ aseguradora) + los montos calculados. Como las categorias se borran soft
 
 - `Consultorio.trabajaConAseguradoras` es la fuente de verdad.
 - `AuthUser` gana `trabajaConAseguradoras: boolean` (en `packages/types` y en el
-  payload que arma el AuthService en login, refresh y `/auth/me`).
+  objeto `user` que arma el AuthService al loguear: login + loginGoogle, e
+  igual en register si devuelve `user`). NO va en el JWT firmado: vive en el
+  objeto `user` de la respuesta, que el front persiste en el auth store.
 - Front: `useAuthStore((s) => s.user?.trabajaConAseguradoras)`. Gate de todo el
   modulo (nav, tabs, bloques) con ese booleano.
-- `PUT /consultorio` (Configuracion) actualiza la columna; el front, en
-  `onSuccess` del toggle, hace `GET /auth/me` y `setUser(...)` para refrescar el
-  store del admin sin re-login.
+- `PUT /consultorio` (Configuracion) actualiza la columna y DEVUELVE el
+  consultorio (CONSULTORIO_SELECT, al que se le agrega `trabajaConAseguradoras`).
+  No existe `/auth/me` en este proyecto: el front, en `onSuccess` del toggle, lee
+  `res.data.trabajaConAseguradoras` y hace
+  `setUser({ ...user, trabajaConAseguradoras })` para refrescar el store del
+  admin sin re-login.
 - Backend: los endpoints del modulo existen siempre (protegidos por
   `@Roles(ADMIN)`), pero la **logica de cobertura en la cita** solo corre si el
   consultorio tiene el flag on (se lee la columna, no el JWT, en el path de
