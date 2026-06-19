@@ -8,6 +8,7 @@ import { PAIS_DEFAULT } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
 import { UsuarioModal } from './UsuarioModal'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
+import { useAuthStore } from '../../stores/auth.store'
 
 const MONEDAS = ['ARS', 'USD', 'UYU', 'CLP', 'PEN', 'COP', 'MXN', 'BOB', 'BRL']
 const TIMEZONES = [
@@ -34,11 +35,14 @@ type Consultorio = {
   msjRecordatorio: string | null; msjDeuda: string | null; msjContacto: string | null
   qrUrl: string | null
   emailCierreCaja: string | null
+  trabajaConAseguradoras: boolean
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
 export function ConfiguracionPage() {
   const qc = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
   const [tab, setTab] = useState<'usuarios' | 'consultorio'>('usuarios')
   const [usuarioEdit, setUsuarioEdit] = useState<Usuario | null>(null)
   const [usuarioModal, setUsuarioModal] = useState(false)
@@ -50,6 +54,7 @@ export function ConfiguracionPage() {
     slug: '', portalActivo: false,
     msjRecordatorio: '', msjDeuda: '', msjContacto: '',
     emailCierreCaja: '',
+    trabajaConAseguradoras: false,
   })
   const [linkCopiado, setLinkCopiado] = useState(false)
 
@@ -80,6 +85,7 @@ export function ConfiguracionPage() {
         msjDeuda: consultorio.msjDeuda ?? '',
         msjContacto: consultorio.msjContacto ?? '',
         emailCierreCaja: consultorio.emailCierreCaja ?? '',
+        trabajaConAseguradoras: consultorio.trabajaConAseguradoras ?? false,
       })
     }
   }, [consultorio])
@@ -123,12 +129,15 @@ export function ConfiguracionPage() {
         // El backend acepta '' para limpiar el campo (ValidateIf); con email
         // valido envia el resumen, vacio lo desactiva
         emailCierreCaja: data.emailCierreCaja,
-      }),
-    onSuccess: () => {
+        trabajaConAseguradoras: data.trabajaConAseguradoras,
+      }).then((r) => r.data),
+    onSuccess: (cons) => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
       // Aplicar la moneda al instante (sin esperar el refetch) para que los
       // simbolos del front se actualicen apenas se guarda.
       setMonedaActual(consForm.moneda)
+      // Propagar el flag al auth store (no hay /auth/me): el admin lo ve sin re-login
+      if (user) setUser({ ...user, trabajaConAseguradoras: cons.trabajaConAseguradoras })
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2000)
     },
@@ -414,6 +423,31 @@ export function ConfiguracionPage() {
                   />
                 </div>
               ))}
+            </div>
+
+            {/* Módulo de aseguradoras (F1) */}
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={consForm.trabajaConAseguradoras}
+                onClick={() => setConsForm((f) => ({ ...f, trabajaConAseguradoras: !f.trabajaConAseguradoras }))}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  consForm.trabajaConAseguradoras ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">Trabaja con aseguradoras</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Habilita el catálogo de aseguradoras, la cobertura por cita y las liquidaciones. Si lo apagás, el módulo queda oculto.
+                  </span>
+                </span>
+                <span aria-hidden="true" className={cn('relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200', consForm.trabajaConAseguradoras ? 'bg-primary' : 'bg-muted-foreground/30')}>
+                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', consForm.trabajaConAseguradoras ? 'translate-x-[22px]' : 'translate-x-0.5')} />
+                </span>
+              </button>
+              <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
