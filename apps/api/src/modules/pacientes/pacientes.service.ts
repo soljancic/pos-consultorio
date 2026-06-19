@@ -1,9 +1,12 @@
 import { randomBytes } from 'crypto'
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, IsInt, Matches, ValidateIf } from 'class-validator'
+import { validateSync } from 'class-validator'
+import { plainToInstance } from 'class-transformer'
 import { PartialType } from '@nestjs/swagger'
 import { EstadoCita } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { parseWorkbook, buildWorkbook, buildSample, type FilaPaciente } from './pacientes.xlsx'
 
 export class CreatePacienteDto {
   @IsString() @IsNotEmpty()
@@ -342,6 +345,80 @@ export class PacientesService {
     })
     return { token: actualizado.portalToken }
   }
+
+  private validarFila(fila: FilaPaciente): { dto?: CreatePacienteDto; error?: string } {
+    if (!fila.nombre?.trim() || !fila.apellido?.trim()) return { error: 'nombre y apellido son obligatorios' }
+    const limpio: FilaPaciente = {}
+    for (const [k, v] of Object.entries(fila)) {
+      const val = typeof v === 'string' ? v.trim() : v
+      if (val !== undefined && val !== '') (limpio as Record<string, unknown>)[k] = k === 'pais' ? String(val).toUpperCase() : val
+    }
+    const dto = plainToInstance(CreatePacienteDto, limpio)
+    const errs = validateSync(dto, { whitelist: true, forbidNonWhitelisted: false })
+    if (errs.length) return { error: errs.map((e) => Object.values(e.constraints ?? {}).join(', ')).join('; ') }
+    return { dto }
+  }
+
+  async importXlsx(consultorioId: number, usuarioId: number, buffer: Buffer, actualizarExistentes: boolean) {
+    const filas = await parseWorkbook(buffer)
+    let creados = 0, actualizados = 0, omitidos = 0
+    const errores: Array<{ fila: number; motivo: string }> = []
+
+    await this.prisma.$transaction(async (tx) => {
+      for (let i = 0; i < filas.length; i++) {
+        const nroFila = i + 2 // +1 header, +1 base-1
+        const { dto, error } = this.validarFila(filas[i])
+        if (error || !dto) { errores.push({ fila: nroFila, motivo: error ?? 'fila invalida' }); continue }
+
+        const existente = dto.dni?.trim()
+          ? await tx.paciente.findFirst({ where: { consultorioId, dni: dto.dni.trim(), deletedAt: null }, select: { id: true } })
+          : await tx.paciente.findFirst({
+              where: { consultorioId, deletedAt: null,
+                nombre: { equals: dto.nombre, mode: 'insensitive' },
+                apellido: { equals: dto.apellido, mode: 'insensitive' } },
+              select: { id: true },
+            })
+
+        if (existente) {
+          if (!actualizarExistentes) { omitidos++; continue }
+          await tx.paciente.update({ where: { id: existente.id }, data: { ...dto } })
+          actualizados++
+        } else {
+          await tx.paciente.create({ data: { ...dto, consultorioId } })
+          creados++
+        }
+      }
+
+      await tx.log.create({
+        data: {
+          consultorioId, usuarioId, entidad: 'paciente_import', entidadId: 0,
+          accion: 'CREATE',
+          payloadDespues: { creados, actualizados, omitidos, errores: errores.length } as object,
+        },
+      })
+    })
+
+    return { creados, actualizados, omitidos, errores }
+  }
+
+  async exportXlsx(consultorioId: number) {
+    const pacientes = await this.prisma.paciente.findMany({
+      where: { consultorioId, deletedAt: null },
+      orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+      select: { nombre: true, apellido: true, dni: true, telefono: true, pais: true,
+        email: true, sexo: true, fechaNacimiento: true, direccion: true, notas: true },
+    })
+    return buildWorkbook(
+      pacientes.map((p) => ({
+        nombre: p.nombre, apellido: p.apellido, dni: p.dni ?? '', telefono: p.telefono ?? '',
+        pais: p.pais ?? '', email: p.email ?? '', sexo: p.sexo ?? '',
+        fechaNacimiento: p.fechaNacimiento ? p.fechaNacimiento.toISOString().slice(0, 10) : '',
+        direccion: p.direccion ?? '', notas: p.notas ?? '',
+      })),
+    )
+  }
+
+  async sampleXlsx() { return buildSample() }
 
   async softDelete(consultorioId: number, id: number) {
     await this.findOne(consultorioId, id)

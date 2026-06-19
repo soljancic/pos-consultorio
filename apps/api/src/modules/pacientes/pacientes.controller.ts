@@ -1,5 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseIntPipe, UseInterceptors, UploadedFile, Res, BadRequestException, StreamableFile } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { Response } from 'express'
+import { Rol } from '@pos/types'
+import { Roles } from '../../common/decorators/roles.decorator'
 import { PacientesService, CreatePacienteDto, UpdatePacienteDto, SetActivoDto } from './pacientes.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
@@ -41,6 +45,43 @@ export class PacientesController {
       email,
       excluirId: excluirId ? Number(excluirId) : undefined,
     })
+  }
+
+  @Get('export')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Exportar todos los pacientes a XLSX (ADMIN)' })
+  async export(@CurrentUser() user: JwtPayload, @Res({ passthrough: true }) res: Response) {
+    const buf = await this.service.exportXlsx(user.consultorioId)
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="pacientes.xlsx"',
+    })
+    return new StreamableFile(buf)
+  }
+
+  @Get('import/sample')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Descargar XLSX de ejemplo para importar (ADMIN)' })
+  async sample(@Res({ passthrough: true }) res: Response) {
+    const buf = await this.service.sampleXlsx()
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="pacientes-ejemplo.xlsx"',
+    })
+    return new StreamableFile(buf)
+  }
+
+  @Post('import')
+  @Roles(Rol.ADMIN)
+  @UseInterceptors(FileInterceptor('archivo'))
+  @ApiOperation({ summary: 'Importar pacientes desde XLSX (ADMIN)' })
+  async import(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() archivo: Express.Multer.File | undefined,
+    @Body('actualizarExistentes') actualizarExistentes?: string,
+  ) {
+    if (!archivo) throw new BadRequestException('Falta el archivo XLSX')
+    return this.service.importXlsx(user.consultorioId, user.sub, archivo.buffer, actualizarExistentes === 'true')
   }
 
   @Get(':id/portal-token')
