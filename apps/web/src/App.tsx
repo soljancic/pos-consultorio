@@ -16,6 +16,7 @@ import { DeudoresPage } from './features/deudores/DeudoresPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { ConfiguracionPage } from './features/configuracion/ConfiguracionPage'
 import { ReportesPage } from './features/reportes/ReportesPage'
+import { LiquidacionesPage } from './features/liquidaciones/LiquidacionesPage'
 import { MensajesPage } from './features/mensajes/MensajesPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
 import { AyudaPage } from './features/ayuda/AyudaPage'
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="ayuda" element={<AyudaPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
         <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />
+        <Route path="liquidaciones" element={<AdminRoute><LiquidacionesPage /></AdminRoute>} />
         <Route path="actividad" element={<AdminRoute><ActividadPage /></AdminRoute>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
