@@ -89,6 +89,9 @@ model Consultorio {
   qrUrl           String?
   // Email al que se envia el resumen de cada cierre de caja (opcional)
   emailCierreCaja String?
+  // Modulo Aseguradoras (F1): habilita catalogo, cobertura en cita y liquidaciones.
+  // Default off: la mayoria de los consultorios no usa el modulo.
+  trabajaConAseguradoras Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -102,6 +105,9 @@ model Consultorio {
   gastos     Gasto[]
   tiposGasto  TipoGasto[]
   tiposCuenta TipoCuenta[]
+  aseguradoras     Aseguradora[]
+  categoriasSeguro CategoriaSeguro[]
+  tarifasCobertura TarifaCobertura[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
@@ -174,6 +180,7 @@ model Servicio {
   citas Cita[]
   doctores Doctor[] @relation("DoctorServicios")
   preciosDoctor DoctorServicioPrecio[]
+  tarifasCobertura TarifaCobertura[]
 
   @@index([consultorioId])
   @@map("servicios")
@@ -636,4 +643,63 @@ model Notificacion {
   @@index([consultorioId, destinoUsuarioId, leidaAt])
   @@index([consultorioId, createdAt])
   @@map("notificaciones")
+}
+
+// ─── ASEGURADORAS (F1) ───────────────────────────────────────────────────────
+
+model Aseguradora {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  nombre        String
+  contacto      String?
+  telefono      String?
+  email         String?
+  observaciones String?
+  activa        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  categorias CategoriaSeguro[]
+
+  @@index([consultorioId])
+  @@map("aseguradoras")
+}
+
+model CategoriaSeguro {
+  id                  Int      @id @default(autoincrement())
+  consultorioId       Int
+  consultorio         Consultorio @relation(fields: [consultorioId], references: [id])
+  aseguradoraId       Int
+  aseguradora         Aseguradora @relation(fields: [aseguradoraId], references: [id])
+  nombre              String
+  porcentajeCobertura Decimal  @db.Decimal(5, 2)
+  activa              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  tarifas TarifaCobertura[]
+
+  @@index([consultorioId])
+  @@index([aseguradoraId])
+  @@map("categorias_seguro")
+}
+
+model TarifaCobertura {
+  id                Int      @id @default(autoincrement())
+  consultorioId     Int
+  consultorio       Consultorio @relation(fields: [consultorioId], references: [id])
+  categoriaSeguroId Int
+  categoriaSeguro   CategoriaSeguro @relation(fields: [categoriaSeguroId], references: [id])
+  servicioId        Int
+  servicio          Servicio @relation(fields: [servicioId], references: [id])
+  montoPaciente     Decimal  @db.Decimal(10, 2)
+  montoAseguradora  Decimal  @db.Decimal(10, 2)
+  activa            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([categoriaSeguroId, servicioId])
+  @@index([consultorioId])
+  @@map("tarifas_cobertura")
 }
