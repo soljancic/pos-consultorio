@@ -15,7 +15,7 @@ interface Aseguradora {
   telefono?: string | null
   email?: string | null
   observaciones?: string | null
-  activo: boolean
+  activa: boolean
 }
 
 interface Props {
@@ -33,7 +33,7 @@ export function AseguradoraModal({ aseguradora, onClose }: Props) {
     telefono: aseguradora?.telefono ?? '',
     email: aseguradora?.email ?? '',
     observaciones: aseguradora?.observaciones ?? '',
-    activo: aseguradora?.activo ?? true,
+    activa: aseguradora?.activa ?? true,
   })
 
   const mutation = useMutation({
@@ -44,7 +44,7 @@ export function AseguradoraModal({ aseguradora, onClose }: Props) {
         telefono: data.telefono || undefined,
         email: data.email || undefined,
         observaciones: data.observaciones || undefined,
-        ...(editando ? { activo: data.activo } : {}),
+        ...(editando ? { activa: data.activa } : {}),
       }
       return editando
         ? api.put(`/aseguradoras/${aseguradora!.id}`, payload)
@@ -77,11 +77,11 @@ export function AseguradoraModal({ aseguradora, onClose }: Props) {
             <button
               type="button"
               role="switch"
-              aria-checked={form.activo}
-              onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+              aria-checked={form.activa}
+              onClick={() => setForm((f) => ({ ...f, activa: !f.activa }))}
               className={cn(
                 'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
-                form.activo
+                form.activa
                   ? 'border-input bg-card hover:bg-muted/40'
                   : 'border-input bg-muted/40 hover:bg-muted/60',
               )}
@@ -92,13 +92,13 @@ export function AseguradoraModal({ aseguradora, onClose }: Props) {
                     aria-hidden="true"
                     className={cn(
                       'h-2 w-2 shrink-0 rounded-full',
-                      form.activo ? 'bg-emerald-500' : 'bg-muted-foreground/50',
+                      form.activa ? 'bg-emerald-500' : 'bg-muted-foreground/50',
                     )}
                   />
-                  Aseguradora {form.activo ? 'activa' : 'inactiva'}
+                  Aseguradora {form.activa ? 'activa' : 'inactiva'}
                 </span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {form.activo
+                  {form.activa
                     ? 'Disponible para asignar a pacientes y cobros.'
                     : 'Inactiva: no aparece en nuevos registros; los datos se conservan.'}
                 </span>
@@ -107,13 +107,13 @@ export function AseguradoraModal({ aseguradora, onClose }: Props) {
                 aria-hidden="true"
                 className={cn(
                   'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
-                  form.activo ? 'bg-primary' : 'bg-muted-foreground/30',
+                  form.activa ? 'bg-primary' : 'bg-muted-foreground/30',
                 )}
               >
                 <span
                   className={cn(
                     'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                    form.activo ? 'translate-x-[22px]' : 'translate-x-0.5',
+                    form.activa ? 'translate-x-[22px]' : 'translate-x-0.5',
                   )}
                 />
               </span>

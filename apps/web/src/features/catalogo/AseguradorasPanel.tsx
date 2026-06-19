@@ -18,14 +18,14 @@ interface Aseguradora {
   telefono?: string | null
   email?: string | null
   observaciones?: string | null
-  activo: boolean
+  activa: boolean
 }
 
 interface CategoriaSeguro {
   id: number
   nombre: string
   porcentajeCobertura: string | number
-  activo: boolean
+  activa: boolean
   aseguradoraId: number
 }
 
@@ -213,12 +213,12 @@ export function AseguradorasPanel() {
                       <td className="px-4 py-3">
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            cat.activo
+                            cat.activa
                               ? 'bg-accent/10 text-accent'
                               : 'bg-muted text-muted-foreground'
                           }`}
                         >
-                          {cat.activo ? 'Activa' : 'Inactiva'}
+                          {cat.activa ? 'Activa' : 'Inactiva'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -386,12 +386,12 @@ export function AseguradorasPanel() {
                 <td className="px-4 py-3">
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      a.activo
+                      a.activa
                         ? 'bg-accent/10 text-accent'
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {a.activo ? 'Activa' : 'Inactiva'}
+                    {a.activa ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">

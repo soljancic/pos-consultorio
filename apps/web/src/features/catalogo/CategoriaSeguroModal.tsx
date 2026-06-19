@@ -11,7 +11,7 @@ interface CategoriaSeguro {
   id?: number
   nombre: string
   porcentajeCobertura: number | string
-  activo: boolean
+  activa: boolean
   aseguradoraId: number
 }
 
@@ -30,7 +30,7 @@ export function CategoriaSeguroModal({ categoria, aseguradoraId, onClose }: Prop
     porcentajeCobertura: categoria?.porcentajeCobertura != null
       ? String(Number(categoria.porcentajeCobertura))
       : '',
-    activo: categoria?.activo ?? true,
+    activa: categoria?.activa ?? true,
   })
 
   const mutation = useMutation({
@@ -40,7 +40,7 @@ export function CategoriaSeguroModal({ categoria, aseguradoraId, onClose }: Prop
         porcentajeCobertura: data.porcentajeCobertura !== ''
           ? Number(data.porcentajeCobertura)
           : undefined,
-        ...(editando ? { activo: data.activo } : { aseguradoraId }),
+        ...(editando ? { activa: data.activa } : { aseguradoraId }),
       }
       return editando
         ? api.put(`/categorias-seguro/${categoria!.id}`, payload)
@@ -73,11 +73,11 @@ export function CategoriaSeguroModal({ categoria, aseguradoraId, onClose }: Prop
             <button
               type="button"
               role="switch"
-              aria-checked={form.activo}
-              onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
+              aria-checked={form.activa}
+              onClick={() => setForm((f) => ({ ...f, activa: !f.activa }))}
               className={cn(
                 'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
-                form.activo
+                form.activa
                   ? 'border-input bg-card hover:bg-muted/40'
                   : 'border-input bg-muted/40 hover:bg-muted/60',
               )}
@@ -88,13 +88,13 @@ export function CategoriaSeguroModal({ categoria, aseguradoraId, onClose }: Prop
                     aria-hidden="true"
                     className={cn(
                       'h-2 w-2 shrink-0 rounded-full',
-                      form.activo ? 'bg-emerald-500' : 'bg-muted-foreground/50',
+                      form.activa ? 'bg-emerald-500' : 'bg-muted-foreground/50',
                     )}
                   />
-                  Categoría {form.activo ? 'activa' : 'inactiva'}
+                  Categoría {form.activa ? 'activa' : 'inactiva'}
                 </span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {form.activo
+                  {form.activa
                     ? 'Disponible para asignar coberturas y tarifas.'
                     : 'Inactiva: no aparece en nuevos registros; los datos se conservan.'}
                 </span>
@@ -103,13 +103,13 @@ export function CategoriaSeguroModal({ categoria, aseguradoraId, onClose }: Prop
                 aria-hidden="true"
                 className={cn(
                   'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
-                  form.activo ? 'bg-primary' : 'bg-muted-foreground/30',
+                  form.activa ? 'bg-primary' : 'bg-muted-foreground/30',
                 )}
               >
                 <span
                   className={cn(
                     'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
-                    form.activo ? 'translate-x-[22px]' : 'translate-x-0.5',
+                    form.activa ? 'translate-x-[22px]' : 'translate-x-0.5',
                   )}
                 />
               </span>
