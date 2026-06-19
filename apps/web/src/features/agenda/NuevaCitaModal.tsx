@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { cn, abrirWhatsApp, publicBaseUrl } from '../../lib/utils'
+import { cn, abrirWhatsApp, publicBaseUrl, formatMoneda } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import type { Paciente, Doctor, Servicio } from '@pos/types'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -11,6 +11,7 @@ import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 import { PacienteModal } from '../pacientes/PacienteModal'
+import { useAuthStore } from '../../stores/auth.store'
 
 interface Props {
   fechaInicial: Date
@@ -44,6 +45,11 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
   const [notas, setNotas] = useState('')
   const [error, setError] = useState('')
   const [modalNuevoPaciente, setModalNuevoPaciente] = useState(false)
+
+  // Seguro / cobertura
+  const trabajaConAseguradoras = useAuthStore((s) => s.user?.trabajaConAseguradoras)
+  const [usarSeguro, setUsarSeguro] = useState(false)
+  const [codigoSeguro, setCodigoSeguro] = useState('')
   const [enviarConfirmacion, setEnviarConfirmacion] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   // El usuario tocó el check: dejamos de re-sugerir segun la fecha/hora
@@ -82,6 +88,33 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     staleTime: 5 * 60 * 1000,
   })
 
+  // Detalle de seguro del paciente seleccionado (fetch puntual; la búsqueda devuelve campos limitados)
+  const { data: pacienteSeguro } = useQuery<{
+    tieneSeguro: boolean
+    codigoSeguro: string | null
+    aseguradora: { id: number; nombre: string } | null
+    categoriaSeguro: { id: number; nombre: string; aseguradoraId: number } | null
+  }>({
+    queryKey: ['paciente-seguro', pacienteSeleccionado?.id],
+    queryFn: () => api.get(`/pacientes/${pacienteSeleccionado!.id}`).then((r) => r.data),
+    enabled: !!pacienteSeleccionado && !!trabajaConAseguradoras,
+    staleTime: 2 * 60 * 1000,
+  })
+
+  // Preview de tarifa: rows { servicioId, montoPaciente, montoAseguradora }
+  const categoriaSeguroId = pacienteSeguro?.categoriaSeguro?.id
+  const { data: tarifasPreview = [] } = useQuery<
+    { servicioId: number; montoPaciente: string; montoAseguradora: string }[]
+  >({
+    queryKey: ['tarifa-preview', categoriaSeguroId, servicioId],
+    queryFn: () =>
+      api
+        .get(`/tarifas-cobertura?categoriaSeguroId=${categoriaSeguroId}`)
+        .then((r) => r.data),
+    enabled: usarSeguro && !!categoriaSeguroId && !!servicioId,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const crearCita = useMutation({
     mutationFn: (data: object) => api.post('/citas', data),
     onSuccess: () => {
@@ -112,6 +145,18 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     const aFuturo = !Number.isNaN(cuando) && cuando - Date.now() > 60 * 60 * 1000
     setEnviarConfirmacion(aFuturo)
   }, [fecha, hora])
+
+  // Cuando cambia el paciente y llega el detalle de seguro: activar toggle y prellenar código
+  useEffect(() => {
+    if (!trabajaConAseguradoras) return
+    if (pacienteSeguro?.tieneSeguro) {
+      setUsarSeguro(true)
+      setCodigoSeguro(pacienteSeguro.codigoSeguro ?? '')
+    } else {
+      setUsarSeguro(false)
+      setCodigoSeguro('')
+    }
+  }, [pacienteSeguro, trabajaConAseguradoras])
 
   function seleccionarPaciente(p: PacienteBusqueda) {
     setPacienteSeleccionado(p)
@@ -166,6 +211,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
     if (!doctorId) return setError('Seleccione un doctor')
     if (!servicioId) return setError('Seleccione un servicio')
 
+    const mostrarCobertura = trabajaConAseguradoras && pacienteSeguro?.tieneSeguro
     crearCita.mutate({
       pacienteId: pacienteSeleccionado.id,
       doctorId: Number(doctorId),
@@ -176,6 +222,9 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
       notasSecretaria: notas || undefined,
       // Solo tiene sentido si el paciente tiene email cargado
       enviarConfirmacion: !!pacienteSeleccionado.email && enviarConfirmacion,
+      // Cobertura: solo se envía cuando el bloque está visible
+      usaSeguro: mostrarCobertura ? usarSeguro : false,
+      codigoSeguro: mostrarCobertura && usarSeguro && codigoSeguro ? codigoSeguro : undefined,
     })
   }
 
@@ -286,6 +335,104 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
               </option>
             ))}
           </FloatingSelect>
+
+          {/* Bloque Cobertura: solo si el consultorio trabaja con aseguradoras y el paciente tiene seguro */}
+          {trabajaConAseguradoras && pacienteSeguro?.tieneSeguro && (() => {
+            const tarifaFila = tarifasPreview.find((r) => r.servicioId === Number(servicioId))
+            return (
+              <div className="space-y-3">
+                {/* Toggle "Usar seguro" */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={usarSeguro}
+                  onClick={() => setUsarSeguro((v) => !v)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    usarSeguro ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <ShieldCheck
+                        className={cn('h-4 w-4 shrink-0', usarSeguro ? 'text-primary' : 'text-muted-foreground/50')}
+                        aria-hidden="true"
+                      />
+                      Usar seguro
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {usarSeguro
+                        ? 'La cita se facturará con cobertura de la aseguradora.'
+                        : 'La cita se atenderá como particular.'}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200',
+                      usarSeguro ? 'bg-primary' : 'bg-muted-foreground/30',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                        usarSeguro ? 'translate-x-[22px]' : 'translate-x-0.5',
+                      )}
+                    />
+                  </span>
+                </button>
+
+                {/* Detalles de la cobertura cuando el toggle está ON */}
+                {usarSeguro && (
+                  <div className="rounded-lg border border-input bg-muted/20 px-4 py-3 space-y-3">
+                    {/* Aseguradora y categoría (read-only) */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="block text-xs text-muted-foreground mb-0.5">Aseguradora</span>
+                        <span className="font-medium text-foreground">{pacienteSeguro.aseguradora?.nombre ?? '—'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-xs text-muted-foreground mb-0.5">Categoría</span>
+                        <span className="font-medium text-foreground">{pacienteSeguro.categoriaSeguro?.nombre ?? '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Código de asegurado (editable) */}
+                    <FloatingInput
+                      label="Código de asegurado"
+                      value={codigoSeguro}
+                      onChange={(e) => setCodigoSeguro(e.target.value)}
+                    />
+
+                    {/* Preview de montos */}
+                    {servicioId && (
+                      tarifaFila ? (
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div className="rounded-md bg-card border border-input px-3 py-2 text-center">
+                            <span className="block text-xs text-muted-foreground mb-0.5">Paga el paciente</span>
+                            <span className="text-base font-semibold tabular-nums text-foreground">
+                              {formatMoneda(Number(tarifaFila.montoPaciente))}
+                            </span>
+                          </div>
+                          <div className="rounded-md bg-card border border-input px-3 py-2 text-center">
+                            <span className="block text-xs text-muted-foreground mb-0.5">Cubre la aseguradora</span>
+                            <span className="text-base font-semibold tabular-nums text-primary">
+                              {formatMoneda(Number(tarifaFila.montoAseguradora))}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          Sin tarifa para este servicio: se atenderá como particular.
+                        </p>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Link de reserva del portal: alternativa a crear la cita. Siempre
               visible con el portal activo; sirve aunque no haya nada elegido
