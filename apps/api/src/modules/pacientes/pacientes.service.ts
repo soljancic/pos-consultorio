@@ -70,38 +70,41 @@ export class SetActivoDto {
 export class PacientesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(consultorioId: number, search?: string, incluirInactivos = false) {
-    return this.prisma.paciente.findMany({
-      where: {
-        consultorioId,
-        deletedAt: null,
-        // Por defecto solo activos (grid limpio). Los archivados aparecen al
-        // buscar (incluirInactivos), marcados con su flag `activo`.
-        ...(incluirInactivos ? {} : { activo: true }),
-        ...(search && {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { apellido: { contains: search, mode: 'insensitive' } },
-            { dni: { contains: search } },
-            { telefono: { contains: search } },
-          ],
-        }),
-      },
-      orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        dni: true,
-        telefono: true,
-        pais: true,
-        email: true,
-        deudaTotal: true,
-        requierePrepago: true,
-        activo: true,
-        createdAt: true,
-      },
-    })
+  async findAll(
+    consultorioId: number,
+    opts: { search?: string; incluirInactivos?: boolean; page?: number; limit?: number } = {},
+  ) {
+    const page = Math.max(1, opts.page ?? 1)
+    const limit = Math.min(100, Math.max(1, opts.limit ?? 50))
+    const search = opts.search?.trim()
+    const where = {
+      consultorioId,
+      deletedAt: null,
+      ...(opts.incluirInactivos ? {} : { activo: true }),
+      ...(search && {
+        OR: [
+          { nombre: { contains: search, mode: 'insensitive' as const } },
+          { apellido: { contains: search, mode: 'insensitive' as const } },
+          { dni: { contains: search } },
+          { telefono: { contains: search } },
+        ],
+      }),
+    }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.paciente.findMany({
+        where,
+        orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true, nombre: true, apellido: true, dni: true, telefono: true,
+          pais: true, email: true, deudaTotal: true, requierePrepago: true,
+          activo: true, createdAt: true,
+        },
+      }),
+      this.prisma.paciente.count({ where }),
+    ])
+    return { items, total }
   }
 
   async findOne(consultorioId: number, id: number) {

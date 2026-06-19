@@ -10,14 +10,20 @@ export class PacientesController {
   constructor(private service: PacientesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listar pacientes (con busqueda)' })
+  @ApiOperation({ summary: 'Listar pacientes paginado (con busqueda)' })
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('search') search?: string,
-    // Por defecto solo activos; con incluirInactivos tambien los archivados.
     @Query('incluirInactivos') incluirInactivos?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.service.findAll(user.consultorioId, search, incluirInactivos === 'true')
+    return this.service.findAll(user.consultorioId, {
+      search,
+      incluirInactivos: incluirInactivos === 'true',
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    })
   }
 
   @Get('coincidencias')
