@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Users } from 'lucide-react'
 import { api } from '../../lib/api-client'
@@ -13,11 +13,14 @@ import { TableSkeleton } from '../../components/shared/Skeleton'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import type { Paciente } from '@pos/types'
 
+const LIMIT = 50
+
 export function PacientesPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [modalNuevo, setModalNuevo] = useState(false)
+  const sentinelRef = useRef<HTMLTableRowElement | null>(null)
 
   function handleSearch(value: string) {
     setSearch(value)
@@ -25,12 +28,44 @@ export function PacientesPage() {
     ;(window as any).__searchTimer = setTimeout(() => setDebouncedSearch(value), 300)
   }
 
-  const { data: pacientes = [], isLoading, isError, refetch } = useQuery<Paciente[]>({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<{ items: Paciente[]; total: number }>({
     queryKey: ['pacientes', debouncedSearch],
-    queryFn: () =>
-      // Al buscar incluimos archivados (marcados); sin busqueda el grid muestra solo activos.
-      api.get(`/pacientes${debouncedSearch ? `?search=${debouncedSearch}&incluirInactivos=true` : ''}`).then((r) => r.data),
+    queryFn: ({ pageParam }) =>
+      api
+        .get(
+          `/pacientes?page=${pageParam}&limit=${LIMIT}${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}&incluirInactivos=true` : ''}`,
+        )
+        .then((r) => r.data),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const cargados = allPages.reduce((n, p) => n + p.items.length, 0)
+      return cargados < lastPage.total ? allPages.length + 1 : undefined
+    },
   })
+
+  const pacientes = data?.pages.flatMap((p) => p.items) ?? []
+  const total = data?.pages[0]?.total ?? 0
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasNextPage) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingNextPage) fetchNextPage()
+      },
+      { rootMargin: '200px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div className="flex flex-col h-full">
@@ -51,18 +86,25 @@ export function PacientesPage() {
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto">
-        <div className="relative mb-4 max-w-md">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
-            aria-hidden="true"
-          />
-          <input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Buscar por nombre, CI, telefono..."
-            aria-label="Buscar pacientes"
-            className={cn(inputUI, 'pl-9')}
-          />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative max-w-md flex-1">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
+              aria-hidden="true"
+            />
+            <input
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Buscar por nombre, CI, teléfono..."
+              aria-label="Buscar pacientes"
+              className={cn(inputUI, 'pl-9')}
+            />
+          </div>
+          {!isLoading && !isError && (
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+              {total} paciente{total !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
 
         {isLoading ? (
@@ -125,8 +167,15 @@ export function PacientesPage() {
                       {debouncedSearch ? (
                         <EmptyState icon={Search} title="No se encontraron pacientes" description="Probá con otro nombre, CI o teléfono." className="py-8" />
                       ) : (
-                        <EmptyState icon={Users} title="No hay pacientes registrados" description="Cargá tu primer paciente con “Nuevo paciente”." className="py-8" />
+                        <EmptyState icon={Users} title="No hay pacientes registrados" description="Cargá tu primer paciente con «Nuevo paciente»." className="py-8" />
                       )}
+                    </td>
+                  </tr>
+                )}
+                {hasNextPage && (
+                  <tr ref={sentinelRef}>
+                    <td colSpan={4} className="px-4 py-4 text-center text-sm text-muted-foreground">
+                      {isFetchingNextPage ? 'Cargando más...' : ''}
                     </td>
                   </tr>
                 )}
