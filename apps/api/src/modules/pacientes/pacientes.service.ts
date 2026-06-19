@@ -134,7 +134,7 @@ export class PacientesService {
     return { ...paciente, noShows }
   }
 
-  private async validarCategoriaseguro(
+  private async validarCategoriaSeguro(
     consultorioId: number,
     aseguradoraId: number,
     categoriaSeguroId: number,
@@ -178,7 +178,7 @@ export class PacientesService {
     } = {}
 
     if (dto.tieneSeguro === true) {
-      await this.validarCategoriaseguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
+      await this.validarCategoriaSeguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
       seguroData = {
         tieneSeguro: true,
         aseguradoraId: dto.aseguradoraId,
@@ -270,7 +270,7 @@ export class PacientesService {
     } = {}
 
     if (dto.tieneSeguro === true) {
-      await this.validarCategoriaseguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
+      await this.validarCategoriaSeguro(consultorioId, dto.aseguradoraId!, dto.categoriaSeguroId!)
       seguroData = {
         tieneSeguro: true,
         aseguradoraId: dto.aseguradoraId,

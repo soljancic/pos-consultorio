@@ -789,6 +789,7 @@ export class CitasService {
               data: {
                 usaSeguro: false,
                 categoriaSeguroId: null,
+                codigoSeguro: null,
                 montoPaciente: null,
                 montoAseguradora: null,
               },
