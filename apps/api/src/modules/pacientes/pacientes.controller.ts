@@ -22,11 +22,13 @@ export class PacientesController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    const pageNum = Number(page)
+    const limitNum = Number(limit)
     return this.service.findAll(user.consultorioId, {
       search,
       incluirInactivos: incluirInactivos === 'true',
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      page: page && Number.isFinite(pageNum) ? pageNum : undefined,
+      limit: limit && Number.isFinite(limitNum) ? limitNum : undefined,
     })
   }
 

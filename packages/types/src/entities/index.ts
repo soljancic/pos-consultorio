@@ -94,6 +94,12 @@ export interface Cita {
   notasSecretaria?: string
   createdById: number
   createdAt: Date
+  // F2 snapshot fields (seguro al momento de la cita)
+  usaSeguro?: boolean
+  categoriaSeguroId?: number | null
+  montoPaciente?: number | string | null
+  montoAseguradora?: number | string | null
+  codigoSeguro?: string | null
   // Relations (populated when requested)
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'apellido' | 'telefono' | 'pais' | 'deudaTotal'>
   doctor?: Pick<Doctor, 'id' | 'nombre' | 'colorAgenda'>

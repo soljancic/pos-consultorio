@@ -14,7 +14,19 @@ export async function descargarBlob(url: string, filename: string) {
     a.remove()
     URL.revokeObjectURL(href)
   } catch (err: unknown) {
-    const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+    const responseData = (err as { response?: { data?: unknown } })?.response?.data
+    if (responseData instanceof Blob) {
+      let extracted: string | undefined
+      try {
+        const text = await responseData.text()
+        const parsed = JSON.parse(text) as { message?: unknown }
+        if (typeof parsed.message === 'string') extracted = parsed.message
+      } catch {
+        // not JSON — use generic fallback below
+      }
+      throw new Error(extracted ?? 'Error al descargar el archivo')
+    }
+    const msg = (responseData as { message?: unknown } | undefined)?.message
     throw new Error(typeof msg === 'string' ? msg : 'Error al descargar el archivo')
   }
 }

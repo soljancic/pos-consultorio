@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max, ValidateNested, ArrayMaxSize } from 'class-validator'
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max, ValidateNested, ArrayMaxSize, IsArray } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -67,7 +67,7 @@ export class SetTarifasDto {
   @Type(() => Number) @IsInt()
   categoriaSeguroId: number
 
-  @ValidateNested({ each: true }) @Type(() => TarifaItemDto) @ArrayMaxSize(500)
+  @IsArray() @ValidateNested({ each: true }) @Type(() => TarifaItemDto) @ArrayMaxSize(500)
   tarifas: TarifaItemDto[]
 }
 

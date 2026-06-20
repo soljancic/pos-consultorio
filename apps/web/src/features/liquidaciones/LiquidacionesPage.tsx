@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Receipt } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, cn } from '../../lib/utils'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
@@ -275,10 +275,10 @@ export function LiquidacionesPage() {
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   function patchFiltros(patch: Partial<{ aseguradoraId: string; desde: string; hasta: string; estado: string }>) {
-    if ('aseguradoraId' in patch) setAseguradoraId(patch.aseguradoraId!)
-    if ('desde' in patch) setDesde(patch.desde!)
-    if ('hasta' in patch) setHasta(patch.hasta!)
-    if ('estado' in patch) setEstado(patch.estado!)
+    if ('aseguradoraId' in patch) setAseguradoraId(patch.aseguradoraId ?? '')
+    if ('desde' in patch) setDesde(patch.desde ?? '')
+    if ('hasta' in patch) setHasta(patch.hasta ?? '')
+    if ('estado' in patch) setEstado(patch.estado ?? '')
     setPage(1)
   }
 
@@ -288,7 +288,7 @@ export function LiquidacionesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card print:hidden">
         <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <span className={chipIconUI}>
-            <Receipt className="h-4 w-4" aria-hidden="true" />
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
           </span>
           Liquidaciones
         </h1>
@@ -379,7 +379,7 @@ export function LiquidacionesPage() {
                   <tr>
                     <td colSpan={8} className="px-4 py-2">
                       <EmptyState
-                        icon={Receipt}
+                        icon={ShieldCheck}
                         title="Sin liquidaciones"
                         description="No hay liquidaciones que coincidan con los filtros seleccionados."
                         className="py-12"
@@ -407,7 +407,7 @@ export function LiquidacionesPage() {
                       <td className="px-4 py-3">
                         <AccionesCell
                           row={row}
-                          mutando={cambiarEstado.isPending}
+                          mutando={cambiarEstado.isPending && cambiarEstado.variables?.id === row.id}
                           onConfirmar={(accion, descripcion) =>
                             setConfirmPendiente({ id: row.id, accion, descripcion })
                           }

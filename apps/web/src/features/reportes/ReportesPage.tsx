@@ -120,7 +120,7 @@ export function ReportesPage() {
           if (tab === 'cobertura' && meta.porCategoria?.length) {
             return (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <MetaBreakdown title="Pacientes por categoría" items={meta.porCategoria} format="number" />
+                <MetaBreakdown title="Pacientes por categoría" items={meta.porCategoria ?? []} format="number" />
               </div>
             )
           }

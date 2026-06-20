@@ -27,11 +27,12 @@ export function PacientesPage() {
   const [modalNuevo, setModalNuevo] = useState(false)
   const [modalImport, setModalImport] = useState(false)
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   function handleSearch(value: string) {
     setSearch(value)
-    clearTimeout((window as any).__searchTimer)
-    ;(window as any).__searchTimer = setTimeout(() => setDebouncedSearch(value), 300)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setDebouncedSearch(value), 300)
   }
 
   const {
