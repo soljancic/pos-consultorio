@@ -82,6 +82,9 @@ export function PacientesPage() {
             <Users className="h-4 w-4" aria-hidden="true" />
           </span>
           Pacientes
+          {!isLoading && !isError && (
+            <span className="text-sm font-normal text-muted-foreground tabular-nums">{total}</span>
+          )}
         </h1>
         <div className="relative flex-1 sm:max-w-md sm:mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
@@ -114,14 +117,6 @@ export function PacientesPage() {
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto">
-        {!isLoading && !isError && (
-          <div className="mb-4">
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {total} paciente{total !== 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
-
         {isLoading ? (
           <TableSkeleton cols={4} />
         ) : isError ? (
