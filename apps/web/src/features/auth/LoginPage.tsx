@@ -20,7 +20,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [recuperando, setRecuperando] = useState(false)
-  const { setTokens, setUser } = useAuthStore()
+  const { setAccessToken, setUser } = useAuthStore()
   const navigate = useNavigate()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +29,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       const { data } = await api.post('/auth/login', { email, password })
-      setTokens(data.accessToken, data.refreshToken)
+      setAccessToken(data.accessToken)
       setUser(data.user)
       navigate('/agenda')
     } catch {
@@ -48,7 +48,7 @@ export function LoginPage() {
     setError('')
     try {
       const { data } = await api.post('/auth/google', { credential: response.credential })
-      setTokens(data.accessToken, data.refreshToken)
+      setAccessToken(data.accessToken)
       setUser(data.user)
       navigate('/agenda')
     } catch {

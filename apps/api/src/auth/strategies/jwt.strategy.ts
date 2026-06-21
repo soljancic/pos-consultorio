@@ -20,11 +20,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    // Releemos rol + activo en cada request (misma query que ya haciamos para
+    // activo). Asi un cambio de rol o una baja pegan al instante, sin esperar a
+    // que caduque el token: el RolesGuard usa este rol fresco, no el del claim.
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: payload.sub },
-      select: { id: true, activo: true },
+      select: { activo: true, rol: true },
     })
     if (!usuario || !usuario.activo) throw new UnauthorizedException()
-    return payload
+    return { ...payload, rol: usuario.rol }
   }
 }

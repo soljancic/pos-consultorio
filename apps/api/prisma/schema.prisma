@@ -141,12 +141,36 @@ model Usuario {
   logs             Log[]
   doctor           Doctor?
   passwordTokens   PasswordToken[]
+  sessions         Session[]
   mensajesResueltos MensajePendiente[] @relation("MensajeResueltoPor")
   notificaciones Notificacion[]
 
   @@unique([email, consultorioId])
   @@index([consultorioId])
   @@map("usuarios")
+}
+
+// Sesiones de refresh con rotacion + deteccion de reuso (hardening auth 2026-06-21).
+// Se guarda SOLO el hash SHA-256 del refresh token vigente, nunca el token plano
+// (mismo patron que PasswordToken). Cada refresh rota el eslabon: el anterior queda
+// revocado. Un refresh ya revocado que se vuelve a presentar = senal de robo: se
+// revoca toda la familia. logout y cambio de contrasena revocan en el server.
+model Session {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  // uuid de la cadena de rotacion: todos los eslabones comparten familia
+  familia    String
+  tokenHash  String   @unique
+  userAgent  String?
+  ip         String?
+  expiraAt   DateTime
+  revocadoAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([usuarioId])
+  @@index([familia])
+  @@map("sessions")
 }
 
 // E2-M10: tokens de un solo uso para definir/restablecer contrasena.

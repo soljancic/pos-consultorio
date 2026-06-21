@@ -65,6 +65,17 @@ Proyecto Railway "pos-consultorio"
 > La API valida al arrancar: en `NODE_ENV=production` se niega a levantar si
 > `JWT_SECRET`/`JWT_REFRESH_SECRET`/`DATABASE_URL` faltan o tienen el placeholder.
 
+> **Auth — cookie de refresh (hardening 2026-06-21).** El refresh token ya NO va
+> en el body: viaja en una cookie httpOnly `SameSite=Lax` con scope `/api/v1/auth`
+> (rotacion + revocacion server-side; tabla `sessions`, migracion **aditiva**).
+> Para que el navegador mande la cookie, la API y la web deben **compartir sitio**
+> (el dominio registrable `toptech.com.bo`): servir la API en un subdominio propio
+> (p.ej. `api.toptech.com.bo`), **NO** en el crudo `*.up.railway.app` (seria
+> cross-site y Safari/iOS bloquearia la cookie → el refresh se romperia). Entonces
+> `VITE_API_URL=https://api.toptech.com.bo/api/v1` y `FRONTEND_URL` con el origen
+> de la web (CORS ya va con `credentials: true`). Nueva dep: `cookie-parser`
+> (corre `pnpm install`). El logout (`POST /auth/logout`) revoca la sesion real.
+
 **Build & start (monorepo pnpm):**
 - Root del servicio: repo completo (necesita packages/types).
 - Build command: `pnpm install --frozen-lockfile && pnpm --filter @pos/types build && pnpm --filter api build`
@@ -77,7 +88,8 @@ Proyecto Railway "pos-consultorio"
 
 **Opcion A — Vercel (recomendada para SPA):**
 - Root: `apps/web`, framework Vite.
-- Env de build: `VITE_API_URL=https://<api>.up.railway.app/api/v1`
+- Env de build: `VITE_API_URL=https://api.toptech.com.bo/api/v1` (subdominio propio,
+  mismo sitio que la web — requisito de la cookie de refresh; ver nota de Auth arriba).
 - Vercel maneja el fallback SPA automaticamente.
 
 **Opcion B — Railway static:**

@@ -74,7 +74,14 @@ export function AppShell() {
     setTema(nuevo)
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    // Logout real: el server revoca la sesion y borra la cookie httpOnly. Si la
+    // red falla igual limpiamos el estado local para no dejar al usuario adentro.
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      /* el cierre local procede igual */
+    }
     logout()
     navigate('/login')
   }

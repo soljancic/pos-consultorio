@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
 import { AppModule } from './app.module'
 
 const esProduccion = process.env.NODE_ENV === 'production'
@@ -29,6 +30,8 @@ async function bootstrap() {
   app.enableShutdownHooks()
 
   app.use(helmet())
+  // Lee la cookie httpOnly del refresh token (auth.controller la setea/borra)
+  app.use(cookieParser())
 
   app.setGlobalPrefix('api/v1')
 

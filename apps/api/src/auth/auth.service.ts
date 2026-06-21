@@ -2,7 +2,7 @@ import { Injectable, ConflictException, UnauthorizedException, BadRequestExcepti
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import { OAuth2Client } from 'google-auth-library'
-import { randomBytes, createHash } from 'crypto'
+import { randomBytes, createHash, randomUUID } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { MailService } from '../modules/mail/mail.service'
 import { RegisterDto } from './dto/register.dto'
@@ -14,6 +14,14 @@ import * as argon2 from 'argon2'
 // En produccion JAMAS (el unico canal es el email).
 const MAIL_DEBUG = process.env.NODE_ENV !== 'production' && process.env.MAIL_DEBUG === '1'
 
+const sha256 = (v: string) => createHash('sha256').update(v).digest('hex')
+
+// Contexto opcional de la request (para auditar la sesion); no es de confianza.
+export interface SessionContext {
+  userAgent?: string
+  ip?: string
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -23,7 +31,7 @@ export class AuthService {
     private mail: MailService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto, ctx?: SessionContext) {
     const passwordHash = await argon2.hash(dto.password)
 
     const consultorio = await this.prisma.consultorio.create({
@@ -60,10 +68,10 @@ export class AuthService {
     })
 
     const usuario = consultorio.usuarios[0]
-    return this.buildTokens(usuario.id, usuario.email, usuario.rol, consultorio.id)
+    return this.buildTokens(usuario.id, usuario.email, usuario.rol, consultorio.id, ctx)
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, ctx?: SessionContext) {
     const usuario = await this.prisma.usuario.findFirst({
       // Email case-insensitive: el correo no distingue mayus/minus al loguear
       where: { email: { equals: dto.email.trim(), mode: 'insensitive' }, activo: true },
@@ -81,6 +89,7 @@ export class AuthService {
       usuario.email,
       usuario.rol,
       usuario.consultorioId,
+      ctx,
     )
 
     return {
@@ -97,7 +106,7 @@ export class AuthService {
     }
   }
 
-  async loginGoogle(credential: string) {
+  async loginGoogle(credential: string, ctx?: SessionContext) {
     const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')
     if (!clientId) {
       throw new UnauthorizedException('Google login no esta configurado')
@@ -110,6 +119,9 @@ export class AuthService {
       const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId })
       const payload = ticket.getPayload()
       if (!payload?.email) throw new Error('Payload invalido')
+      // Solo aceptamos emails verificados por Google: un email sin verificar no
+      // prueba la posesion de esa casilla y podria suplantar a un usuario existente.
+      if (payload.email_verified === false) throw new Error('Email de Google no verificado')
       email = payload.email.toLowerCase()
       nombre = payload.name ?? payload.email
     } catch {
@@ -130,6 +142,7 @@ export class AuthService {
       usuario.email,
       usuario.rol,
       usuario.consultorioId,
+      ctx,
     )
 
     return {
@@ -146,15 +159,71 @@ export class AuthService {
     }
   }
 
-  async refresh(refreshToken: string) {
+  // Rotacion con deteccion de reuso. El refresh token es stateful: vive como
+  // hash en la tabla Session. Cada uso rota el eslabon (el anterior se revoca);
+  // presentar un eslabon ya revocado = senal de robo -> se mata toda la familia.
+  async refresh(refreshToken: string | undefined, ctx?: SessionContext) {
+    if (!refreshToken) throw new UnauthorizedException('Refresh token invalido')
+
+    // 1) Firma + expiracion del JWT (barato, antes de tocar la DB)
     try {
-      const payload = this.jwt.verify(refreshToken, {
-        secret: this.config.get('JWT_REFRESH_SECRET'),
-      })
-      return this.buildTokens(payload.sub, payload.email, payload.rol, payload.consultorioId)
+      this.jwt.verify(refreshToken, { secret: this.config.get('JWT_REFRESH_SECRET') })
     } catch {
       throw new UnauthorizedException('Refresh token invalido')
     }
+
+    // 2) El token debe existir como sesion vigente
+    const sesion = await this.prisma.session.findUnique({ where: { tokenHash: sha256(refreshToken) } })
+    if (!sesion) throw new UnauthorizedException('Refresh token invalido')
+
+    // 3) Reuso de un eslabon ya rotado/revocado: revocar la familia entera
+    if (sesion.revocadoAt || sesion.expiraAt < new Date()) {
+      await this.prisma.session.updateMany({
+        where: { familia: sesion.familia, revocadoAt: null },
+        data: { revocadoAt: new Date() },
+      })
+      throw new UnauthorizedException('Refresh token invalido')
+    }
+
+    // 4) Claims frescos desde la DB (un cambio de rol o una baja pegan ya)
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: sesion.usuarioId },
+      select: { id: true, email: true, rol: true, activo: true, consultorioId: true },
+    })
+    if (!usuario || !usuario.activo) {
+      await this.prisma.session.updateMany({
+        where: { familia: sesion.familia, revocadoAt: null },
+        data: { revocadoAt: new Date() },
+      })
+      throw new UnauthorizedException('Refresh token invalido')
+    }
+
+    // 5) Rotar: revocar el eslabon actual y emitir uno nuevo en la misma familia
+    return this.buildTokens(
+      usuario.id,
+      usuario.email,
+      usuario.rol,
+      usuario.consultorioId,
+      ctx,
+      { familia: sesion.familia, revocarId: sesion.id },
+    )
+  }
+
+  // Logout real: revoca la familia de la sesion presentada (este dispositivo).
+  // Idempotente: sin token o token desconocido devuelve ok igual.
+  async logout(refreshToken: string | undefined) {
+    if (!refreshToken) return { ok: true }
+    const sesion = await this.prisma.session.findUnique({
+      where: { tokenHash: sha256(refreshToken) },
+      select: { familia: true },
+    })
+    if (sesion) {
+      await this.prisma.session.updateMany({
+        where: { familia: sesion.familia, revocadoAt: null },
+        data: { revocadoAt: new Date() },
+      })
+    }
+    return { ok: true }
   }
 
   // E2-M10: token de un solo uso para definir/restablecer contrasena.
@@ -213,6 +282,12 @@ export class AuthService {
         where: { id: registro.id },
         data: { usadoAt: new Date() },
       }),
+      // Cambiar la contrasena cierra todas las sesiones abiertas del usuario:
+      // si la cuenta estaba comprometida, los tokens del atacante dejan de servir
+      this.prisma.session.updateMany({
+        where: { usuarioId: registro.usuario.id, revocadoAt: null },
+        data: { revocadoAt: new Date() },
+      }),
       this.prisma.log.create({
         data: {
           consultorioId: registro.usuario.consultorioId,
@@ -232,6 +307,9 @@ export class AuthService {
     email: string,
     rol: string,
     consultorioId: number,
+    ctx?: SessionContext,
+    // Si viene, es una rotacion: reusa la familia y revoca el eslabon anterior
+    rotacion?: { familia: string; revocarId: number },
   ) {
     const payload = { sub: userId, email, rol, consultorioId }
 
@@ -240,11 +318,37 @@ export class AuthService {
         secret: this.config.get('JWT_SECRET'),
         expiresIn: this.config.get('JWT_EXPIRES_IN') || '15m',
       }),
-      this.jwt.signAsync(payload, {
+      // jti unico: garantiza que cada refresh sea distinto (hash unico en Session)
+      this.jwt.signAsync({ ...payload, jti: randomUUID() }, {
         secret: this.config.get('JWT_REFRESH_SECRET'),
         expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN') || '7d',
       }),
     ])
+
+    // La sesion expira exactamente cuando expira el JWT (su claim exp)
+    const exp = (this.jwt.decode(refreshToken) as { exp?: number } | null)?.exp
+    const expiraAt = exp ? new Date(exp * 1000) : new Date(Date.now() + 7 * 24 * 3600 * 1000)
+
+    const datosSesion = {
+      usuarioId: userId,
+      familia: rotacion?.familia ?? randomUUID(),
+      tokenHash: sha256(refreshToken),
+      userAgent: ctx?.userAgent?.slice(0, 255),
+      ip: ctx?.ip?.slice(0, 100),
+      expiraAt,
+    }
+
+    if (rotacion) {
+      await this.prisma.$transaction([
+        this.prisma.session.update({
+          where: { id: rotacion.revocarId },
+          data: { revocadoAt: new Date() },
+        }),
+        this.prisma.session.create({ data: datosSesion }),
+      ])
+    } else {
+      await this.prisma.session.create({ data: datosSesion })
+    }
 
     return { accessToken, refreshToken }
   }
