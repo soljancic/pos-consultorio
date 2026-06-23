@@ -49,7 +49,7 @@ try {
   Write-Host ""
   Write-Host "Deploy completo." -ForegroundColor Green
   Write-Host "  web: https://consultech.up.railway.app"
-  Write-Host "  api: https://api-production-9143.up.railway.app/api/v1/health"
+  Write-Host "  api: https://api.up.railway.app/api/v1/health"
 }
 finally {
   Pop-Location
