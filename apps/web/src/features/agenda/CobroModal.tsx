@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Pencil, Check, Undo2, Wallet } from 'lucide-react'
+import { X, Pencil, Check, Undo2, Wallet, AlertCircle } from 'lucide-react'
 import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, simboloMoneda, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -29,6 +29,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const [nuevoPrecio, setNuevoPrecio] = useState('')
   const [motivoAjuste, setMotivoAjuste] = useState('')
   const [errorAjuste, setErrorAjuste] = useState('')
+  const [errorPago, setErrorPago] = useState('')
 
   const { data: cobro, isLoading } = useQuery({
     queryKey: ['cobro-cita', cita.id],
@@ -72,6 +73,10 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
       invalidarFinanzas()
       onClose()
     },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setErrorPago(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo registrar el pago')
+    },
   })
 
   const ajustarTotal = useMutation({
@@ -107,6 +112,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setErrorPago('')
     if (montoNum <= 0 || montoNum > saldo) return
     registrarPago.mutate({
       monto: montoNum,
@@ -320,7 +326,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
                 {vuelto > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Vuelto</span>
+                    <span className="text-muted-foreground">Cambio</span>
                     <span className="font-semibold text-accent tabular-nums">{formatMoneda(vuelto)}</span>
                   </div>
                 )}
@@ -333,6 +339,13 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                 {quedaDeuda === 0 && montoNum > 0 && (
                   <div className="text-accent font-medium text-center">Cobro completo</div>
                 )}
+              </div>
+            )}
+
+            {errorPago && (
+              <div className={errorUI} role="alert" aria-live="assertive">
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{errorPago}</span>
               </div>
             )}
 
