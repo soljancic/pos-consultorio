@@ -404,7 +404,7 @@ export function ConfiguracionPage() {
                 cargado). Si dejás un mensaje vacío se usa el texto por defecto del sistema.
               </p>
               {([
-                ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora} en {consultorio}. Te esperamos en {direccion} {linkGoogleMaps}'],
+                ['msjRecordatorio', 'Recordatorio de cita', 'Hola {nombre}, le recordamos su cita {fecha} a las {hora} en {consultorio}. Te esperamos en {direccion} {linkGoogleMaps}'],
                 ['msjDeuda', 'Recordatorio de deuda', 'Hola {nombre}, le recordamos que tiene un saldo pendiente de {monto} en {consultorio}. ¡Gracias!'],
                 ['msjContacto', 'Contacto general', 'Hola {nombre}, le contactamos desde {consultorio}.'],
               ] as const).map(([campo, label, placeholder]) => (

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle, RefreshCw, Check, X, CalendarClock, CircleDollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatHora, buildWhatsAppUrl, abrirWhatsApp, cn } from '../../lib/utils'
+import { formatMoneda, formatHora, buildWhatsAppUrl, abrirWhatsApp, fechaRelativa, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderRecordatorio, renderDeuda } from '../../lib/whatsapp'
 import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
@@ -71,7 +71,7 @@ export function MensajesPage() {
       return renderRecordatorio(plantillas.recordatorio, {
         nombre: m.paciente.nombre,
         hora: formatHora(m.cita.fechaHora),
-        fecha: new Date(m.cita.fechaHora).toLocaleDateString('es-BO'),
+        fecha: fechaRelativa(m.cita.fechaHora),
         consultorio: consultorioNombre,
       }, { direccion, linkGoogleMaps: ubicacionUrl })
     }

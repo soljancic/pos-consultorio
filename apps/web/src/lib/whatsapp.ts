@@ -5,7 +5,7 @@ import { publicBaseUrl } from './utils'
 // E3 item 26: plantillas de WhatsApp editables por consultorio.
 // Variables soportadas: {nombre} {hora} {fecha} {monto} {consultorio} {direccion} {linkGoogleMaps}
 export const PLANTILLAS_DEFAULT = {
-  recordatorio: 'Hola {nombre}, le recordamos su cita el día de hoy a las {hora} en {consultorio}. Te esperamos en {direccion} {linkGoogleMaps}',
+  recordatorio: 'Hola {nombre}, le recordamos su cita {fecha} a las {hora} en {consultorio}. Te esperamos en {direccion} {linkGoogleMaps}',
   deuda: 'Hola {nombre}, le recordamos que tiene un saldo pendiente de {monto} en {consultorio}. ¡Gracias!',
   contacto: 'Hola {nombre}, le contactamos desde {consultorio}.',
 } as const

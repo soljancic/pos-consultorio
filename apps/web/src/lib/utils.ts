@@ -16,6 +16,19 @@ export function formatHora(date: Date | string) {
   return format(new Date(date), 'HH:mm', { locale: es })
 }
 
+// Etiqueta de fecha relativa para mensajes al paciente: "hoy", "mañana" o
+// "el lunes 24 de junio". Para timestamps con hora (fechaHora de citas); para
+// fechas @db.Date sin hora usar formatDia. El recordatorio de WhatsApp la usa
+// para no decir "hoy" cuando la cita es de otro día.
+export function fechaRelativa(date: Date | string) {
+  const d = new Date(date)
+  const soloDia = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const dias = Math.round((soloDia(d) - soloDia(new Date())) / 86_400_000)
+  if (dias === 0) return 'hoy'
+  if (dias === 1) return 'mañana'
+  return `el ${format(d, "EEEE d 'de' MMMM", { locale: es })}`
+}
+
 // Dias calendario (@db.Date): llegan como medianoche UTC y new Date() los
 // corre un dia hacia atras en GMT-4. Formatear SIEMPRE desde el string
 // YYYY-MM-DD sin pasar por el timezone (gastos, historial de caja,

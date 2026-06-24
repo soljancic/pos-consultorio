@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe } from 'lucide-react'
 import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
-import { formatHora, formatMoneda, abrirWhatsApp, cn } from '../../lib/utils'
+import { formatHora, formatMoneda, abrirWhatsApp, fechaRelativa, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderRecordatorio } from '../../lib/whatsapp'
 import { btnIconUI, cardUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
@@ -113,7 +113,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
     const msg = renderRecordatorio(plantillas.recordatorio, {
       nombre: cita.paciente?.nombre ?? '',
       hora: formatHora(cita.fechaHora),
-      fecha: new Date(cita.fechaHora).toLocaleDateString('es-BO'),
+      fecha: fechaRelativa(cita.fechaHora),
       consultorio: consultorioNombre,
     }, { direccion, linkGoogleMaps: ubicacionUrl })
     abrirWhatsApp(telefonoWhatsApp, msg, cita.paciente?.pais)
