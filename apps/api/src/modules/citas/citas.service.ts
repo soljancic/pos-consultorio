@@ -432,17 +432,6 @@ export class CitasService {
       )
     }
 
-    // Cancelar/no-asistio con pagos registrados requiere anular los pagos
-    // primero (asiento de reversa, E2-M1): el dinero ya entro a la caja.
-    if (ESTADOS_ANULAN_COBRO.includes(dto.estado)) {
-      const pagos = await this.prisma.pago.count({ where: { cobro: { citaId } } })
-      if (pagos > 0) {
-        throw new ConflictException(
-          'La cita tiene pagos registrados: anule los pagos antes de cancelarla',
-        )
-      }
-    }
-
     // Prepago total: al atender, si el cobro ya esta saldado, la cita queda
     // COBRADO directo (no hay nada que cobrar al terminar la atencion).
     const estadoFinal =
@@ -473,16 +462,24 @@ export class CitasService {
         })
       }
 
-      // Reabrir (CANCELADA/NO_ASISTIO -> PENDIENTE) revive el cobro
+      // Reabrir (CANCELADA/NO_ASISTIO -> PENDIENTE) revive el cobro segun los
+      // pagos vivos: si quedo plata retenida, el saldo sigue reducido.
       if (
         dto.estado === EstadoCita.PENDIENTE &&
         ESTADOS_ANULAN_COBRO.includes(cita.estado) &&
         cita.cobro
       ) {
-        await tx.cobro.update({
-          where: { citaId },
-          data: { estado: EstadoCobro.PENDIENTE },
+        const total = await tx.cobro.findUnique({
+          where: { citaId }, select: { total: true, saldoPendiente: true },
         })
+        const estadoCobro = !total
+          ? EstadoCobro.PENDIENTE
+          : total.saldoPendiente.lte(0)
+            ? EstadoCobro.COMPLETO
+            : total.saldoPendiente.lt(total.total)
+              ? EstadoCobro.PARCIAL
+              : EstadoCobro.PENDIENTE
+        await tx.cobro.update({ where: { citaId }, data: { estado: estadoCobro } })
       }
 
       // Al cancelar: si hay LiquidacionItem PENDIENTE, eliminarlo (el servicio

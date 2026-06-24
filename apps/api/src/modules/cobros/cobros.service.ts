@@ -311,6 +311,73 @@ export class CobrosService {
     }
   }
 
+  // Devolucion de prepago: reversa TODOS los pagos activos del cobro de la cita
+  // (espejo negativo, los originales quedan anulados). Saca la plata de la caja
+  // de hoy. Deja el cobro en su total/PENDIENTE; al cancelar la cita pasara a
+  // ANULADO. No toca cita.estado ni deudaTotal (cancelar es siempre pre-atencion,
+  // donde el prepago no impacto la deuda).
+  async reversarPagosDeCita(
+    consultorioId: number,
+    citaId: number,
+    usuarioId: number,
+    motivo?: string,
+  ): Promise<void> {
+    const pagos = await this.prisma.pago.findMany({
+      where: { cobro: { citaId, consultorioId }, anuladoAt: null, monto: { gt: 0 } },
+      select: {
+        id: true, monto: true, tipoCuentaId: true, referencia: true,
+        tipoCuenta: { select: { esEfectivo: true } },
+        cobro: { select: { id: true, total: true } },
+      },
+    })
+    if (pagos.length === 0) return
+    await this.exigirCajaAbierta(consultorioId)
+    const { clave: hoy } = diaCajaLocal()
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const p of pagos) {
+        await tx.pago.create({
+          data: {
+            cobroId: p.cobro.id,
+            tipoCuentaId: p.tipoCuentaId,
+            monto: p.monto.negated(),
+            referencia: p.referencia,
+            createdById: usuarioId,
+            reversaDeId: p.id,
+          },
+        })
+        await tx.pago.update({
+          where: { id: p.id },
+          data: { anuladoAt: new Date(), anuladoPorId: usuarioId, motivoAnulacion: motivo },
+        })
+        await tx.cajaDiaria.upsert({
+          where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+          create: {
+            consultorioId, fecha: hoy, usuarioAperturaId: usuarioId,
+            ...(p.tipoCuenta.esEfectivo && { totalEfectivo: p.monto.negated() }),
+            totalGeneral: p.monto.negated(),
+          },
+          update: {
+            ...(p.tipoCuenta.esEfectivo && { totalEfectivo: { decrement: p.monto } }),
+            totalGeneral: { decrement: p.monto },
+          },
+        })
+        await tx.log.create({
+          data: {
+            consultorioId, usuarioId, entidad: 'Pago', entidadId: p.id, accion: 'PAYMENT',
+            payloadAntes: { monto: p.monto.toString() },
+            payloadDespues: { anulado: true, motivo: motivo ?? null, citaId, devolucion: true },
+          },
+        })
+      }
+      // El cobro vuelve a su total; quedara ANULADO al cancelar la cita
+      await tx.cobro.update({
+        where: { id: pagos[0].cobro.id },
+        data: { saldoPendiente: pagos[0].cobro.total, estado: EstadoCobro.PENDIENTE },
+      })
+    })
+  }
+
   // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA).
   // Las citas futuras crean cobros PENDIENTE que NO son deuda.
   private readonly whereDeudaReal = (consultorioId: number) => ({

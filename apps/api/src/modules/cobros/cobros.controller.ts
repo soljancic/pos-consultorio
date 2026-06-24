@@ -59,4 +59,15 @@ export class CobrosController {
   ) {
     return this.service.anularPago(user.consultorioId, id, dto, user.sub)
   }
+
+  @Post('cita/:citaId/devolver')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Devolver (reversar) todos los pagos de prepago de una cita' })
+  devolverPrepago(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Body() body: { motivo?: string },
+  ) {
+    return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, body?.motivo)
+  }
 }
