@@ -8,8 +8,8 @@ resume P2/P3.** El plan de implementacion arranca por P1.
 Modulos nuevos/tocados (P1):
 - `apps/api/src/modules/productos` (nuevo)
 - `apps/api/src/modules/cobros`, `citas`, `consultorios`, `auth` (integracion)
-- `apps/web/src/features/catalogo` (o `productos`), `agenda` (modal de cobro),
-  `configuracion`
+- `apps/web/src/features/inventario` (nuevo: seccion propia con tab Productos en
+  P1; Compras en P2; Ajustes en P3), `agenda` (modal de cobro), `configuracion`
 - `packages/types` (tipos compartidos del flag y de las lineas de cobro)
 
 ## Problema / objetivo
@@ -60,6 +60,13 @@ apagado, es invisible (mismo patron que Aseguradoras).
    `MovimientoStock` nace en P2 con las compras.
 10. **`categoria`** es texto libre en P1 (puede graduar a tabla lookup como
     `tipos_gasto` luego). **`stockActual`** es entero (unidades).
+11. **Seccion propia "Inventario"** en el nav (no es un tab de Catalogo): la
+    seccion agrupa **Productos** (catalogo, P1), **Compras** (P2) y **Ajustes**
+    de inventario (P3) como sub-tabs/sub-rutas. En P1 nace con el tab Productos;
+    los otros dos tabs se suman en su fase. Toda la seccion va gateada por
+    `vendeProductos` y es ADMIN (la venta sigue en el modal de cobro de la
+    Agenda, que es SECRETARIA/CAJA). Nombre tentativo "Inventario"; el owner
+    puede renombrarlo.
 
 ## Reglas del proyecto que aplican (PLAN.md 8b)
 
@@ -231,12 +238,16 @@ Cada pantalla pasa por los skills de UI antes del JSX. Reusar tokens de
 Toggle "Vende productos" (switch-container + helper que explica que habilita el
 modulo). `onSuccess` refresca AuthUser (`setUser`).
 
-### Catalogo -> tab "Productos" (o pagina propia)
-Visible solo admin + flag on. Lista paginada (patron del grid de pacientes:
-`{items,total}`, scroll infinito) con buscador por nombre/codigo de barras y
-filtros (habilitado, activo). Alta/edicion con FloatingInputs: categoria, nombre,
-codigo de barras, precioVenta, precioCosto, stock inicial, `controlaStock`,
-`habilitadoVenta`. Archivar en vez de borrar si esta usado.
+### Seccion nueva "Inventario" -> tab "Productos"
+Seccion propia en el nav (no un tab de Catalogo), visible solo admin + flag on.
+La seccion tiene su shell con tabs/sub-rutas: **Productos** (P1), y mas adelante
+**Compras** (P2) y **Ajustes** (P3). En P1 entra solo Productos.
+
+Tab Productos: lista paginada (patron del grid de pacientes: `{items,total}`,
+scroll infinito) con buscador por nombre/codigo de barras y filtros (habilitado,
+activo). Alta/edicion con FloatingInputs: categoria, nombre, codigo de barras,
+precioVenta, precioCosto, stock inicial, `controlaStock`, `habilitadoVenta`.
+Archivar en vez de borrar si esta usado.
 
 ### Modal de cobro (Agenda) -> venta mixta
 Visible el bloque de productos solo si flag on. Buscador unificado con **tabs
@@ -272,6 +283,8 @@ Productos. Reusa todo el flujo (detalle, caja, deuda).
 
 ## P2 — Compras + Kardex (resumen; spec aparte)
 
+UI: tab **Compras** dentro de la seccion Inventario.
+
 - **`Compra`** (cabecera): `consultorioId`, `fechaCompra`, `proveedor String?`,
   `comentarios String?`, `total`, `registradoPorId`. **`DetalleCompra`**:
   `productoId`, `cantidad`, `costoUnitario`. Confirmar la compra **incrementa**
@@ -285,6 +298,9 @@ Productos. Reusa todo el flujo (detalle, caja, deuda).
   `DetalleCobro` o registrar desde el momento en que P2 entra.
 
 ## P3 — Ajuste de inventario + Reportes (resumen; spec aparte)
+
+UI: tab **Ajustes** dentro de la seccion Inventario; los reportes de
+utilidad/inventario van en el modulo Reportes existente.
 
 - **`AjusteInventario`** (conteo): por producto, `stockContado` vs
   `stockSistema`, `diferencia`, `motivo`, `createdById`. Setea `stockActual` al
