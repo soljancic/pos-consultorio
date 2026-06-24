@@ -30,6 +30,15 @@ const LABEL_ESTADO: Record<EstadoCita, string> = {
 // Una cita en curso o cerrada no se mueve de horario (espejo del backend)
 const ESTADOS_REPROGRAMABLES = [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO]
 
+const ESTADOS_COBRABLES: EstadoCita[] = [
+  EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO,
+  EstadoCita.EN_ATENCION, EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA,
+]
+
+const ESTADOS_PREPAGO = [
+  EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO, EstadoCita.EN_ATENCION,
+]
+
 interface CitaCardProps {
   cita: Cita
   onCambiarEstado: (estado: EstadoCita) => void
@@ -165,6 +174,13 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
               <span className="hidden lg:inline">Portal</span>
             </span>
           )}
+          {ESTADOS_PREPAGO.includes(cita.estado) && cita.cobro && cita.cobro.estado !== 'PENDIENTE' && (
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
+              {Number(cita.cobro.saldoPendiente) <= 0
+                ? 'Pagado'
+                : `Seña ${formatMoneda(Number(cita.cobro.total) - Number(cita.cobro.saldoPendiente))}`}
+            </span>
+          )}
         </div>
         <div className="text-sm text-muted-foreground mt-0.5">
           {cita.doctor?.nombre} &bull; {cita.servicio?.nombre}
@@ -201,7 +217,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
           </button>
         )}
 
-        {(cita.estado === EstadoCita.ATENDIDA || cita.estado === EstadoCita.CON_DEUDA) && (
+        {ESTADOS_COBRABLES.includes(cita.estado) && cita.cobro && Number(cita.cobro.saldoPendiente) > 0 && (
           <button
             onClick={onCobrar}
             className={cn(btnIconUI, 'text-primary hover:bg-primary/10')}
