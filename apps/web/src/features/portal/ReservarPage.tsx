@@ -27,7 +27,7 @@ export function ReservarPage() {
   // El link puede venir precargado: ?doctor= ?servicio= y/o ?p=<token opaco
   // del paciente>. Los datos personales NUNCA viajan en la URL: con ?p= el
   // portal se los pide al backend y el cliente solo elige fecha y hora.
-  const [params] = useSearchParams()
+  const [params, setSearchParams] = useSearchParams()
   // El link trae doctor/servicio cifrados con Sqids (ofuscacion). Se decodifican
   // a id numerico; un codigo invalido se ignora (el paciente elige normal).
   const decodeParam = (raw: string | null) => {
@@ -35,16 +35,42 @@ export function ReservarPage() {
     const n = decodeId(raw)
     return n != null ? String(n) : ''
   }
-  const doctorFijo = decodeParam(params.get('doctor'))
-  const tokenPaciente = params.get('p')
-  const tokenReprog = params.get('reprogramar')
-  const tokenCancelar = params.get('cancelar')
+  // Capturamos los parametros del link UNA sola vez (primer render) y mas abajo
+  // limpiamos la URL: asi los codigos no quedan visibles en la barra. Por eso NO
+  // se leen de `params` despues (quedaria vacio). ?p=/?reprogramar=/?cancelar=
+  // son tokens opacos; doctor/servicio vienen cifrados con Sqids.
+  const linkRef = useRef<{
+    doctorFijo: string
+    servicio: string
+    p: string | null
+    reprog: string | null
+    cancelar: string | null
+  } | null>(null)
+  if (linkRef.current === null) {
+    linkRef.current = {
+      doctorFijo: decodeParam(params.get('doctor')),
+      servicio: decodeParam(params.get('servicio')),
+      p: params.get('p'),
+      reprog: params.get('reprogramar'),
+      cancelar: params.get('cancelar'),
+    }
+  }
+  const doctorFijo = linkRef.current.doctorFijo
+  const tokenPaciente = linkRef.current.p
+  const tokenReprog = linkRef.current.reprog
+  const tokenCancelar = linkRef.current.cancelar
   const esReprogramacion = !!tokenReprog
   const esCancelacion = !!tokenCancelar
   // Reprogramar y cancelar comparten el mismo token opaco de la cita
   const tokenCita = tokenReprog ?? tokenCancelar
 
-  const [servicioId, setServicioId] = useState(decodeParam(params.get('servicio')))
+  // Una vez capturados los parametros, limpiar la URL (replace: no agrega una
+  // entrada al historial) para que los codigos del link no queden a la vista.
+  useEffect(() => {
+    if (params.toString()) setSearchParams({}, { replace: true })
+  }, [params, setSearchParams])
+
+  const [servicioId, setServicioId] = useState(linkRef.current.servicio)
   const [doctorId, setDoctorId] = useState(doctorFijo)
   const [mesCal, setMesCal] = useState(format(new Date(), 'yyyy-MM'))
   const [fecha, setFecha] = useState('')
