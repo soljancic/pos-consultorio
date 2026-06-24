@@ -12,6 +12,7 @@ import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 import { PacienteModal } from '../pacientes/PacienteModal'
 import { useAuthStore } from '../../stores/auth.store'
+import { encodeId } from '../../lib/portal-codec'
 
 interface Props {
   fechaInicial: Date
@@ -173,8 +174,8 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
 
   function buildLinkReserva() {
     const query = new URLSearchParams()
-    if (doctorId) query.set('doctor', doctorId)
-    if (servicioId) query.set('servicio', servicioId)
+    if (doctorId) query.set('doctor', encodeId(Number(doctorId)))
+    if (servicioId) query.set('servicio', encodeId(Number(servicioId)))
     if (pacienteSeleccionado && tokenPortal?.token) query.set('p', tokenPortal.token)
     const qs = query.toString()
     return `${publicBaseUrl()}/reservar/${consultorio!.slug}${qs ? `?${qs}` : ''}`

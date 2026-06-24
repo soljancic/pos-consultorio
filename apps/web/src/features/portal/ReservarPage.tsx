@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths } from 'date-fns'
 import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight, UserRound, User, Mail, FileText, Phone, MessageCircle, CalendarX2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
+import { decodeId } from '../../lib/portal-codec'
 import { formatDia, formatHora, abrirWhatsApp, cn } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, btnDestructiveUI, cardUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT, PAISES } from '../../lib/paises'
@@ -27,7 +28,14 @@ export function ReservarPage() {
   // del paciente>. Los datos personales NUNCA viajan en la URL: con ?p= el
   // portal se los pide al backend y el cliente solo elige fecha y hora.
   const [params] = useSearchParams()
-  const doctorFijo = params.get('doctor')
+  // El link trae doctor/servicio cifrados con Sqids (ofuscacion). Se decodifican
+  // a id numerico; un codigo invalido se ignora (el paciente elige normal).
+  const decodeParam = (raw: string | null) => {
+    if (!raw) return ''
+    const n = decodeId(raw)
+    return n != null ? String(n) : ''
+  }
+  const doctorFijo = decodeParam(params.get('doctor'))
   const tokenPaciente = params.get('p')
   const tokenReprog = params.get('reprogramar')
   const tokenCancelar = params.get('cancelar')
@@ -36,8 +44,8 @@ export function ReservarPage() {
   // Reprogramar y cancelar comparten el mismo token opaco de la cita
   const tokenCita = tokenReprog ?? tokenCancelar
 
-  const [servicioId, setServicioId] = useState(params.get('servicio') ?? '')
-  const [doctorId, setDoctorId] = useState(doctorFijo ?? '')
+  const [servicioId, setServicioId] = useState(decodeParam(params.get('servicio')))
+  const [doctorId, setDoctorId] = useState(doctorFijo)
   const [mesCal, setMesCal] = useState(format(new Date(), 'yyyy-MM'))
   const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
@@ -62,6 +70,22 @@ export function ReservarPage() {
     queryFn: () => api.get(`/public/${slug}`).then((r) => r.data),
     retry: 1,
   })
+
+  // Si el link trae un servicio que no esta en la lista publica (oculto), pedir
+  // su nombre/duracion para mostrarlo como seleccionado.
+  const servicioEnLista = info?.servicios.some((s) => String(s.id) === servicioId)
+  const { data: servicioOculto } = useQuery<{ id: number; nombre: string; duracionMin: number }>({
+    queryKey: ['portal-servicio', slug, servicioId],
+    queryFn: () => api.get(`/public/${slug}/servicio/${servicioId}`).then((r) => r.data),
+    enabled: !!servicioId && !!info && !servicioEnLista,
+    retry: 0,
+  })
+
+  // Nombre del servicio seleccionado: primero la lista publica, luego el oculto
+  const nombreServicioSel =
+    info?.servicios.find((s) => String(s.id) === servicioId)?.nombre ??
+    servicioOculto?.nombre ??
+    ''
 
   type CtxCita = {
     consultorio: { nombre: string; logoUrl: string | null; telefono: string | null; direccion: string | null }
@@ -412,25 +436,43 @@ export function ReservarPage() {
               </div>
             )}
             {!esReprogramacion && (
-              <FloatingSelect
-                id="res-servicio"
-                label="Servicio"
-                Icon={Stethoscope}
-                required
-                value={servicioId}
-                onChange={(e) => {
-                  setServicioId(e.target.value)
-                  setFecha(''); setHora(''); setMostrarForm(false)
-                  setMesCal(format(new Date(), 'yyyy-MM'))
-                  // El doctor elegido podria no atender el nuevo servicio
-                  if (!doctorFijo) setDoctorId('')
-                }}
-              >
-                <option value="">Seleccione el servicio...</option>
-                {info.servicios.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
-                ))}
-              </FloatingSelect>
+              servicioId && !servicioEnLista ? (
+                // Servicio oculto deep-linkeado: se muestra como campo fijo (no editable)
+                <FloatingSelect
+                  id="res-servicio"
+                  label="Servicio"
+                  Icon={Stethoscope}
+                  required
+                  value={servicioId}
+                  disabled
+                  onChange={() => {}}
+                >
+                  <option value={servicioId}>
+                    {nombreServicioSel || 'Cargando servicio...'}
+                    {servicioOculto ? ` (${servicioOculto.duracionMin} min)` : ''}
+                  </option>
+                </FloatingSelect>
+              ) : (
+                <FloatingSelect
+                  id="res-servicio"
+                  label="Servicio"
+                  Icon={Stethoscope}
+                  required
+                  value={servicioId}
+                  onChange={(e) => {
+                    setServicioId(e.target.value)
+                    setFecha(''); setHora(''); setMostrarForm(false)
+                    setMesCal(format(new Date(), 'yyyy-MM'))
+                    // El doctor elegido podria no atender el nuevo servicio
+                    if (!doctorFijo) setDoctorId('')
+                  }}
+                >
+                  <option value="">Seleccione el servicio...</option>
+                  {info.servicios.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nombre} ({s.duracionMin} min)</option>
+                  ))}
+                </FloatingSelect>
+              )
             )}
 
             <FloatingSelect
