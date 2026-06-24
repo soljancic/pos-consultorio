@@ -407,7 +407,7 @@ export class CitasService {
     const cita = await this.prisma.cita.findFirst({
       where: { id: citaId, consultorioId, deletedAt: null },
       include: {
-        cobro: { select: { saldoPendiente: true } },
+        cobro: { select: { saldoPendiente: true, estado: true } },
         liquidacion: { select: { id: true, estado: true } },
       },
     })
@@ -443,10 +443,17 @@ export class CitasService {
       }
     }
 
+    // Prepago total: al atender, si el cobro ya esta saldado, la cita queda
+    // COBRADO directo (no hay nada que cobrar al terminar la atencion).
+    const estadoFinal =
+      dto.estado === EstadoCita.ATENDIDA && cita.cobro?.estado === EstadoCobro.COMPLETO
+        ? EstadoCita.COBRADO
+        : dto.estado
+
     const citaActualizada = await this.prisma.$transaction(async (tx) => {
       const actualizada = await tx.cita.update({
         where: { id: citaId },
-        data: { estado: dto.estado },
+        data: { estado: estadoFinal },
       })
 
       // La deuda del paciente nace cuando el servicio fue prestado (ATENDIDA).
