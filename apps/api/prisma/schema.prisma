@@ -199,6 +199,9 @@ model Servicio {
   duracionMin   Int
   precioBase    Decimal     @db.Decimal(10, 2)
   activo        Boolean     @default(true)
+  // El servicio aparece en el dropdown del portal publico. false = oculto
+  // (solo reservable por deep-link &servicio=). No bloquea la reserva.
+  mostrarEnBooking  Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
