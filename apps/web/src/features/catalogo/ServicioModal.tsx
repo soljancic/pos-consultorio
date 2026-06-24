@@ -14,6 +14,7 @@ interface Servicio {
   duracionMin: number
   precioBase: number
   activo: boolean
+  mostrarEnBooking?: boolean
 }
 
 interface Props {
@@ -31,6 +32,7 @@ export function ServicioModal({ servicio, onClose }: Props) {
     duracionMin: servicio?.duracionMin ?? 30,
     precioBase: Number(servicio?.precioBase ?? 0),
     activo: servicio?.activo ?? true,
+    mostrarEnBooking: servicio?.mostrarEnBooking ?? true,
   })
 
   const mutation = useMutation({
@@ -40,6 +42,7 @@ export function ServicioModal({ servicio, onClose }: Props) {
         descripcion: data.descripcion || undefined,
         duracionMin: data.duracionMin,
         precioBase: data.precioBase,
+        mostrarEnBooking: data.mostrarEnBooking,
         ...(editando ? { activo: data.activo } : {}),
       }
       return editando
@@ -101,6 +104,12 @@ export function ServicioModal({ servicio, onClose }: Props) {
               className="tabular-nums"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+            <input type="checkbox" checked={form.mostrarEnBooking}
+              onChange={(e) => setForm((f) => ({ ...f, mostrarEnBooking: e.target.checked }))}
+              className="rounded" />
+            Mostrar en reservas online
+          </label>
           {editando && (
             <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
               <input type="checkbox" checked={form.activo}
