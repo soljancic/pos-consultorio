@@ -75,7 +75,7 @@ Invoke-RestMethod -Uri "$base/cobros/$($cobro3.id)/pagos" -Method Post -Headers 
 $cobro3After = CobroDe $cita3.id
 if ($cobro3After.estado -ne 'PARCIAL') { throw "FAIL S3a: cobro debe ser PARCIAL tras pago parcial (es $($cobro3After.estado))" }
 if ($cobro3After.saldoPendiente -ne 250) { throw "FAIL S3a: saldoPendiente debe ser 250 (es $($cobro3After.saldoPendiente))" }
-if ((Estado $cita3.id) -ne 'CONFIRMADA') { throw "FAIL S3a: cita debe seguir CONFIRMADA (es $(Estado $cita3.id))" }
+if ((Estado $cita3.id) -ne 'PENDIENTE') { throw "FAIL S3a: la cita debe seguir PENDIENTE (el prepago parcial no cambia el estado): es $(Estado $cita3.id)" }
 
 # Drive to ATENDIDA
 foreach ($e in @("CONFIRMADA", "LLEGO", "EN_ATENCION", "ATENDIDA")) {
@@ -161,11 +161,21 @@ if ($cajaAfterS6.totalEfectivo -ne $cajaAntesS6.totalEfectivo) { throw "FAIL S6:
 Write-Host "6 CANCELAR SIN DEVOLVER: PASS" -ForegroundColor Green
 
 # ============ SCENARIO 7: No es deuda (prepago parcial NO aparece en deudores) ============
-# Prepaid CONFIRMADA cita con pago parcial (la seña del escenario 3 es un buen ejemplo)
-# Este escenario verifica que una cita con saldo pendiente pero prepagada NO aparezca en deudores
-# (deudores = citas ATENDIDA/CON_DEUDA sin haber pagado; un prepago parcial NO es deuda real)
+# Crea una cita fresca (15:00) con pago parcial y verifica que NO aparezca en /cobros/deudores.
+# Deudores = citas ATENDIDA/CON_DEUDA sin pago; un prepago parcial pre-atencion NO es deuda real.
+$fh7 = "${manana}T15:00:00Z"
+$cita7 = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ pacienteId = $pac.id; doctorId = $doc.id; servicioId = $srv.id; fechaHora = $fh7 } | ConvertTo-Json)
+$cobro7 = CobroDe $cita7.id
+
+# Pago parcial (50%)
+Invoke-RestMethod -Uri "$base/cobros/$($cobro7.id)/pagos" -Method Post -Headers $h -ContentType "application/json" -Body (@{ monto = 250; tipoCuentaId = $tcEfectivo } | ConvertTo-Json) | Out-Null
+$cobro7After = CobroDe $cita7.id
+if ($cobro7After.estado -ne 'PARCIAL') { throw "FAIL S7: cobro debe ser PARCIAL tras pago parcial (es $($cobro7After.estado))" }
+if ((Estado $cita7.id) -ne 'PENDIENTE') { throw "FAIL S7: cita debe seguir PENDIENTE tras prepago parcial (es $(Estado $cita7.id))" }
+
+# La cita con prepago parcial pre-atencion NO debe aparecer en deudores
 $deudores = Invoke-RestMethod -Uri "$base/cobros/deudores" -Headers $h
-$esDeudora = @($deudores) | Where-Object { $_.citaId -eq $cita3.id }
+$esDeudora = @($deudores) | Where-Object { $_.citaId -eq $cita7.id }
 if (@($esDeudora).Count -gt 0) { throw "FAIL S7: cita prepagada parcial no debe aparecer en deudores" }
 Write-Host "7 PREPAGO NO ES DEUDA: PASS" -ForegroundColor Green
 
