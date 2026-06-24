@@ -311,6 +311,8 @@ model Paciente {
   @@index([consultorioId, dni])
   // el portal publico matchea pacientes por telefono
   @@index([consultorioId, telefono])
+  // FK de cobertura (claude-db M11): pacientes por aseguradora
+  @@index([consultorioId, aseguradoraId])
   @@map("pacientes")
 }
 
@@ -359,6 +361,8 @@ model Cita {
   @@index([consultorioId, doctorId, fechaHora])
   @@index([consultorioId, pacienteId])
   @@index([consultorioId, estado])
+  // FK de cobertura (claude-db M11): reportes de demanda por servicio
+  @@index([consultorioId, servicioId])
   @@map("citas")
 }
 
@@ -390,6 +394,8 @@ model Receta {
   pdfUrl     String?
   createdAt  DateTime @default(now())
 
+  // FK de cobertura (claude-db M11): recetas por atencion
+  @@index([atencionId])
   @@map("recetas")
 }
 
@@ -636,6 +642,9 @@ model Gasto {
   deletedAt       DateTime?
 
   @@index([consultorioId, fecha])
+  // FK de cobertura (claude-db M11): reportes de gastos por tipo y por cuenta
+  @@index([consultorioId, tipoGastoId])
+  @@index([consultorioId, tipoCuentaId])
   @@map("gastos")
 }
 
