@@ -97,6 +97,16 @@ export class CobrosService {
     })
     if (!tipoCuenta) throw new BadRequestException('Forma de pago no valida')
 
+    const ESTADOS_PRE_ATENCION: EstadoCita[] = [
+      EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO, EstadoCita.EN_ATENCION,
+    ]
+    const ESTADOS_POST_ATENCION: EstadoCita[] = [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA]
+    const estadoCita = cobro.cita.estado as EstadoCita
+    if (![...ESTADOS_PRE_ATENCION, ...ESTADOS_POST_ATENCION].includes(estadoCita)) {
+      throw new BadRequestException('No se puede cobrar una cita en este estado')
+    }
+    const tocaCita = ESTADOS_POST_ATENCION.includes(estadoCita)
+
     const nuevoSaldo = cobro.saldoPendiente.minus(monto)
     const cobrado = nuevoSaldo.lte(0)
     const nuevoEstadoCobro = cobrado ? EstadoCobro.COMPLETO : EstadoCobro.PARCIAL
@@ -120,17 +130,19 @@ export class CobrosService {
         data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
       })
 
-      // Actualizar estado de la cita
-      await tx.cita.update({
-        where: { id: cobro.citaId },
-        data: { estado: nuevoEstadoCita },
-      })
-
-      // Actualizar deuda total del paciente
-      await tx.paciente.update({
-        where: { id: cobro.cita.pacienteId },
-        data: { deudaTotal: { decrement: monto } },
-      })
+      // Prepago (pre-atencion): no se toca el ciclo de vida de la cita ni la
+      // deuda (la cita futura no es deuda). Post-atencion: comportamiento de
+      // siempre (la cita pasa a COBRADO/CON_DEUDA y baja la deuda del paciente).
+      if (tocaCita) {
+        await tx.cita.update({
+          where: { id: cobro.citaId },
+          data: { estado: nuevoEstadoCita },
+        })
+        await tx.paciente.update({
+          where: { id: cobro.cita.pacienteId },
+          data: { deudaTotal: { decrement: monto } },
+        })
+      }
 
       // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC). Solo el
       // efectivo participa del arqueo; totalGeneral suma todo.
