@@ -345,7 +345,7 @@ export function AgendaPage() {
           <div className="w-40 sm:w-64 text-center">
             <h2 title={tituloFecha} className="text-lg font-semibold text-foreground capitalize truncate">{tituloFecha}</h2>
             {(vista === 'lista' || vista === 'dia') && (
-              <p className="text-xs text-muted-foreground tabular-nums">{citas.length} citas</p>
+              <p className="text-xs text-muted-foreground tabular-nums">{citas.length} {citas.length === 1 ? 'cita' : 'citas'}</p>
             )}
           </div>
           <button onClick={() => navegar(1)} aria-label="Siguiente" className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
