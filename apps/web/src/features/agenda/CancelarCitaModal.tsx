@@ -118,7 +118,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
               <>
                 <button type="button" onClick={() => { setError(''); cancelar.mutate(false) }}
                   disabled={cancelar.isPending} className={cn(btnOutlineUI, 'flex-1')}>
-                  Mantener
+                  {cancelar.isPending ? 'Procesando...' : 'Mantener'}
                 </button>
                 <button type="button" onClick={() => { setError(''); cancelar.mutate(true) }}
                   disabled={cancelar.isPending} className={cn(btnDestructiveUI, 'flex-1')}>

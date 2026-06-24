@@ -57,6 +57,8 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
   const tieneSaldo = cita.cobro && Number(cita.cobro.saldoPendiente) > 0
+  const saldoCobro = cita.cobro ? Number(cita.cobro.saldoPendiente) : 0
+  const pagadoCobro = cita.cobro ? Number(cita.cobro.total) - saldoCobro : 0
   const [menuAbierto, setMenuAbierto] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -175,10 +177,12 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
             </span>
           )}
           {ESTADOS_PREPAGO.includes(cita.estado) && cita.cobro && cita.cobro.estado !== 'PENDIENTE' && (
-            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
-              {Number(cita.cobro.saldoPendiente) <= 0
-                ? 'Pagado'
-                : `Seña ${formatMoneda(Number(cita.cobro.total) - Number(cita.cobro.saldoPendiente))}`}
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0">
+              {saldoCobro <= 0 ? (
+                'Pagado'
+              ) : (
+                <>Seña <span className="tabular-nums">{formatMoneda(pagadoCobro)}</span></>
+              )}
             </span>
           )}
         </div>

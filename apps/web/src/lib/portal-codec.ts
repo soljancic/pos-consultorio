@@ -3,8 +3,8 @@ import Sqids from 'sqids'
 // Ofuscacion (no seguridad) de los ids numericos de doctor/servicio en el link
 // de reserva: doctor=5 -> doctor=aB2k. Mismo id -> mismo codigo. El backend
 // igual valida pertenencia/activo. minLength 4 para que ids chicos no salgan
-// de 1-2 chars. Alfabeto fijo barajado (estable: no cambiar o se rompen los
-// links ya compartidos).
+// de 1-2 chars. Alfabeto fijo de caracteres unicos (requisito de Sqids),
+// estable: no cambiarlo o se rompen los links ya compartidos.
 const ALFABETO = 'fhpwxKQRTUVbn23456789ABCDEFGHJLMNPqrstuvyz'
 const sqids = new Sqids({ alphabet: ALFABETO, minLength: 4 })
 
