@@ -19,6 +19,14 @@ export class PortalController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 60 } })
+  @Get(':slug/servicio/:id')
+  @ApiOperation({ summary: 'Nombre/duracion de un servicio (resuelve deep-link, incluye ocultos)' })
+  servicio(@Param('slug') slug: string, @Param('id', ParseIntPipe) id: number) {
+    return this.service.servicio(slug, id)
+  }
+
+  @Public()
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   @Get(':slug/prefill/:token')
   @ApiOperation({ summary: 'Datos de contacto del paciente del link precargado (token opaco)' })

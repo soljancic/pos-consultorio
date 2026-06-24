@@ -119,7 +119,7 @@ export class PortalService {
         orderBy: { nombre: 'asc' },
       }),
       this.prisma.servicio.findMany({
-        where: { consultorioId: c.id, activo: true },
+        where: { consultorioId: c.id, activo: true, mostrarEnBooking: true },
         select: { id: true, nombre: true, duracionMin: true },
         orderBy: { nombre: 'asc' },
       }),
@@ -132,6 +132,19 @@ export class PortalService {
       })),
       servicios,
     }
+  }
+
+  // Resuelve el nombre de un servicio para el deep-link (?servicio=). Devuelve
+  // tambien servicios ocultos (mostrarEnBooking:false): el link directo es el
+  // permiso. Solo exige que pertenezca al consultorio y este activo.
+  async servicio(slug: string, servicioId: number) {
+    const c = await this.consultorioPorSlug(slug)
+    const s = await this.prisma.servicio.findFirst({
+      where: { id: servicioId, consultorioId: c.id, activo: true },
+      select: { id: true, nombre: true, duracionMin: true },
+    })
+    if (!s) throw new NotFoundException('Servicio no encontrado')
+    return s
   }
 
   // Precarga del link con token opaco (?p=): devuelve SOLO los datos de
