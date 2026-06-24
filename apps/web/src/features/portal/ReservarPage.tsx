@@ -74,12 +74,18 @@ export function ReservarPage() {
   // Si el link trae un servicio que no esta en la lista publica (oculto), pedir
   // su nombre/duracion para mostrarlo como seleccionado.
   const servicioEnLista = info?.servicios.some((s) => String(s.id) === servicioId)
-  const { data: servicioOculto } = useQuery<{ id: number; nombre: string; duracionMin: number }>({
+  const { data: servicioOculto, isError: errorServicioOculto, isLoading: cargandoServicioOculto } = useQuery<{ id: number; nombre: string; duracionMin: number }>({
     queryKey: ['portal-servicio', slug, servicioId],
     queryFn: () => api.get(`/public/${slug}/servicio/${servicioId}`).then((r) => r.data),
     enabled: !!servicioId && !!info && !servicioEnLista,
     retry: 0,
   })
+
+  // Si el servicio oculto del deep-link no se puede resolver (404 / error de red),
+  // caer al selector normal: el paciente elige el servicio como si no hubiera venido precargado.
+  useEffect(() => {
+    if (errorServicioOculto) setServicioId('')
+  }, [errorServicioOculto])
 
   // Nombre del servicio seleccionado: primero la lista publica, luego el oculto
   const nombreServicioSel =
@@ -437,7 +443,8 @@ export function ReservarPage() {
             )}
             {!esReprogramacion && (
               servicioId && !servicioEnLista ? (
-                // Servicio oculto deep-linkeado: se muestra como campo fijo (no editable)
+                // Servicio oculto deep-linkeado: se muestra como campo fijo (no editable).
+                // Si la query falla el useEffect de arriba limpia servicioId y cae al selector normal.
                 <FloatingSelect
                   id="res-servicio"
                   label="Servicio"
@@ -448,7 +455,7 @@ export function ReservarPage() {
                   onChange={() => {}}
                 >
                   <option value={servicioId}>
-                    {nombreServicioSel || 'Cargando servicio...'}
+                    {cargandoServicioOculto ? 'Cargando servicio...' : nombreServicioSel}
                     {servicioOculto ? ` (${servicioOculto.duracionMin} min)` : ''}
                   </option>
                 </FloatingSelect>
