@@ -339,10 +339,13 @@ export function AgendaPage() {
           <button onClick={() => navegar(-1)} aria-label="Anterior" className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground capitalize">{tituloFecha}</h2>
+          {/* Ancho fijo + texto centrado: el titulo cambia de largo (dia/semana/mes)
+              y movia el chevron "Siguiente"; reservar el espacio lo deja quieto
+              para poder navegar click-click-click sin perder el boton. */}
+          <div className="w-40 sm:w-64 text-center">
+            <h2 title={tituloFecha} className="text-lg font-semibold text-foreground capitalize truncate">{tituloFecha}</h2>
             {(vista === 'lista' || vista === 'dia') && (
-              <p className="text-xs text-muted-foreground">{citas.length} citas</p>
+              <p className="text-xs text-muted-foreground tabular-nums">{citas.length} citas</p>
             )}
           </div>
           <button onClick={() => navegar(1)} aria-label="Siguiente" className={cn(btnIconUI, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
