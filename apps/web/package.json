@@ -34,6 +34,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.0",
     "react-router-dom": "^7.1.0",
+    "sqids": "^0.3.0",
     "tailwind-merge": "^2.5.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.0"
