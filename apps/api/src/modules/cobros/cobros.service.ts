@@ -30,6 +30,11 @@ export class AnularPagoDto {
   motivo?: string
 }
 
+export class DevolverPrepagoDto {
+  @IsString() @IsOptional()
+  motivo?: string
+}
+
 @Injectable()
 export class CobrosService {
   constructor(private prisma: PrismaService) {}

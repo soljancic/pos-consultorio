@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto } from './cobros.service'
+import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { Rol } from '@pos/types'
@@ -66,8 +66,8 @@ export class CobrosController {
   devolverPrepago(
     @CurrentUser() user: JwtPayload,
     @Param('citaId', ParseIntPipe) citaId: number,
-    @Body() body: { motivo?: string },
+    @Body() dto: DevolverPrepagoDto,
   ) {
-    return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, body?.motivo)
+    return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, dto.motivo)
   }
 }
