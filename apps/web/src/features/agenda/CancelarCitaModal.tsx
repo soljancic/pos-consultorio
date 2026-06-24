@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, AlertTriangle, UserX } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatFecha, formatHora, cn } from '../../lib/utils'
+import { formatFecha, formatHora, formatMoneda, cn } from '../../lib/utils'
 import { btnOutlineUI, errorUI, btnDestructiveUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
@@ -48,14 +48,21 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   const t = TEXTOS[modo]
   const Icono = modo === 'cancelar' ? AlertTriangle : UserX
 
+  const pagado = cita.cobro ? Number(cita.cobro.total) - Number(cita.cobro.saldoPendiente) : 0
+  const tienePrepago = modo === 'cancelar' && pagado > 0
+
   const cancelar = useMutation({
-    mutationFn: () =>
-      api.put(`/citas/${cita.id}/estado`, {
+    mutationFn: async (devolver: boolean) => {
+      if (modo === 'cancelar' && devolver && pagado > 0) {
+        await api.post(`/cobros/cita/${cita.id}/devolver`, { motivo: motivo || undefined })
+      }
+      return api.put(`/citas/${cita.id}/estado`, {
         estado: modo === 'cancelar' ? EstadoCita.CANCELADA : EstadoCita.NO_ASISTIO,
         motivo: motivo || undefined,
-      }),
+      })
+    },
     onSuccess: () => {
-      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'cobro-cita']) {
+      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'cobro-cita', 'caja-hoy']) {
         qc.invalidateQueries({ queryKey: [key] })
       }
       onClose()
@@ -96,18 +103,34 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
             </p>
           )}
 
+          {tienePrepago && (
+            <div className="rounded-lg border border-amber-300/60 bg-amber-500/10 p-3 text-sm text-foreground">
+              Esta cita tiene <span className="font-semibold tabular-nums">{formatMoneda(pagado)}</span> prepagados.
+              ¿Devolver al paciente o mantener el pago?
+            </div>
+          )}
+
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>
-            <button
-              type="button"
-              onClick={() => { setError(''); cancelar.mutate() }}
-              disabled={cancelar.isPending}
-              className={cn(btnDestructiveUI, 'flex-1')}
-            >
-              {cancelar.isPending ? t.botonCargando : t.boton}
-            </button>
+            {tienePrepago ? (
+              <>
+                <button type="button" onClick={() => { setError(''); cancelar.mutate(false) }}
+                  disabled={cancelar.isPending} className={cn(btnOutlineUI, 'flex-1')}>
+                  Mantener
+                </button>
+                <button type="button" onClick={() => { setError(''); cancelar.mutate(true) }}
+                  disabled={cancelar.isPending} className={cn(btnDestructiveUI, 'flex-1')}>
+                  {cancelar.isPending ? 'Procesando...' : 'Devolver y cancelar'}
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => { setError(''); cancelar.mutate(false) }}
+                disabled={cancelar.isPending} className={cn(btnDestructiveUI, 'flex-1')}>
+                {cancelar.isPending ? t.botonCargando : t.boton}
+              </button>
+            )}
           </div>
         </div>
       </div>
