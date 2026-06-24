@@ -15,6 +15,9 @@ export class CreateServicioDto {
 
   @IsNumber() @Min(0)
   precioBase: number
+
+  @IsBoolean() @IsOptional()
+  mostrarEnBooking?: boolean
 }
 
 export class UpdateServicioDto extends PartialType(CreateServicioDto) {
