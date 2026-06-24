@@ -2,6 +2,15 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# Forzar versiones parcheadas de dependencias transitivas (npm audit, 2026-06-24).
+# xlsx queda fuera: solo se usa para export (no parsea), y SheetJS dejo de publicar
+# versiones parcheadas en npm (npm congelado en 0.18.5).
+overrides:
+  multer: "^2.2.0"
+  form-data: "^4.0.6"
+  dompurify: "^3.4.11"
+  js-yaml: "^4.1.2"
+
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
