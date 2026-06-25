@@ -92,6 +92,9 @@ model Consultorio {
   // Modulo Aseguradoras (F1): habilita catalogo, cobertura en cita y liquidaciones.
   // Default off: la mayoria de los consultorios no usa el modulo.
   trabajaConAseguradoras Boolean @default(false)
+  // Modulo Productos e Inventario (P1): habilita catalogo de productos, venta
+  // mixta en el cobro y venta directa. Default off: la mayoria no vende nada.
+  vendeProductos Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -109,6 +112,7 @@ model Consultorio {
   categoriasSeguro CategoriaSeguro[]
   tarifasCobertura TarifaCobertura[]
   liquidaciones    LiquidacionItem[]
+  productos        Producto[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
@@ -802,4 +806,32 @@ model LiquidacionItem {
   @@index([consultorioId, aseguradoraId, estado])
   @@index([consultorioId, fecha])
   @@map("liquidacion_items")
+}
+
+// ─── PRODUCTOS E INVENTARIO (P1) ─────────────────────────────────────────────
+
+model Producto {
+  id              Int      @id @default(autoincrement())
+  consultorioId   Int
+  consultorio     Consultorio @relation(fields: [consultorioId], references: [id])
+  categoria       String?  // texto libre en P1
+  nombre          String
+  codigoBarras    String?
+  precioVenta     Decimal  @db.Decimal(10, 2)
+  precioCosto     Decimal  @db.Decimal(10, 2)
+  stockActual     Int      @default(0)
+  controlaStock   Boolean  @default(true)
+  // habilitadoVenta=true => vendible (aparece en el modal de cobro / venta
+  // directa). false => insumo de control interno (solo catalogo, compras P2,
+  // ajustes P3).
+  habilitadoVenta Boolean  @default(true)
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([consultorioId, codigoBarras])
+  @@index([consultorioId])
+  @@index([consultorioId, nombre])
+  @@map("productos")
 }
