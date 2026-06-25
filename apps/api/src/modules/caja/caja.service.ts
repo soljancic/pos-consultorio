@@ -99,6 +99,7 @@ export class CajaService {
               },
             },
           },
+          // Para pagosDeudaAnterior: usar createdAt del cobro cuando no hay cita
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -121,7 +122,7 @@ export class CajaService {
     // MVP: "Total del dia. Total por forma de pago. Nuevas deudas. Pagos de deuda"
     // Pago cuya cita es de un dia local anterior a hoy = cobro de deuda vieja
     const pagosDeudaAnterior = pagos
-      .filter((p) => new Date(p.cobro.cita!.fechaHora) < inicioLocal)
+      .filter((p) => new Date(p.cobro.cita?.fechaHora ?? p.cobro.createdAt) < inicioLocal)
       .reduce((acc, p) => acc + Number(p.monto), 0)
 
     // Nuevas deudas: saldo pendiente de cobros de citas de HOY (dia local) ya prestadas
@@ -129,11 +130,18 @@ export class CajaService {
       where: {
         consultorioId,
         saldoPendiente: { gt: 0 },
-        cita: {
-          fechaHora: { gte: inicioLocal, lt: finLocal },
-          estado: { in: ['ATENDIDA', 'CON_DEUDA'] },
-          deletedAt: null,
-        },
+        OR: [
+          // Deuda de citas atendidas hoy
+          {
+            cita: {
+              fechaHora: { gte: inicioLocal, lt: finLocal },
+              estado: { in: ['ATENDIDA', 'CON_DEUDA'] },
+              deletedAt: null,
+            },
+          },
+          // Deuda de ventas directas creadas hoy
+          { citaId: null, createdAt: { gte: inicioLocal, lt: finLocal } },
+        ],
       },
       select: { saldoPendiente: true },
     })

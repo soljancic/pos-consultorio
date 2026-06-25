@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto, SetLineasProductoDto } from './cobros.service'
+import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto, SetLineasProductoDto, CrearVentaDirectaDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { Rol } from '@pos/types'
@@ -49,6 +49,12 @@ export class CobrosController {
     @Body() dto: DevolverPrepagoDto,
   ) {
     return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, dto.motivo)
+  }
+
+  @Post('venta-directa')
+  @ApiOperation({ summary: 'Crear una venta directa de productos (sin cita)' })
+  crearVentaDirecta(@CurrentUser() user: JwtPayload, @Body() dto: CrearVentaDirectaDto) {
+    return this.service.crearVentaDirecta(user.consultorioId, dto, user.sub)
   }
 
   @Get(':id')

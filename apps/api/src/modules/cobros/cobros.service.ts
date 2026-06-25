@@ -3,6 +3,7 @@ import { IsNumber, Min, IsInt, IsString, IsOptional, IsArray, ValidateNested, Ar
 import { Type } from 'class-transformer'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCobro, EstadoCita } from '@pos/types'
+import { Prisma } from '@prisma/client'
 import { Decimal } from '@prisma/client/runtime/library'
 import { diaCajaLocal } from '../caja/caja.service'
 import { descontarStockDeCobro } from './stock.helper'
@@ -46,6 +47,14 @@ export class LineaProductoDto {
 }
 
 export class SetLineasProductoDto {
+  @IsArray() @ValidateNested({ each: true }) @Type(() => LineaProductoDto) @ArrayMaxSize(100)
+  lineas: LineaProductoDto[]
+}
+
+export class CrearVentaDirectaDto {
+  @IsInt() @IsOptional()
+  pacienteId?: number
+
   @IsArray() @ValidateNested({ each: true }) @Type(() => LineaProductoDto) @ArrayMaxSize(100)
   lineas: LineaProductoDto[]
 }
@@ -198,6 +207,92 @@ export class CobrosService {
     return { ...fresco, advertencias }
   }
 
+  // Venta de mostrador sin cita. El cobro nace YA confirmado: el stock se
+  // descuenta al crearlo. paciente opcional (consumidor final al contado), pero
+  // OBLIGATORIO si queda saldo (para colgar la deuda). No registra el pago aca:
+  // el pago se hace despues con registrarPago sobre este cobro.
+  async crearVentaDirecta(consultorioId: number, dto: CrearVentaDirectaDto, usuarioId: number) {
+    if (dto.lineas.length === 0) throw new BadRequestException('La venta no tiene productos')
+    await this.exigirCajaAbierta(consultorioId)
+
+    if (dto.pacienteId) {
+      const pac = await this.prisma.paciente.findFirst({
+        where: { id: dto.pacienteId, consultorioId, deletedAt: null },
+        select: { id: true },
+      })
+      if (!pac) throw new BadRequestException('Paciente no valido')
+    }
+
+    const ids = [...new Set(dto.lineas.map((l) => l.productoId))]
+    const productos = await this.prisma.producto.findMany({
+      where: { id: { in: ids }, consultorioId, deletedAt: null, activo: true, habilitadoVenta: true },
+    })
+    const porId = new Map(productos.map((p) => [p.id, p]))
+    for (const l of dto.lineas) {
+      if (!porId.has(l.productoId)) {
+        throw new BadRequestException(`Producto ${l.productoId} no existe o no esta habilitado para la venta`)
+      }
+    }
+
+    let total = new Decimal(0)
+    for (const l of dto.lineas) total = total.plus(porId.get(l.productoId)!.precioVenta.mul(l.cantidad))
+    // Sin pago al crear: queda saldo = total. Si hay saldo, exigir paciente.
+    if (total.gt(0) && !dto.pacienteId) {
+      throw new BadRequestException('Si la venta no se paga al contado completo, elegi un paciente para la deuda')
+    }
+
+    const advertencias: string[] = []
+
+    const fresco = await this.prisma.$transaction(async (tx) => {
+      const cobro = await tx.cobro.create({
+        data: {
+          citaId: null,
+          consultorioId,
+          pacienteId: dto.pacienteId ?? null,
+          total,
+          saldoPendiente: total,
+          estado: EstadoCobro.PENDIENTE,
+        },
+      })
+      for (const l of dto.lineas) {
+        const p = porId.get(l.productoId)!
+        await tx.detalleCobro.create({
+          data: {
+            consultorioId, cobroId: cobro.id, productoId: p.id,
+            descripcion: p.nombre, cantidad: l.cantidad,
+            precioVenta: p.precioVenta, precioCosto: p.precioCosto,
+            subtotal: p.precioVenta.mul(l.cantidad),
+          },
+        })
+      }
+      // Confirmada al crear: descontar stock
+      const adv = await descontarStockDeCobro(tx, consultorioId, cobro.id, usuarioId)
+      advertencias.push(...adv)
+
+      // Deuda: si hay paciente y saldo, sube a deudaTotal
+      if (dto.pacienteId && total.gt(0)) {
+        await tx.paciente.update({ where: { id: dto.pacienteId }, data: { deudaTotal: { increment: total } } })
+      }
+
+      await tx.log.create({
+        data: {
+          consultorioId, usuarioId, entidad: 'Cobro', entidadId: cobro.id, accion: 'CREATE',
+          payloadDespues: { evento: 'venta-directa', total: total.toString(), pacienteId: dto.pacienteId ?? null },
+        },
+      })
+
+      return tx.cobro.findFirst({
+        where: { id: cobro.id, consultorioId },
+        include: {
+          pagos: { orderBy: { createdAt: 'asc' }, include: { tipoCuenta: { select: { nombre: true } } } },
+          detalles: { orderBy: { id: 'asc' } },
+        },
+      })
+    })
+
+    return { ...fresco, advertencias }
+  }
+
   async registrarPago(
     consultorioId: number,
     cobroId: number,
@@ -236,16 +331,27 @@ export class CobrosService {
       EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO, EstadoCita.EN_ATENCION,
     ]
     const ESTADOS_POST_ATENCION: EstadoCita[] = [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA]
-    const estadoCita = cobro.cita!.estado as EstadoCita
-    if (![...ESTADOS_PRE_ATENCION, ...ESTADOS_POST_ATENCION].includes(estadoCita)) {
-      throw new BadRequestException('No se puede cobrar una cita en este estado')
+
+    // Venta directa (sin cita): no hay validacion de estado de cita.
+    // Para cobros con cita: validar que la cita este en un estado cobrable.
+    let tocaCita = false
+    let estadoCita: EstadoCita | undefined
+    let nuevoEstadoCita: EstadoCita | undefined
+
+    if (cobro.citaId) {
+      estadoCita = cobro.cita!.estado as EstadoCita
+      if (![...ESTADOS_PRE_ATENCION, ...ESTADOS_POST_ATENCION].includes(estadoCita)) {
+        throw new BadRequestException('No se puede cobrar una cita en este estado')
+      }
+      tocaCita = ESTADOS_POST_ATENCION.includes(estadoCita)
+      const nuevoSaldoTemp = cobro.saldoPendiente.minus(monto)
+      const cobradoTemp = nuevoSaldoTemp.lte(0)
+      nuevoEstadoCita = cobradoTemp ? EstadoCita.COBRADO : EstadoCita.CON_DEUDA
     }
-    const tocaCita = ESTADOS_POST_ATENCION.includes(estadoCita)
 
     const nuevoSaldo = cobro.saldoPendiente.minus(monto)
     const cobrado = nuevoSaldo.lte(0)
     const nuevoEstadoCobro = cobrado ? EstadoCobro.COMPLETO : EstadoCobro.PARCIAL
-    const nuevoEstadoCita = cobrado ? EstadoCita.COBRADO : EstadoCita.CON_DEUDA
 
     await this.prisma.$transaction(async (tx) => {
       // Registrar pago
@@ -268,9 +374,9 @@ export class CobrosService {
       // Prepago (pre-atencion): no se toca el ciclo de vida de la cita ni la
       // deuda (la cita futura no es deuda). Post-atencion: comportamiento de
       // siempre (la cita pasa a COBRADO/CON_DEUDA y baja la deuda del paciente).
-      if (tocaCita) {
+      if (tocaCita && cobro.citaId) {
         await tx.cita.update({
-          where: { id: cobro.citaId! },
+          where: { id: cobro.citaId },
           data: { estado: nuevoEstadoCita },
         })
         await tx.paciente.update({
@@ -282,6 +388,14 @@ export class CobrosService {
         if (estadoCita === EstadoCita.ATENDIDA) {
           await descontarStockDeCobro(tx, consultorioId, cobroId, usuarioId)
         }
+      }
+
+      // Venta directa (sin cita): la deuda del paciente baja con cada pago
+      if (!cobro.citaId && cobro.pacienteId) {
+        await tx.paciente.update({
+          where: { id: cobro.pacienteId },
+          data: { deudaTotal: { decrement: monto } },
+        })
       }
 
       // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC). Solo el
@@ -316,7 +430,9 @@ export class CobrosService {
       })
     })
 
-    return this.findByCita(consultorioId, cobro.citaId!)
+    return cobro.citaId
+      ? this.findByCita(consultorioId, cobro.citaId)
+      : this.findOne(consultorioId, cobroId)
   }
 
   // Anulacion con asiento de reversa (E2-M1): el pago original nunca se borra
@@ -351,7 +467,9 @@ export class CobrosService {
     const pagado = cobro.total.minus(nuevoSaldo)
     const nuevoEstadoCobro = pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
     // Una cita cobrada vuelve a tener deuda; los demas estados no cambian
-    const revierteCita = cobro.cita!.estado === EstadoCita.COBRADO
+    const revierteCita = !!cobro.cita && cobro.cita.estado === EstadoCita.COBRADO
+    // Paciente cuya deuda se incrementa: el de la cita, o el directo del cobro
+    const pacienteDeuda = cobro.cita?.pacienteId ?? cobro.pacienteId
 
     const { clave: hoy } = diaCajaLocal()
 
@@ -381,18 +499,20 @@ export class CobrosService {
         data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
       })
 
-      if (revierteCita) {
+      if (revierteCita && cobro.cita) {
         await tx.cita.update({
-          where: { id: cobro.cita!.id },
+          where: { id: cobro.cita.id },
           data: { estado: EstadoCita.CON_DEUDA },
         })
       }
 
       // Espejo del decrement de registrarPago
-      await tx.paciente.update({
-        where: { id: cobro.cita!.pacienteId },
-        data: { deudaTotal: { increment: pago.monto } },
-      })
+      if (pacienteDeuda) {
+        await tx.paciente.update({
+          where: { id: pacienteDeuda },
+          data: { deudaTotal: { increment: pago.monto } },
+        })
+      }
 
       // La reversa descuenta de la caja de HOY (la historica no se reescribe).
       // Solo el efectivo afecta el arqueo.
@@ -442,13 +562,16 @@ export class CobrosService {
       select: { cerrada: true },
     })
 
-    const cobroFresco = await this.findByCita(consultorioId, cobro.cita!.id)
-    return {
-      ...cobroFresco,
-      advertencia: cajaOriginal?.cerrada
-        ? 'La caja del dia del pago original ya estaba cerrada: la reversa impacta la caja de hoy'
-        : undefined,
+    const advertencia = cajaOriginal?.cerrada
+      ? 'La caja del dia del pago original ya estaba cerrada: la reversa impacta la caja de hoy'
+      : undefined
+
+    if (cobro.citaId && cobro.cita) {
+      const cobroFresco = await this.findByCita(consultorioId, cobro.cita.id)
+      return { ...cobroFresco, advertencia }
     }
+    const cobroFresco = await this.findOne(consultorioId, cobro.id)
+    return { ...cobroFresco, advertencia }
   }
 
   // Devolucion de prepago: reversa TODOS los pagos activos del cobro de la cita
@@ -518,15 +641,16 @@ export class CobrosService {
     })
   }
 
-  // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA).
-  // Las citas futuras crean cobros PENDIENTE que NO son deuda.
-  private readonly whereDeudaReal = (consultorioId: number) => ({
+  // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA),
+  // mas ventas directas con saldo y paciente asignado.
+  private readonly whereDeudaReal = (consultorioId: number): Prisma.CobroWhereInput => ({
     consultorioId,
     saldoPendiente: { gt: new Decimal(0) },
-    cita: {
-      estado: { in: [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA] },
-      deletedAt: null,
-    },
+    OR: [
+      { cita: { estado: { in: [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA] }, deletedAt: null } },
+      // Venta directa: sin cita, con paciente para colgar la deuda
+      { citaId: null, pacienteId: { not: null } },
+    ],
   })
 
   // Ajuste de precio al cobrar (MVP: "Descuento"). El total nunca puede
@@ -572,8 +696,8 @@ export class CobrosService {
 
       // La deuda del paciente sigue al saldo solo si el servicio ya se presto
       const citaConDeuda =
-        cobro.cita!.estado === EstadoCita.ATENDIDA ||
-        cobro.cita!.estado === EstadoCita.CON_DEUDA
+        cobro.cita?.estado === EstadoCita.ATENDIDA ||
+        cobro.cita?.estado === EstadoCita.CON_DEUDA
       if (citaConDeuda) {
         const delta = nuevoSaldo.minus(cobro.saldoPendiente)
         if (!delta.isZero()) {
@@ -611,7 +735,9 @@ export class CobrosService {
       })
     })
 
-    return this.findByCita(consultorioId, cobro.cita!.id)
+    return cobro.citaId
+      ? this.findByCita(consultorioId, cobro.citaId)
+      : this.findOne(consultorioId, cobroId)
   }
 
   async getDeudores(consultorioId: number) {
@@ -619,6 +745,7 @@ export class CobrosService {
       where: this.whereDeudaReal(consultorioId),
       include: {
         pagos: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+        paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true } },
         cita: {
           include: {
             paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true } },
@@ -643,8 +770,10 @@ export class CobrosService {
     const porPaciente = new Map<number, Deudor>()
 
     for (const cobro of cobros) {
-      const pac = cobro.cita!.paciente
-      const fechaCita = new Date(cobro.cita!.fechaHora)
+      const pac = cobro.cita?.paciente ?? cobro.paciente
+      if (!pac) continue // venta directa sin paciente (contado): no es deuda
+      const fechaCita = cobro.cita ? new Date(cobro.cita.fechaHora) : new Date(cobro.createdAt)
+      const ultimoServicio = cobro.cita?.servicio.nombre ?? 'Venta de productos'
       const fechaPago = cobro.pagos[0]?.createdAt ?? null
       const existing = porPaciente.get(pac.id)
 
@@ -652,7 +781,7 @@ export class CobrosService {
         existing.deudaTotal += Number(cobro.saldoPendiente)
         if (fechaCita > existing.ultimaCitaFecha) {
           existing.ultimaCitaFecha = fechaCita
-          existing.ultimoServicio = cobro.cita!.servicio.nombre
+          existing.ultimoServicio = ultimoServicio
         }
         if (fechaPago && (!existing.ultimoPago || fechaPago > existing.ultimoPago)) {
           existing.ultimoPago = fechaPago
@@ -667,7 +796,7 @@ export class CobrosService {
           pais: pac.pais,
           deudaTotal: Number(cobro.saldoPendiente),
           ultimaCitaFecha: fechaCita,
-          ultimoServicio: cobro.cita!.servicio.nombre,
+          ultimoServicio,
           ultimoPago: fechaPago,
           cobros: [cobro],
         })
@@ -685,11 +814,11 @@ export class CobrosService {
       }),
       this.prisma.cobro.findMany({
         where: this.whereDeudaReal(consultorioId),
-        select: { cita: { select: { pacienteId: true } } },
+        select: { pacienteId: true, cita: { select: { pacienteId: true } } },
       }),
     ])
 
-    const pacienteIds = new Set(cobros.map((c) => c.cita!.pacienteId))
+    const pacienteIds = new Set(cobros.map((c) => c.cita?.pacienteId ?? c.pacienteId).filter(Boolean))
 
     return {
       totalDeuda: Number(suma._sum.saldoPendiente ?? 0),
