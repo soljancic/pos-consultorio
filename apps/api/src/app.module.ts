@@ -29,6 +29,7 @@ import { PlantillasModule } from './modules/plantillas/plantillas.module'
 import { MensajesModule } from './modules/mensajes/mensajes.module'
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module'
 import { LiquidacionesModule } from './modules/liquidaciones/liquidaciones.module'
+import { ProductosModule } from './modules/productos/productos.module'
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { LiquidacionesModule } from './modules/liquidaciones/liquidaciones.modul
     MensajesModule,
     NotificacionesModule,
     LiquidacionesModule,
+    ProductosModule,
   ],
   controllers: [HealthController],
   providers: [
