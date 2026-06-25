@@ -17,6 +17,13 @@ export class ProductosController {
     return this.service.vendibles(user.consultorioId, search)
   }
 
+  // Categorias existentes (distinct) para el combobox del formulario de producto.
+  @Get('categorias')
+  @Roles(Rol.ADMIN)
+  categorias(@CurrentUser() user: JwtPayload) {
+    return this.service.categorias(user.consultorioId)
+  }
+
   @Get()
   @Roles(Rol.ADMIN)
   findAll(

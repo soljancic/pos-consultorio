@@ -16,7 +16,9 @@ type CobroDeudor = {
   id: number
   total: number
   saldoPendiente: number
-  cita: Cita & { paciente: any; servicio: any }
+  createdAt: string
+  // Venta directa con deuda: no tiene cita (se cobra por id de cobro).
+  cita: (Cita & { paciente: any; servicio: any }) | null
 }
 
 type Deudor = {
@@ -37,6 +39,8 @@ export function DeudoresPage() {
   const [search, setSearch] = useState('')
   const { plantillas, consultorioNombre, linkQRBase } = usePlantillasWhatsApp()
   const [citaCobro, setCitaCobro] = useState<Cita | null>(null)
+  // Cobro de venta directa con deuda (sin cita): se cobra por id de cobro.
+  const [cobroDirecto, setCobroDirecto] = useState<{ id: number; pacienteNombre: string } | null>(null)
   const [expandido, setExpandido] = useState<number | null>(null)
 
   const { data: deudores = [], isLoading, isError, refetch } = useQuery<Deudor[]>({
@@ -54,11 +58,21 @@ export function DeudoresPage() {
 
   const totalDeuda = filtrados.reduce((acc, d) => acc + d.deudaTotal, 0)
 
-  // Con una sola cita adeudada cobra directo; con varias, expande el detalle
-  // para cobrar cita por cita (los montos del modal siempre corresponden).
+  // Abre el modal de cobro correcto: por cita (flujo normal) o por id de cobro
+  // (venta directa con deuda, que no tiene cita).
+  function cobrarCobro(cobro: CobroDeudor, deudor: Deudor) {
+    if (cobro.cita) {
+      setCitaCobro(cobro.cita)
+    } else {
+      setCobroDirecto({ id: cobro.id, pacienteNombre: `${deudor.nombre} ${deudor.apellido}` })
+    }
+  }
+
+  // Con un solo cobro adeudado cobra directo; con varios, expande el detalle
+  // para cobrar uno por uno (los montos del modal siempre corresponden).
   function cobrarDeudor(deudor: Deudor) {
     if (deudor.cobros.length === 1) {
-      setCitaCobro(deudor.cobros[0].cita)
+      cobrarCobro(deudor.cobros[0], deudor)
     } else {
       setExpandido(expandido === deudor.pacienteId ? null : deudor.pacienteId)
     }
@@ -202,8 +216,8 @@ export function DeudoresPage() {
                             className="border-b last:border-0 bg-muted/30"
                           >
                             <td className="pl-12 pr-4 py-2.5 text-muted-foreground" colSpan={2}>
-                              {formatFecha(cobro.cita.fechaHora)} &middot;{' '}
-                              {cobro.cita.servicio?.nombre}
+                              {formatFecha(cobro.cita ? cobro.cita.fechaHora : cobro.createdAt)} &middot;{' '}
+                              {cobro.cita?.servicio?.nombre ?? 'Venta de productos'}
                             </td>
                             <td className="px-4 py-2.5 text-xs text-muted-foreground" colSpan={2}>
                               Total {formatMoneda(Number(cobro.total))}
@@ -214,10 +228,10 @@ export function DeudoresPage() {
                             <td className="px-4 py-2.5">
                               <div className="flex justify-end">
                                 <button
-                                  onClick={() => setCitaCobro(cobro.cita)}
+                                  onClick={() => cobrarCobro(cobro, d)}
                                   className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                                 >
-                                  Cobrar esta cita
+                                  {cobro.cita ? 'Cobrar esta cita' : 'Cobrar esta venta'}
                                 </button>
                               </div>
                             </td>
@@ -306,10 +320,10 @@ export function DeudoresPage() {
                         >
                           <div className="min-w-0">
                             <p className="text-sm text-foreground truncate">
-                              {cobro.cita.servicio?.nombre}
+                              {cobro.cita?.servicio?.nombre ?? 'Venta de productos'}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {formatFecha(cobro.cita.fechaHora)} &middot; Total{' '}
+                              {formatFecha(cobro.cita ? cobro.cita.fechaHora : cobro.createdAt)} &middot; Total{' '}
                               {formatMoneda(Number(cobro.total))}
                             </p>
                           </div>
@@ -318,7 +332,7 @@ export function DeudoresPage() {
                               {formatMoneda(Number(cobro.saldoPendiente))}
                             </span>
                             <button
-                              onClick={() => setCitaCobro(cobro.cita)}
+                              onClick={() => cobrarCobro(cobro, d)}
                               className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                             >
                               Cobrar
@@ -367,6 +381,17 @@ export function DeudoresPage() {
           cita={citaCobro}
           onClose={() => {
             setCitaCobro(null)
+            qc.invalidateQueries({ queryKey: ['deudores'] })
+            qc.invalidateQueries({ queryKey: ['deudores-resumen'] })
+          }}
+        />
+      )}
+
+      {cobroDirecto && (
+        <CobroModal
+          cobroSinCita={cobroDirecto}
+          onClose={() => {
+            setCobroDirecto(null)
             qc.invalidateQueries({ queryKey: ['deudores'] })
             qc.invalidateQueries({ queryKey: ['deudores-resumen'] })
           }}

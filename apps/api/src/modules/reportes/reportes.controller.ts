@@ -33,6 +33,13 @@ export class ReportesController {
     return this.service.cobranzas(u.consultorioId, u.rol, u.sub, f)
   }
 
+  @Get('productos')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Reporte de productos vendidos (cantidad, total, costo, margen). ADMIN.' })
+  productos(@CurrentUser() u: JwtPayload, @Query() f: ReportFiltersDto) {
+    return this.service.productos(u.consultorioId, f)
+  }
+
   @Get('gastos')
   @Roles(Rol.ADMIN)
   @ApiOperation({ summary: 'Reporte de gastos (ADMIN).' })

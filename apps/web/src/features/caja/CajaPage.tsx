@@ -200,14 +200,20 @@ export function CajaPage() {
               </thead>
               <tbody>
                 {pagos.map((p) => {
-                  const fechaCita = new Date(p.cobro.cita.fechaHora)
-                  const esDeudaVieja = fechaCita.toDateString() !== hoyStr && fechaCita < new Date()
+                  // Venta directa: el pago no tiene cita; el paciente cuelga del
+                  // cobro (o no hay, si fue contado sin paciente).
+                  const pac = p.cobro.cita?.paciente ?? p.cobro.paciente
+                  const nombrePaciente = pac ? `${pac.nombre} ${pac.apellido}` : 'Venta directa'
+                  const servicio = p.cobro.cita?.servicio?.nombre ?? 'Venta de productos'
+                  const doctor = p.cobro.cita?.doctor?.nombre ?? '—'
+                  const fechaRef = new Date(p.cobro.cita?.fechaHora ?? p.cobro.createdAt)
+                  const esDeudaVieja = fechaRef.toDateString() !== hoyStr && fechaRef < new Date()
                   const esReversa = Number(p.monto) < 0
                   return (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors duration-150">
                       <td className="px-4 py-2 text-muted-foreground tabular-nums">{formatHora(p.createdAt)}</td>
                       <td className="px-4 py-2 font-medium">
-                        {p.cobro.cita.paciente.nombre} {p.cobro.cita.paciente.apellido}
+                        {nombrePaciente}
                         {esDeudaVieja && (
                           <span className="ml-2 text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">Deuda</span>
                         )}
@@ -218,8 +224,8 @@ export function CajaPage() {
                           <span className="ml-2 text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium" title={p.motivoAnulacion ?? undefined}>Anulado</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.servicio.nombre}</td>
-                      <td className="px-4 py-2 text-muted-foreground">{p.cobro.cita.doctor.nombre}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{servicio}</td>
+                      <td className="px-4 py-2 text-muted-foreground">{doctor}</td>
                       <td className="px-4 py-2 text-muted-foreground">{p.tipoCuenta?.nombre}</td>
                       <td className={cn('px-4 py-2 text-right font-medium tabular-nums', esReversa ? 'text-destructive' : 'text-accent', p.anuladoAt && 'line-through opacity-60')}>
                         {formatMoneda(Number(p.monto))}
@@ -233,7 +239,7 @@ export function CajaPage() {
                                   id: p.id,
                                   monto: Number(p.monto),
                                   cuenta: p.tipoCuenta?.nombre ?? '',
-                                  descripcion: `${p.cobro.cita.paciente.nombre} ${p.cobro.cita.paciente.apellido} - ${p.cobro.cita.servicio.nombre}`,
+                                  descripcion: `${nombrePaciente} - ${servicio}`,
                                 })
                               }
                               title="Anular pago"

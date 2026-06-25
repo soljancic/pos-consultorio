@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Archive, Package } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
@@ -90,6 +90,14 @@ function ToggleCard({
 export function ProductoModal({ producto, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!producto?.id
+
+  // Categorias ya usadas: alimentan el combobox (datalist) del campo Categoría,
+  // para reusar nombres en vez de tipear variantes ("Bebida" vs "bebidas").
+  const { data: categorias = [] } = useQuery<string[]>({
+    queryKey: ['productos', 'categorias'],
+    queryFn: () => api.get('/productos/categorias').then((r) => r.data),
+  })
+
   const [error, setError] = useState('')
   const [errores, setErrores] = useState<Errores>({})
   const [archivarOpen, setArchivarOpen] = useState(false)
@@ -200,8 +208,15 @@ export function ProductoModal({ producto, onClose }: Props) {
             <FloatingInput
               label="Categoría"
               value={form.categoria}
+              list="producto-categorias"
+              autoComplete="off"
               onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
             />
+            <datalist id="producto-categorias">
+              {categorias.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
             <FloatingInput
               label="Código de barras"
               value={form.codigoBarras}

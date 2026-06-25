@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
-import type { ReportPage, CitaReportRow, CobranzaReportRow, GastoReportRow, PacienteReportRow, ServicioReportRow, AseguradoraReportRow, CoberturaReportRow } from '@pos/types'
+import type { ReportPage, CitaReportRow, CobranzaReportRow, ProductoReportRow, GastoReportRow, PacienteReportRow, ServicioReportRow, AseguradoraReportRow, CoberturaReportRow } from '@pos/types'
 import { ReportFiltersDto } from './dto/report-filters.dto'
 
 // Item 29: reporte mensual + desglose por doctor (ADMIN).
@@ -80,7 +80,13 @@ export class ReportesService {
         paciente: { select: { nombre: true, apellido: true } },
         doctor: { select: { nombre: true } },
         servicio: { select: { nombre: true, precioBase: true } },
-        cobro: { select: { total: true } },
+        cobro: {
+          select: {
+            total: true, descuento: true, saldoPendiente: true,
+            // subtotales de PRODUCTO para separar la porcion servicio del bruto
+            detalles: { where: { productoId: { not: null } }, select: { subtotal: true } },
+          },
+        },
       },
       orderBy: { fechaHora: f.sortDir ?? 'desc' },
     })
@@ -102,16 +108,30 @@ export class ReportesService {
     })
     const ingresos = Number(pagos._sum.monto ?? 0)
 
-    const rows: CitaReportRow[] = citas.map((c) => ({
-      id: c.id,
-      fechaHora: c.fechaHora.toISOString(),
-      paciente: `${c.paciente.nombre} ${c.paciente.apellido}`,
-      doctor: c.doctor.nombre,
-      servicio: c.servicio.nombre,
-      estado: c.estado,
-      monto: Number(c.cobro?.total ?? c.servicio.precioBase),
-      observaciones: c.notasSecretaria,
-    }))
+    // El reporte de Citas muestra solo la PORCION SERVICIO del cobro (los
+    // productos van al reporte de Productos). El descuento del cobro abarca todo,
+    // asi que se prorratea por el peso del servicio en el bruto. Total/Descuento/
+    // Pagado quedan consistentes: Total(servicio) - Descuento = Pagado (si saldado).
+    const rows: CitaReportRow[] = citas.map((c) => {
+      const descuentoCobro = Number(c.cobro?.descuento ?? 0)
+      const bruto = c.cobro ? Number(c.cobro.total) + descuentoCobro : Number(c.servicio.precioBase)
+      const productosBruto = (c.cobro?.detalles ?? []).reduce((s, d) => s + Number(d.subtotal), 0)
+      const servicioBruto = bruto - productosBruto
+      const share = bruto > 0 ? servicioBruto / bruto : 1
+      const pagadoCobro = c.cobro ? Number(c.cobro.total) - Number(c.cobro.saldoPendiente) : 0
+      return {
+        id: c.id,
+        fechaHora: c.fechaHora.toISOString(),
+        paciente: `${c.paciente.nombre} ${c.paciente.apellido}`,
+        doctor: c.doctor.nombre,
+        servicio: c.servicio.nombre,
+        estado: c.estado,
+        monto: servicioBruto, // total del servicio a precio de lista
+        descuento: descuentoCobro * share,
+        pagado: pagadoCobro * share,
+        observaciones: c.notasSecretaria,
+      }
+    })
     const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
@@ -235,6 +255,86 @@ export class ReportesService {
       ],
       rows: slice, page: f.page ?? 1, pageSize: f.pageSize ?? 25, total: count,
       meta: { cuentas: [...cuentas.entries()].map(([nombre, total]) => ({ nombre, total })) },
+    }
+  }
+
+  // Reporte de productos vendidos: lineas de producto (DetalleCobro) de cobros
+  // no anulados, en el rango. Fecha de referencia = cita.fechaHora (cita) o
+  // createdAt (venta directa). Agrupa por producto con cantidad/total/costo/margen.
+  async productos(consultorioId: number, f: ReportFiltersDto): Promise<ReportPage<ProductoReportRow>> {
+    const { ini, fin } = this.rango(f.desde, f.hasta)
+
+    const detalles = await this.prisma.detalleCobro.findMany({
+      where: {
+        consultorioId,
+        productoId: { not: null },
+        cobro: {
+          estado: { not: 'ANULADO' },
+          OR: [
+            { cita: { fechaHora: { gte: ini, lt: fin } } },
+            { citaId: null, createdAt: { gte: ini, lt: fin } },
+          ],
+        },
+        ...(f.q && { descripcion: { contains: f.q, mode: 'insensitive' as const } }),
+      },
+      select: {
+        productoId: true,
+        descripcion: true,
+        cantidad: true,
+        subtotal: true,
+        precioCosto: true,
+        producto: { select: { categoria: true } },
+        cobro: { select: { total: true, descuento: true } },
+      },
+    })
+
+    // Agrupar por producto (la descripcion es snapshot; la categoria viene viva).
+    // El descuento es del cobro (sobre servicio + productos): se prorratea a cada
+    // linea por su peso en el bruto (= total + descuento). Margen = neto - costo.
+    const porProducto = new Map<number, ProductoReportRow>()
+    for (const d of detalles) {
+      const id = d.productoId!
+      const totalVendido = Number(d.subtotal)
+      const costo = Number(d.precioCosto) * d.cantidad
+      const cobroDescuento = Number(d.cobro?.descuento ?? 0)
+      const bruto = Number(d.cobro?.total ?? 0) + cobroDescuento
+      const descuento = cobroDescuento > 0 && bruto > 0 ? cobroDescuento * (totalVendido / bruto) : 0
+      const existing = porProducto.get(id)
+      if (existing) {
+        existing.cantidad += d.cantidad
+        existing.totalVendido += totalVendido
+        existing.descuento += descuento
+        existing.costo += costo
+        existing.margen = existing.totalVendido - existing.descuento - existing.costo
+      } else {
+        porProducto.set(id, {
+          productoId: id,
+          producto: d.descripcion,
+          categoria: d.producto?.categoria ?? null,
+          cantidad: d.cantidad,
+          totalVendido,
+          descuento,
+          costo,
+          margen: totalVendido - descuento - costo,
+        })
+      }
+    }
+    const rows = [...porProducto.values()].sort((a, b) => b.totalVendido - a.totalVendido)
+
+    const unidades = rows.reduce((s, r) => s + r.cantidad, 0)
+    const totalVendido = rows.reduce((s, r) => s + r.totalVendido, 0)
+    const descontadoTotal = rows.reduce((s, r) => s + r.descuento, 0)
+    const margenTotal = rows.reduce((s, r) => s + r.margen, 0)
+    const { slice, total } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
+
+    return {
+      kpis: [
+        { key: 'unidades', label: 'Unidades vendidas', value: unidades, format: 'number' },
+        { key: 'total', label: 'Total vendido', value: totalVendido, format: 'money' },
+        { key: 'descontado', label: 'Descontado', value: descontadoTotal, format: 'money', tone: 'warning' },
+        { key: 'margen', label: 'Margen total', value: margenTotal, format: 'money', tone: 'success' },
+      ],
+      rows: slice, page: f.page ?? 1, pageSize: f.pageSize ?? 25, total,
     }
   }
 

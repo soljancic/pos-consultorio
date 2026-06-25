@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Pencil, Check, Undo2, Wallet, AlertCircle, AlertTriangle, ShoppingCart, Save } from 'lucide-react'
+import { X, Pencil, Check, Undo2, Wallet, AlertCircle, AlertTriangle, ShoppingCart, Save, QrCode, Copy, MessageCircle } from 'lucide-react'
 import type { Cita } from '@pos/types'
 import { EstadoCita } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, simboloMoneda, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, simboloMoneda, abrirWhatsApp, cn } from '../../lib/utils'
+import { usePlantillasWhatsApp, renderDeuda } from '../../lib/whatsapp'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
@@ -13,13 +14,15 @@ import { FloatingInput } from '../../components/shared/FloatingInput'
 import { LineasProductoEditor, type LineaUI } from '../inventario/LineasProductoEditor'
 
 interface CobroModalProps {
-  cita: Cita
+  cita?: Cita
+  /** Cobro sin cita (venta directa con deuda): se cobra por id de cobro. */
+  cobroSinCita?: { id: number; pacienteNombre: string }
   onClose: () => void
 }
 
 interface TipoCuenta { id: number; nombre: string; esEfectivo: boolean }
 
-export function CobroModal({ cita, onClose }: CobroModalProps) {
+export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
@@ -33,14 +36,25 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const [motivoAjuste, setMotivoAjuste] = useState('')
   const [errorAjuste, setErrorAjuste] = useState('')
   const [errorPago, setErrorPago] = useState('')
+  const [linkCopiado, setLinkCopiado] = useState(false)
+  const { plantillas, consultorioNombre, linkQRBase } = usePlantillasWhatsApp()
   // Venta mixta: lineas de producto editables (solo con la cita en ATENDIDA).
   const [lineas, setLineas] = useState<LineaUI[]>([])
   const [errorLineas, setErrorLineas] = useState('')
   const [advertenciasLineas, setAdvertenciasLineas] = useState<string[]>([])
+  // Productos colapsados por defecto: se abren con el boton "Agregar productos"
+  // (o ya vienen abiertos si el cobro trae productos).
+  const [productosAbierto, setProductosAbierto] = useState(false)
 
+  // El cobro se ubica por cita (flujo normal) o por id de cobro (venta directa
+  // con deuda, que no tiene cita: se cobra desde Deudores).
+  const cobroQueryKey = cita ? ['cobro-cita', cita.id] : ['cobro', cobroSinCita!.id]
   const { data: cobro, isLoading } = useQuery({
-    queryKey: ['cobro-cita', cita.id],
-    queryFn: () => api.get(`/cobros/cita/${cita.id}`).then((r) => r.data),
+    queryKey: cobroQueryKey,
+    queryFn: () =>
+      api
+        .get(cita ? `/cobros/cita/${cita.id}` : `/cobros/${cobroSinCita!.id}`)
+        .then((r) => r.data),
     // Sin refetch al volver el foco: un alt-tab durante la edicion de lineas
     // dispararia un refetch que (via el useEffect de abajo) pisaria las lineas
     // sin guardar con la verdad del servidor. La invalidacion post-pago/Guardar
@@ -50,8 +64,9 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   })
 
   // Solo se editan productos mientras la cita esta ATENDIDA (antes de confirmar
-  // el cobro); luego la grilla queda en solo-lectura.
-  const lineasEditables = vendeProductos && cita.estado === EstadoCita.ATENDIDA
+  // el cobro); luego la grilla queda en solo-lectura. Una venta directa ya esta
+  // confirmada al crearse: sus lineas nunca son editables aca.
+  const lineasEditables = vendeProductos && cita?.estado === EstadoCita.ATENDIDA
 
   // Derivar las lineas de PRODUCTO desde los detalles del cobro (las de servicio
   // tienen productoId null). El snapshot no trae stock vivo, asi que no se
@@ -101,6 +116,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
       'pacientes',
       'paciente',
       'cobro-cita',
+      'cobro',
     ]) {
       qc.invalidateQueries({ queryKey: [key] })
     }
@@ -147,7 +163,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
         .then((r) => r.data),
     onSuccess: (data: any) => {
       const { advertencias, ...cobroFresco } = data
-      qc.setQueryData(['cobro-cita', cita.id], cobroFresco)
+      qc.setQueryData(cobroQueryKey, cobroFresco)
       invalidarFinanzas()
       setAdvertenciasLineas(Array.isArray(advertencias) ? advertencias : [])
       setErrorLineas('')
@@ -161,15 +177,42 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const saldo = cobro ? Number(cobro.saldoPendiente) : 0
   const pagado = cobro ? Number(cobro.total) - saldo : 0
 
-  // Desglose del total: servicio (detalles con productoId null) + productos.
-  // Si el cobro aun no tiene detalles de servicio (cobros viejos), el total
-  // menos los productos guardados es el servicio.
+  // Cobro con QR: cuando el paciente paga a distancia (p.ej. cobro anticipado),
+  // se le manda el link de pago por WhatsApp o se copia. Solo si el consultorio
+  // tiene el QR configurado (linkQRBase) y queda saldo por cobrar.
+  const nombrePaciente = cita
+    ? `${cita.paciente?.nombre ?? ''} ${cita.paciente?.apellido ?? ''}`.trim()
+    : (cobroSinCita?.pacienteNombre ?? '')
+  const linkPago = linkQRBase
+    ? `${linkQRBase}?cliente=${encodeURIComponent(nombrePaciente)}`
+    : ''
+  function enviarLinkPagoWa() {
+    const msg = renderDeuda(
+      plantillas.deuda,
+      { nombre: nombrePaciente, monto: formatMoneda(saldo), consultorio: consultorioNombre },
+      linkQRBase,
+    )
+    abrirWhatsApp(cita?.paciente?.telefono ?? '', msg, cita?.paciente?.pais)
+  }
+  function copiarLinkPago() {
+    if (!linkPago) return
+    navigator.clipboard?.writeText(linkPago).then(() => {
+      setLinkCopiado(true)
+      window.setTimeout(() => setLinkCopiado(false), 2000)
+    })
+  }
+
+  // Desglose: bruto (SUM detalles = servicio + productos) - descuento = total.
+  // Invariante bruto = total + descuento, robusto tambien para cobros viejos
+  // (descuento 0). El servicio = bruto - productos (sirva o no la linea de servicio).
+  const descuentoCobro = cobro ? Number(cobro.descuento ?? 0) : 0
+  const brutoCobro = cobro ? Number(cobro.total) + descuentoCobro : 0
   const subtotalProductosGuardado = cobro?.detalles
     ? cobro.detalles
         .filter((d: any) => d.productoId != null)
         .reduce((s: number, d: any) => s + Number(d.subtotal), 0)
     : 0
-  const subtotalServicio = cobro ? Number(cobro.total) - subtotalProductosGuardado : 0
+  const subtotalServicio = brutoCobro - subtotalProductosGuardado
   // Cambios sin guardar: si las lineas locales difieren de lo persistido (por
   // monto o por cantidad de items). Solo importa cuando se pueden editar.
   const subtotalLineasLocal = lineas.reduce((s, l) => s + l.precioVenta * l.cantidad, 0)
@@ -179,11 +222,28 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     (Math.abs(subtotalLineasLocal - subtotalProductosGuardado) > 0.001 ||
       lineas.length !== cantGuardadas)
 
+  // La seccion de productos queda visible si: la abriste con el boton, hay
+  // productos cargados, o hay cambios sin guardar (p.ej. borraste el ultimo
+  // producto: NO se debe colapsar hasta poder guardar la baja).
+  const mostrarProductos = productosAbierto || lineas.length > 0 || hayCambiosLineas
+
   function confirmarAjuste() {
     setErrorAjuste('')
+    // El descuento se da sobre el total YA con los productos guardados: con
+    // lineas sin guardar el total recalcularia y se perderia el descuento.
+    if (hayCambiosLineas) {
+      setErrorAjuste('Guardá los productos antes de cambiar el precio')
+      return
+    }
     const precio = parseFloat(nuevoPrecio)
     if (isNaN(precio) || precio < 0) {
       setErrorAjuste('Ingrese un precio valido')
+      return
+    }
+    // El descuento puede aplicar al servicio y/o a los productos; el unico piso
+    // es lo ya pagado.
+    if (precio < pagado) {
+      setErrorAjuste(`El total no puede ser menor a lo ya pagado (${formatMoneda(pagado)})`)
       return
     }
     ajustarTotal.mutate({ nuevoTotal: precio, motivo: motivoAjuste || undefined })
@@ -211,23 +271,101 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
 
   return (
     <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         <ModalHeader
           icon={Wallet}
           title="Registrar Cobro"
-          subtitle={<>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; {cita.servicio?.nombre}</>}
+          subtitle={
+            cita ? (
+              <>{cita.paciente?.nombre} {cita.paciente?.apellido} &bull; {cita.servicio?.nombre}</>
+            ) : (
+              <>{cobroSinCita?.pacienteNombre} &bull; Venta de productos</>
+            )
+          }
           onClose={onClose}
         />
 
         {isLoading ? (
           <div className="p-6 text-center text-muted-foreground">Cargando cobro...</div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            {/* Cuerpo scrolleable: con muchas lineas de producto el modal no
+                crece mas alla del viewport; header y botones quedan visibles. */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+            {/* Productos arriba de todo. Oculto por defecto: solo el boton
+                "Agregar productos"; al abrirlo aparece la grilla. Si el cobro ya
+                trae productos, se muestra abierto. */}
+            {vendeProductos && (lineasEditables || lineas.length > 0) && (
+              mostrarProductos ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <h3 className="text-sm font-semibold text-foreground">Productos</h3>
+                  </div>
+
+                  <LineasProductoEditor
+                    lineas={lineas}
+                    onChange={(nuevas) => {
+                      setLineas(nuevas)
+                      setAdvertenciasLineas([])
+                    }}
+                    disabled={!lineasEditables}
+                  />
+
+                  {/* Advertencias de stock bajo (informativas; no bloquean): bloque
+                      ambar, nunca errorUI (que es para errores duros). */}
+                  {advertenciasLineas.length > 0 && (
+                    <div
+                      className="rounded-md bg-amber-500/15 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 space-y-1"
+                      role="status"
+                    >
+                      {advertenciasLineas.map((a, i) => (
+                        <p key={i} className="flex items-start gap-1.5">
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                          <span>{a}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {errorLineas && (
+                    <div className={errorUI} role="alert" aria-live="assertive">
+                      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>{errorLineas}</span>
+                    </div>
+                  )}
+
+                  {/* Guardar lineas: aparece solo con cambios sin guardar. El pago
+                      se registra despues, sobre el total ya recomputado. */}
+                  {hayCambiosLineas && (
+                    <button
+                      type="button"
+                      onClick={() => setLineasMut.mutate()}
+                      disabled={setLineasMut.isPending}
+                      className={cn(btnOutlineUI, 'w-full')}
+                    >
+                      <Save className="h-4 w-4" aria-hidden="true" />
+                      {setLineasMut.isPending ? 'Guardando productos...' : 'Guardar productos'}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setProductosAbierto(true)}
+                  className={cn(btnOutlineUI, 'w-full')}
+                >
+                  <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+                  Agregar productos
+                </button>
+              )
+            )}
+
             <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <div className="text-muted-foreground">
-                    {subtotalProductosGuardado > 0 ? 'Total' : 'Total servicio'}
+                    {(subtotalProductosGuardado > 0 || descuentoCobro > 0) ? 'Total' : 'Total servicio'}
                   </div>
                   <div className="font-semibold inline-flex items-center gap-1.5 tabular-nums">
                     {formatMoneda(Number(cobro?.total))}
@@ -238,9 +376,10 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                           setNuevoPrecio(String(Number(cobro?.total ?? 0)))
                           setEditandoPrecio(true)
                         }}
-                        title="Cambiar precio"
+                        disabled={hayCambiosLineas}
+                        title={hayCambiosLineas ? 'Guardá los productos antes de cambiar el precio' : 'Cambiar precio'}
                         aria-label="Cambiar precio del total"
-                        className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70 transition-colors duration-150"
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -253,17 +392,27 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                 </div>
               </div>
 
-              {/* Desglose servicio + productos cuando la venta es mixta */}
-              {subtotalProductosGuardado > 0 && (
+              {/* Desglose: servicio + productos - descuento = total */}
+              {(subtotalProductosGuardado > 0 || descuentoCobro > 0) && (
                 <div className="border-t pt-2 space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Servicio</span>
-                    <span className="tabular-nums text-foreground">{formatMoneda(subtotalServicio)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Productos</span>
-                    <span className="tabular-nums text-foreground">{formatMoneda(subtotalProductosGuardado)}</span>
-                  </div>
+                  {subtotalServicio > 0.001 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Servicio</span>
+                      <span className="tabular-nums text-foreground">{formatMoneda(subtotalServicio)}</span>
+                    </div>
+                  )}
+                  {subtotalProductosGuardado > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Productos</span>
+                      <span className="tabular-nums text-foreground">{formatMoneda(subtotalProductosGuardado)}</span>
+                    </div>
+                  )}
+                  {descuentoCobro > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Descuento</span>
+                      <span className="tabular-nums text-destructive">-{formatMoneda(descuentoCobro)}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -320,64 +469,6 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                 </div>
               )}
             </div>
-
-            {/* Venta mixta: productos del cobro (solo si el consultorio vende
-                productos). Editable mientras la cita esta ATENDIDA; luego
-                solo-lectura. Guardar (PUT lineas) antes de registrar el pago. */}
-            {vendeProductos && (lineasEditables || lineas.length > 0) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  <h3 className="text-sm font-semibold text-foreground">Productos</h3>
-                </div>
-
-                <LineasProductoEditor
-                  lineas={lineas}
-                  onChange={(nuevas) => {
-                    setLineas(nuevas)
-                    setAdvertenciasLineas([])
-                  }}
-                  disabled={!lineasEditables}
-                />
-
-                {/* Advertencias de stock bajo (informativas; no bloquean): bloque
-                    ambar, nunca errorUI (que es para errores duros). */}
-                {advertenciasLineas.length > 0 && (
-                  <div
-                    className="rounded-md bg-amber-500/15 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 space-y-1"
-                    role="status"
-                  >
-                    {advertenciasLineas.map((a, i) => (
-                      <p key={i} className="flex items-start gap-1.5">
-                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-                        <span>{a}</span>
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                {errorLineas && (
-                  <div className={errorUI} role="alert" aria-live="assertive">
-                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>{errorLineas}</span>
-                  </div>
-                )}
-
-                {/* Guardar lineas: aparece solo con cambios sin guardar. El pago
-                    se registra despues, sobre el total ya recomputado. */}
-                {hayCambiosLineas && (
-                  <button
-                    type="button"
-                    onClick={() => setLineasMut.mutate()}
-                    disabled={setLineasMut.isPending}
-                    className={cn(btnOutlineUI, 'w-full')}
-                  >
-                    <Save className="h-4 w-4" aria-hidden="true" />
-                    {setLineasMut.isPending ? 'Guardando productos...' : 'Guardar productos'}
-                  </button>
-                )}
-              </div>
-            )}
 
             {/* Pagos ya registrados (anulables por ADMIN via reversa) */}
             {cobro?.pagos?.length > 0 && (
@@ -450,6 +541,50 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               </button>
             </div>
 
+            {/* Cobrar con QR: mandar/copiar el link de pago (cobro anticipado o
+                a distancia). Solo con QR configurado y saldo pendiente. */}
+            {linkQRBase && saldo > 0 && (
+              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <QrCode className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Cobrar con QR
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enviale el link de pago al paciente para que abone por QR.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={enviarLinkPagoWa}
+                    disabled={hayCambiosLineas}
+                    title={hayCambiosLineas ? 'Guardá los productos antes de enviar el link (el monto cambia)' : undefined}
+                    className={cn(btnOutlineUI, 'flex-1')}
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copiarLinkPago}
+                    aria-live="polite"
+                    className={cn(btnOutlineUI, 'flex-1')}
+                  >
+                    {linkCopiado ? (
+                      <>
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                        Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" aria-hidden="true" />
+                        Copiar link
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 Forma de pago
@@ -511,7 +646,11 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               </div>
             )}
 
-            <div className="flex gap-2 pt-1">
+            </div>
+
+            {/* Footer fijo: las acciones quedan siempre a la vista aunque el
+                cuerpo scrollee. */}
+            <div className="flex gap-2 shrink-0 border-t bg-card p-4">
               <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
                 Cancelar
               </button>

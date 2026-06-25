@@ -242,6 +242,20 @@ export class CitasService {
           consultorioId,
           total: totalCobro,
           saldoPendiente: totalCobro,
+          // El servicio se guarda como linea del cobro: asi SUM(detalles) = bruto
+          // (servicio + productos) y el descuento/venta mixta quedan consistentes.
+          // Tambien habilita a futuro varios servicios por visita.
+          detalles: {
+            create: {
+              consultorioId,
+              servicioId: dto.servicioId,
+              descripcion: c.servicio.nombre,
+              cantidad: 1,
+              precioVenta: totalCobro,
+              precioCosto: 0,
+              subtotal: totalCobro,
+            },
+          },
         },
       })
 

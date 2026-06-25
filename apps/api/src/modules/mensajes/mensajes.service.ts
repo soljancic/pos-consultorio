@@ -16,9 +16,19 @@ export class ResolverMensajeDto {
 export class MensajesService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(consultorioId: number, estado?: EstadoMensaje) {
+  // Los resueltos se acumulan sin techo: el tab "Resueltos" filtra por rango de
+  // fechas (resueltoAt) para no traer todo el historico cada vez. Rango local:
+  // [desde 00:00, hasta+1dia 00:00) — mismo criterio que Reportes.
+  findAll(consultorioId: number, estado?: EstadoMensaje, desde?: string, hasta?: string) {
+    let resueltoAt: { gte: Date; lt: Date } | undefined
+    if (desde && hasta) {
+      const ini = new Date(`${desde}T00:00:00`)
+      const fin = new Date(`${hasta}T00:00:00`)
+      fin.setDate(fin.getDate() + 1)
+      resueltoAt = { gte: ini, lt: fin }
+    }
     return this.prisma.mensajePendiente.findMany({
-      where: { consultorioId, ...(estado && { estado }) },
+      where: { consultorioId, ...(estado && { estado }), ...(resueltoAt && { resueltoAt }) },
       include: {
         paciente: { select: { id: true, nombre: true, apellido: true, telefono: true, pais: true, deudaTotal: true } },
         cita: { select: { id: true, fechaHora: true, estado: true, doctor: { select: { nombre: true } } } },

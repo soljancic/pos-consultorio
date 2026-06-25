@@ -91,6 +91,8 @@ export class CajaService {
         tipoCuenta: { select: { id: true, nombre: true, esEfectivo: true } },
         cobro: {
           include: {
+            // Venta directa (sin cita): el paciente cuelga directo del cobro
+            paciente: { select: { nombre: true, apellido: true } },
             cita: {
               include: {
                 paciente: { select: { nombre: true, apellido: true } },

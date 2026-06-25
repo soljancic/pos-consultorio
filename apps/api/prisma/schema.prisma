@@ -423,6 +423,9 @@ model Cobro {
   consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
   total          Decimal     @db.Decimal(10, 2)
   saldoPendiente Decimal     @db.Decimal(10, 2)
+  // Descuento sobre el bruto (SUM de detalles). Regla: total = SUM(detalles) - descuento.
+  descuento       Decimal    @db.Decimal(10, 2) @default(0)
+  motivoDescuento String?
   estado         EstadoCobro @default(PENDIENTE)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt

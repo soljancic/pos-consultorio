@@ -96,6 +96,19 @@ export class ProductosService {
     })
   }
 
+  // Categorias distintas ya usadas en el catalogo (para el combobox del form).
+  async categorias(consultorioId: number) {
+    const rows = await this.prisma.producto.findMany({
+      where: { consultorioId, deletedAt: null, categoria: { not: null } },
+      select: { categoria: true },
+      distinct: ['categoria'],
+      orderBy: { categoria: 'asc' },
+    })
+    return rows
+      .map((r) => r.categoria)
+      .filter((c): c is string => !!c && c.trim() !== '')
+  }
+
   async create(consultorioId: number, dto: CreateProductoDto) {
     await this.validarCodigoUnico(consultorioId, dto.codigoBarras)
     return this.prisma.producto.create({

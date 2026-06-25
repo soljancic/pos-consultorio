@@ -11,9 +11,14 @@ export class MensajesController {
   constructor(private service: MensajesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Cola de mensajes (estado opcional: PENDIENTE/ENVIADO/OMITIDO)' })
-  findAll(@CurrentUser() user: JwtPayload, @Query('estado') estado?: EstadoMensaje) {
-    return this.service.findAll(user.consultorioId, estado)
+  @ApiOperation({ summary: 'Cola de mensajes (estado opcional; resueltos filtran por rango desde/hasta)' })
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('estado') estado?: EstadoMensaje,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+  ) {
+    return this.service.findAll(user.consultorioId, estado, desde, hasta)
   }
 
   @Get('pendientes/count')

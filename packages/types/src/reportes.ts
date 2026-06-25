@@ -1,4 +1,4 @@
-export type ReportTab = 'citas' | 'cobranzas' | 'gastos' | 'pacientes' | 'servicios' | 'aseguradoras' | 'cobertura'
+export type ReportTab = 'citas' | 'cobranzas' | 'productos' | 'gastos' | 'pacientes' | 'servicios' | 'aseguradoras' | 'cobertura'
 
 export type KpiFormat = 'money' | 'number' | 'percent'
 export type KpiTone = 'default' | 'success' | 'warning' | 'danger'
@@ -30,7 +30,9 @@ export interface CitaReportRow {
   doctor: string
   servicio: string
   estado: string // EstadoCita
-  monto: number
+  monto: number // total del servicio a precio de lista (sin productos)
+  descuento: number // parte del descuento del cobro prorrateada al servicio
+  pagado: number // pago atribuible al servicio
   observaciones: string | null
 }
 export interface CobranzaReportRow {
@@ -41,6 +43,16 @@ export interface CobranzaReportRow {
   formaPago: string
   monto: number
   usuario: string
+}
+export interface ProductoReportRow {
+  productoId: number
+  producto: string
+  categoria: string | null
+  cantidad: number // unidades vendidas
+  totalVendido: number // bruto a precio de lista
+  descuento: number // parte del descuento del cobro prorrateada a este producto
+  costo: number
+  margen: number // (totalVendido - descuento) - costo
 }
 export interface GastoReportRow {
   id: number

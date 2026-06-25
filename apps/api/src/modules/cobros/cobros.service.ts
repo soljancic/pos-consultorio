@@ -132,7 +132,7 @@ export class CobrosService {
   ) {
     const cobro = await this.prisma.cobro.findFirst({
       where: { id: cobroId, consultorioId },
-      include: { cita: { select: { id: true, estado: true, pacienteId: true } } },
+      include: { cita: { select: { id: true, estado: true, pacienteId: true, servicioId: true, servicio: { select: { nombre: true } } } } },
     })
     if (!cobro) throw new NotFoundException('Cobro no encontrado')
     if (cobro.estado === EstadoCobro.ANULADO) {
@@ -160,6 +160,30 @@ export class CobrosService {
     const pagado = cobro.total.minus(cobro.saldoPendiente)
 
     const fresco = await this.prisma.$transaction(async (tx) => {
+      // Auto-heal de cobros viejos (creados antes de modelar el servicio como
+      // linea): si no hay linea de servicio, crearla con el monto que falta
+      // (bruto actual - productos actuales) ANTES de tocar las lineas, asi el
+      // servicio no se pierde al recomputar SUM(detalles).
+      const yaServicio = await tx.detalleCobro.findFirst({
+        where: { cobroId, consultorioId, servicioId: { not: null } }, select: { id: true },
+      })
+      if (!yaServicio && cobro.cita?.servicioId) {
+        const prodPrev = await tx.detalleCobro.aggregate({
+          where: { cobroId, consultorioId, productoId: { not: null } }, _sum: { subtotal: true },
+        })
+        const servicioMonto = cobro.total.plus(cobro.descuento).minus(prodPrev._sum.subtotal ?? new Decimal(0))
+        if (servicioMonto.gt(0)) {
+          await tx.detalleCobro.create({
+            data: {
+              consultorioId, cobroId,
+              servicioId: cobro.cita.servicioId,
+              descripcion: cobro.cita.servicio?.nombre ?? 'Servicio',
+              cantidad: 1, precioVenta: servicioMonto, precioCosto: 0, subtotal: servicioMonto,
+            },
+          })
+        }
+      }
+
       // Borrar lineas de producto previas (las de servicio quedan)
       await tx.detalleCobro.deleteMany({ where: { cobroId, consultorioId, productoId: { not: null } } })
 
@@ -183,9 +207,14 @@ export class CobrosService {
         }
       }
 
-      // Recomputar total = SUM(detalles) y saldo = total - pagado
+      // Recomputar bruto = SUM(detalles) (incluye la linea de servicio); el total
+      // conserva el descuento ya aplicado: total = bruto - descuento. Si se
+      // quitaron productos y el descuento supera al bruto, se recorta para no dar
+      // total negativo.
       const agg = await tx.detalleCobro.aggregate({ where: { cobroId, consultorioId }, _sum: { subtotal: true } })
-      const nuevoTotal = agg._sum.subtotal ?? new Decimal(0)
+      const bruto = agg._sum.subtotal ?? new Decimal(0)
+      const descuento = cobro.descuento.gt(bruto) ? bruto : cobro.descuento
+      const nuevoTotal = bruto.minus(descuento)
       if (nuevoTotal.lt(pagado)) {
         throw new BadRequestException('El total de la venta no puede quedar por debajo de lo ya pagado')
       }
@@ -196,7 +225,7 @@ export class CobrosService {
 
       await tx.cobro.update({
         where: { id: cobroId },
-        data: { total: nuevoTotal, saldoPendiente: nuevoSaldo, estado: nuevoEstado },
+        data: { total: nuevoTotal, descuento, saldoPendiente: nuevoSaldo, estado: nuevoEstado },
       })
 
       // La cita en ATENDIDA ya sumo su saldo a deudaTotal; ajustar por el delta
@@ -764,12 +793,19 @@ export class CobrosService {
 
     const pagado = cobro.total.minus(cobro.saldoPendiente)
     const nuevoTotal = new Decimal(dto.nuevoTotal)
+    // El descuento aplica sobre el total completo (servicio y/o productos); el
+    // unico piso es lo ya pagado (no se puede dejar el cobro con saldo negativo).
     if (nuevoTotal.lt(pagado)) {
       throw new BadRequestException(
         `El nuevo total ($${nuevoTotal}) no puede ser menor a lo ya pagado ($${pagado})`,
       )
     }
 
+    // Bruto (precio de lista = SUM detalles). Invariante total = bruto - descuento
+    // => bruto = total + descuento. Robusto tambien para cobros viejos sin linea
+    // de servicio (ahi descuento=0, bruto=total). El descuento queda como dato.
+    const bruto = cobro.total.plus(cobro.descuento)
+    const nuevoDescuento = bruto.minus(nuevoTotal) // + descuento, - recargo
     const nuevoSaldo = nuevoTotal.minus(pagado)
     const quedaSaldado = nuevoSaldo.lte(0)
     const nuevoEstadoCobro = quedaSaldado
@@ -781,7 +817,13 @@ export class CobrosService {
     await this.prisma.$transaction(async (tx) => {
       await tx.cobro.update({
         where: { id: cobroId },
-        data: { total: nuevoTotal, saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+        data: {
+          total: nuevoTotal,
+          descuento: nuevoDescuento,
+          motivoDescuento: dto.motivo ?? null,
+          saldoPendiente: nuevoSaldo,
+          estado: nuevoEstadoCobro,
+        },
       })
 
       // La deuda del paciente sigue al saldo solo si el servicio ya se presto

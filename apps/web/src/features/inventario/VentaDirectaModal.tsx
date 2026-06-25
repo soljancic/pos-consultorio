@@ -258,7 +258,82 @@ export function VentaDirectaModal({ onClose }: Props) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
-              {/* 1. Productos */}
+              {/* 1. Paciente (opcional) — primero, para identificar al comprador */}
+              <section className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold text-foreground">Paciente <span className="font-normal text-muted-foreground">(opcional)</span></h3>
+                </div>
+                <div ref={searchRef}>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
+                        aria-hidden="true"
+                      />
+                      <input
+                        value={pacienteQuery}
+                        onChange={(e) => {
+                          setPacienteQuery(e.target.value)
+                          setPaciente(null)
+                          setShowPacienteList(true)
+                        }}
+                        onFocus={() => setShowPacienteList(true)}
+                        placeholder="Buscar paciente..."
+                        aria-label="Buscar paciente"
+                        className={cn(inputUI, 'pl-9', paciente && 'pr-9')}
+                      />
+                      {paciente && (
+                        <button
+                          type="button"
+                          onClick={quitarPaciente}
+                          aria-label="Quitar paciente"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      )}
+                      {showPacienteList && pacientesResultado.length > 0 && (
+                        <div className="absolute z-20 top-full w-full mt-1.5 bg-card border rounded-lg shadow-lg max-h-48 overflow-auto">
+                          {pacientesResultado.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => seleccionarPaciente(p)}
+                              className="w-full text-left px-3 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                            >
+                              {p.nombre} {p.apellido}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Alta rapida de paciente sin salir del modal */}
+                    <button
+                      type="button"
+                      onClick={() => setModalNuevoPaciente(true)}
+                      aria-label="Nuevo paciente"
+                      title="Nuevo paciente"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                    >
+                      <UserPlus className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hint contado/deuda: ambar cuando queda saldo sin paciente */}
+                {faltaPaciente && (
+                  <p
+                    role="status"
+                    className="flex items-start gap-1.5 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                    Queda saldo: elegí un paciente para la deuda.
+                  </p>
+                )}
+              </section>
+
+              {/* 2. Productos */}
               <section className="space-y-2">
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -273,7 +348,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                 />
               </section>
 
-              {/* 2. Cobro inline */}
+              {/* 3. Cobro inline */}
               <section className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -384,77 +459,6 @@ export function VentaDirectaModal({ onClose }: Props) {
                     </span>
                   </div>
                 </div>
-              </section>
-
-              {/* 3. Paciente OPCIONAL */}
-              <section className="space-y-2">
-                <div ref={searchRef}>
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search
-                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
-                        aria-hidden="true"
-                      />
-                      <input
-                        value={pacienteQuery}
-                        onChange={(e) => {
-                          setPacienteQuery(e.target.value)
-                          setPaciente(null)
-                          setShowPacienteList(true)
-                        }}
-                        onFocus={() => setShowPacienteList(true)}
-                        placeholder="Paciente (opcional)"
-                        aria-label="Buscar paciente"
-                        className={cn(inputUI, 'pl-9', paciente && 'pr-9')}
-                      />
-                      {paciente && (
-                        <button
-                          type="button"
-                          onClick={quitarPaciente}
-                          aria-label="Quitar paciente"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
-                        >
-                          <X className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      )}
-                      {showPacienteList && pacientesResultado.length > 0 && (
-                        <div className="absolute z-20 top-full w-full mt-1.5 bg-card border rounded-lg shadow-lg max-h-48 overflow-auto">
-                          {pacientesResultado.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => seleccionarPaciente(p)}
-                              className="w-full text-left px-3 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
-                            >
-                              {p.nombre} {p.apellido}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {/* Alta rapida de paciente sin salir del modal */}
-                    <button
-                      type="button"
-                      onClick={() => setModalNuevoPaciente(true)}
-                      aria-label="Nuevo paciente"
-                      title="Nuevo paciente"
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
-                    >
-                      <UserPlus className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Hint contado/deuda: ambar cuando queda saldo sin paciente */}
-                {faltaPaciente && (
-                  <p
-                    role="status"
-                    className="flex items-start gap-1.5 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
-                  >
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-                    Queda saldo: elegí un paciente para la deuda.
-                  </p>
-                )}
               </section>
 
               {/* Error del backend (saldo sin paciente / sobrepago / caja cerrada) */}

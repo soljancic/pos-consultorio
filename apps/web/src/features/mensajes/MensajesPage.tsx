@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatHora, buildWhatsAppUrl, abrirWhatsApp, fechaRelativa, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderRecordatorio, renderDeuda } from '../../lib/whatsapp'
-import { cardUI, chipIconUI, btnOutlineUI } from '../../lib/ui'
+import { cardUI, chipIconUI, btnOutlineUI, inputUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
 import { CardListSkeleton } from '../../components/shared/Skeleton'
@@ -39,13 +39,19 @@ const LABEL_ESTADO: Record<Mensaje['estado'], string> = {
 export function MensajesPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'pendientes' | 'resueltos'>('pendientes')
+  // Rango para el tab "Resueltos" (no tiene sentido traer todo el historico).
+  // Default: solo el ultimo dia (hoy); el usuario amplia el rango si necesita.
+  const [desde, setDesde] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [hasta, setHasta] = useState(format(new Date(), 'yyyy-MM-dd'))
   const { plantillas, consultorioNombre, linkQRBase, direccion, ubicacionUrl } = usePlantillasWhatsApp()
 
   const { data: mensajes = [], isLoading, isError, refetch } = useQuery<Mensaje[]>({
-    queryKey: ['mensajes', tab],
+    queryKey: tab === 'pendientes' ? ['mensajes', 'pendientes'] : ['mensajes', 'resueltos', desde, hasta],
     queryFn: () =>
       api
-        .get('/mensajes', { params: tab === 'pendientes' ? { estado: 'PENDIENTE' } : undefined })
+        .get('/mensajes', {
+          params: tab === 'pendientes' ? { estado: 'PENDIENTE' } : { desde, hasta },
+        })
         .then((r) => r.data),
   })
   const visibles = tab === 'pendientes' ? mensajes : mensajes.filter((m) => m.estado !== 'PENDIENTE')
@@ -120,6 +126,17 @@ export function MensajesPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-3">
+        {tab === 'resueltos' && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="msg-desde" className="sr-only">Desde</label>
+            <input id="msg-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+              className={cn(inputUI, 'w-auto')} />
+            <span className="text-muted-foreground/70">a</span>
+            <label htmlFor="msg-hasta" className="sr-only">Hasta</label>
+            <input id="msg-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+              className={cn(inputUI, 'w-auto')} />
+          </div>
+        )}
         {generar.data && (
           <p role="status" className="text-xs text-muted-foreground">
             Se encolaron {generar.data.recordatorios} recordatorios y {generar.data.avisosDeuda} avisos de deuda.
@@ -136,7 +153,7 @@ export function MensajesPage() {
             {tab === 'pendientes' ? (
               <EmptyState icon={MessageCircle} title="No hay mensajes pendientes" description='La cola se genera sola cada mañana, o con el botón "Generar cola".' />
             ) : (
-              <EmptyState icon={Check} title="Sin mensajes resueltos" description="Todavía no se resolvió ningún mensaje." />
+              <EmptyState icon={Check} title="Sin mensajes resueltos" description="No hay mensajes resueltos en el período elegido. Probá ampliar el rango de fechas." />
             )}
           </div>
         ) : (

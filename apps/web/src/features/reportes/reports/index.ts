@@ -1,5 +1,6 @@
 import { citasColumns, citasExport } from './citas.report'
 import { cobranzasColumns, cobranzasExport } from './cobranzas.report'
+import { productosColumns, productosExport } from './productos.report'
 import { gastosColumns, gastosExport } from './gastos.report'
 import { pacientesColumns, pacientesExport } from './pacientes.report'
 import { serviciosColumns, serviciosExport } from './servicios.report'
@@ -29,6 +30,14 @@ export const REPORTS: Record<ReportTab, {
     toExport: cobranzasExport,
     searchPlaceholder: 'Buscar paciente...',
     rowKey: (r) => r.id,
+  },
+  productos: {
+    label: 'Productos',
+    columns: productosColumns,
+    toExport: productosExport,
+    searchPlaceholder: 'Buscar producto...',
+    soloAdmin: true,
+    rowKey: (r) => r.productoId,
   },
   gastos: {
     label: 'Gastos',
