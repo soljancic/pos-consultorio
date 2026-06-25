@@ -41,6 +41,12 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const { data: cobro, isLoading } = useQuery({
     queryKey: ['cobro-cita', cita.id],
     queryFn: () => api.get(`/cobros/cita/${cita.id}`).then((r) => r.data),
+    // Sin refetch al volver el foco: un alt-tab durante la edicion de lineas
+    // dispararia un refetch que (via el useEffect de abajo) pisaria las lineas
+    // sin guardar con la verdad del servidor. La invalidacion post-pago/Guardar
+    // (invalidarFinanzas + setQueryData) sigue funcionando: esto solo corta el
+    // refetch NO solicitado por foco.
+    refetchOnWindowFocus: false,
   })
 
   // Solo se editan productos mientras la cita esta ATENDIDA (antes de confirmar
