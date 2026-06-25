@@ -94,6 +94,42 @@
 .modal-fade { animation: modal-fade-in 0.18s ease-out; }
 .modal-pop { animation: modal-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* Scrollbar fina y pareja en todos los SO/navegadores: Windows dibuja la
+   scrollbar clasica gruesa y gris (se ve fea); aca la hacemos delgada, con
+   thumb redondeado sutil y track transparente. Variante -light para superficies
+   oscuras (el sidebar). Cubre webkit (Chrome/Edge/Safari) y Firefox. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6);
+}
+
+.scrollbar-thin-light {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+}
+.scrollbar-thin-light::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin-light::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin-light::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.3);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-thin-light::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(255 255 255 / 0.5);
+}
+
 @media print {
   aside, header, .print\:hidden { display: none !important; }
   main { overflow: visible !important; }

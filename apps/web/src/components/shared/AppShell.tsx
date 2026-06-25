@@ -192,7 +192,7 @@ export function AppShell() {
         </div>
 
         {/* Navegacion */}
-        <nav className="flex-1 py-3 space-y-1 px-2 overflow-y-auto">
+        <nav className="flex-1 py-3 space-y-1 px-2 overflow-y-auto scrollbar-thin-light">
           {NAV_ITEMS.filter((item) => (!item.soloAdmin || esAdmin) && !(esDoctor && item.ocultarDoctor) && (!item.requiereAseguradoras || user?.trabajaConAseguradoras) && (!item.requiereProductos || user?.vendeProductos)).map(
             ({ to, icon: Icon, label, end }) => (
               <NavLink
@@ -374,7 +374,7 @@ export function AppShell() {
           <NotificacionesBell className="h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto scrollbar-thin">
           <Outlet />
         </main>
       </div>
