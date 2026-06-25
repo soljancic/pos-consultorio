@@ -236,6 +236,12 @@ $total8a = $precioVenta * $cant8a  # 50
 $productos8apre = Invoke-RestMethod -Uri "$base/productos" -Headers $h
 $stock8apre = [int]($productos8apre.items | Where-Object { $_.id -eq $prodVendible.id }).stockActual
 
+# Baseline de deudores ANTES de la venta al contado: la venta sin paciente y
+# saldada no debe agregar ningun deudor (chequeo robusto por delta de conteo,
+# independiente de la forma del objeto deudor).
+$deudoresAntes8a = Invoke-RestMethod -Uri "$base/cobros/deudores" -Headers $h
+$cntAntes8a = @($deudoresAntes8a).Count
+
 $body8a = "{ ""lineas"": [{ ""productoId"": $($prodVendible.id), ""cantidad"": $cant8a }], ""pagos"": [{ ""tipoCuentaId"": $tcEfectivo, ""monto"": $total8a }] }"
 $vd8a = Invoke-RestMethod -Uri "$base/cobros/venta-directa" -Method Post -Headers $h `
   -ContentType "application/json" -Body $body8a
@@ -246,15 +252,13 @@ $productos8apost = Invoke-RestMethod -Uri "$base/productos" -Headers $h
 $stock8apost = [int]($productos8apost.items | Where-Object { $_.id -eq $prodVendible.id }).stockActual
 $stockEsperado8a = $stock8apre - $cant8a
 
-$deudores8a = Invoke-RestMethod -Uri "$base/cobros/deudores" -Headers $h
-$cobroEnDeudores8a = @($deudores8a) | Where-Object { $_.cobros -ne $null } |
-  ForEach-Object { $_.cobros } | Where-Object { $_.id -eq $vd8a.id }
-$cntDeudores8a = @($cobroEnDeudores8a).Count
+$deudoresDespues8a = Invoke-RestMethod -Uri "$base/cobros/deudores" -Headers $h
+$cntDespues8a = @($deudoresDespues8a).Count
 
-if ($saldo8a -eq 0 -and $estado8a -eq 'COMPLETO' -and $stock8apost -eq $stockEsperado8a -and $cntDeudores8a -eq 0) {
-  Write-Output "8a VD CONTADO SIN PACIENTE: OK (saldo=$saldo8a estado=$estado8a stock=$stock8apost cntDeudores=$cntDeudores8a)"
+if ($saldo8a -eq 0 -and $estado8a -eq 'COMPLETO' -and $stock8apost -eq $stockEsperado8a -and $cntDespues8a -eq $cntAntes8a) {
+  Write-Output "8a VD CONTADO SIN PACIENTE: OK (saldo=$saldo8a estado=$estado8a stock=$stock8apost deudores antes=$cntAntes8a despues=$cntDespues8a)"
 } else {
-  Write-Output "8a VD CONTADO SIN PACIENTE: FALLO (saldo=$saldo8a esperado 0; estado=$estado8a esperado COMPLETO; stock=$stock8apost esperado=$stockEsperado8a; cntDeudores=$cntDeudores8a esperado 0)"
+  Write-Output "8a VD CONTADO SIN PACIENTE: FALLO (saldo=$saldo8a esperado 0; estado=$estado8a esperado COMPLETO; stock=$stock8apost esperado=$stockEsperado8a; deudores antes=$cntAntes8a despues=$cntDespues8a esperado iguales)"
 }
 
 # ====================================================================
@@ -271,7 +275,6 @@ Esperar-Error {
 # ESCENARIO 8c: Sobrepago -> 400
 #               pagos cuyo total supera el total de la venta
 # ====================================================================
-$total8c = $precioVenta * 1  # 50; pagamos 999
 Esperar-Error {
   $body8c = "{ ""lineas"": [{ ""productoId"": $($prodVendible.id), ""cantidad"": 1 }], ""pagos"": [{ ""tipoCuentaId"": $tcEfectivo, ""monto"": 999 }] }"
   Invoke-RestMethod -Uri "$base/cobros/venta-directa" -Method Post -Headers $h `
