@@ -44,7 +44,7 @@ export function ConfiguracionPage() {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
-  const [tab, setTab] = useState<'usuarios' | 'consultorio'>('usuarios')
+  const [tab, setTab] = useState<'usuarios' | 'info' | 'config'>('usuarios')
   const [usuarioEdit, setUsuarioEdit] = useState<Usuario | null>(null)
   const [usuarioModal, setUsuarioModal] = useState(false)
   const [guardado, setGuardado] = useState(false)
@@ -150,23 +150,23 @@ export function ConfiguracionPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className={chipIconUI}>
               <Settings className="h-4 w-4" aria-hidden="true" />
             </span>
             Configuración
           </h1>
-          <div className="flex gap-1" role="tablist">
-            {(['usuarios', 'consultorio'] as const).map((t) => (
+          <div className="flex flex-wrap gap-1" role="tablist">
+            {([['usuarios', 'Usuarios'], ['info', 'Consultorio Info'], ['config', 'Config']] as const).map(([t, label]) => (
               <button key={t} onClick={() => setTab(t)}
                 role="tab"
                 aria-selected={tab === t}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
-                {t}
+                {label}
               </button>
             ))}
           </div>
@@ -224,7 +224,7 @@ export function ConfiguracionPage() {
           </div>
         )}
 
-        {tab === 'consultorio' && (
+        {tab === 'info' && (
           <div className={cn(cardUI, 'p-6 space-y-4')}>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Nombre del consultorio</label>
@@ -316,8 +316,13 @@ export function ConfiguracionPage() {
                 Cada cierre de caja envía a esta dirección un resumen del turno (ingresos, gastos y arqueo).
               </p>
             </div>
+          </div>
+        )}
+
+        {tab === 'config' && (
+          <div className={cn(cardUI, 'p-6 space-y-4')}>
             {/* Portal publico de reservas (E2.5b) */}
-            <div className="border-t pt-4 space-y-3">
+            <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Portal de reservas en línea</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -478,19 +483,21 @@ export function ConfiguracionPage() {
               </button>
               <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>
             </div>
+          </div>
+        )}
 
-            <div className="flex items-center gap-3 pt-2">
-              <button onClick={() => updateConsultorio.mutate(consForm)} disabled={updateConsultorio.isPending}
-                className={btnPrimaryUI}>
-                {updateConsultorio.isPending ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-              {guardado && (
-                <span role="status" className="inline-flex items-center gap-1 text-sm font-medium text-accent">
-                  <Check className="h-4 w-4" aria-hidden="true" />
-                  Guardado
-                </span>
-              )}
-            </div>
+        {(tab === 'info' || tab === 'config') && (
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            <button onClick={() => updateConsultorio.mutate(consForm)} disabled={updateConsultorio.isPending}
+              className={btnPrimaryUI}>
+              {updateConsultorio.isPending ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            {guardado && (
+              <span role="status" className="inline-flex items-center gap-1 text-sm font-medium text-accent">
+                <Check className="h-4 w-4" aria-hidden="true" />
+                Guardado
+              </span>
+            )}
           </div>
         )}
       </div>
