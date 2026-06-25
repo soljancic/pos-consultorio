@@ -121,7 +121,7 @@ export class CajaService {
     // MVP: "Total del dia. Total por forma de pago. Nuevas deudas. Pagos de deuda"
     // Pago cuya cita es de un dia local anterior a hoy = cobro de deuda vieja
     const pagosDeudaAnterior = pagos
-      .filter((p) => new Date(p.cobro.cita.fechaHora) < inicioLocal)
+      .filter((p) => new Date(p.cobro.cita!.fechaHora) < inicioLocal)
       .reduce((acc, p) => acc + Number(p.monto), 0)
 
     // Nuevas deudas: saldo pendiente de cobros de citas de HOY (dia local) ya prestadas
