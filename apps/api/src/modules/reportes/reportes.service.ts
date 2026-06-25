@@ -130,29 +130,53 @@ export class ReportesService {
     const { ini, fin } = this.rango(f.desde, f.hasta)
     const doctorId = await this.doctorIdForzado(consultorioId, rol, usuarioId, f.doctorId)
 
+    // Filtros que SOLO aplican a citas (una venta directa no tiene doctor ni
+    // servicio): si alguno esta activo, la venta directa queda fuera del reporte.
+    const soloCita = doctorId !== undefined || !!f.servicioId
+    // Busqueda por nombre/apellido del paciente (sirve para cita y venta directa).
+    const filtroPacienteQ = f.q
+      ? { paciente: { OR: [
+          { nombre: { contains: f.q, mode: 'insensitive' as const } },
+          { apellido: { contains: f.q, mode: 'insensitive' as const } },
+        ] } }
+      : {}
+
     const pagos = await this.prisma.pago.findMany({
       where: {
         createdAt: { gte: ini, lt: fin },
         ...(f.tipoCuentaId && { tipoCuentaId: f.tipoCuentaId }),
-        cobro: { consultorioId, cita: {
-          ...(doctorId !== undefined && { doctorId }),
-          ...(f.servicioId && { servicioId: f.servicioId }),
-          ...(f.pacienteId && { pacienteId: f.pacienteId }),
-          ...(f.q && { paciente: { OR: [
-            { nombre: { contains: f.q, mode: 'insensitive' } },
-            { apellido: { contains: f.q, mode: 'insensitive' } },
-          ] } }),
-        } },
+        cobro: {
+          consultorioId,
+          OR: [
+            // Cobro de cita: todos los filtros aplican sobre la cita.
+            { cita: {
+              ...(doctorId !== undefined && { doctorId }),
+              ...(f.servicioId && { servicioId: f.servicioId }),
+              ...(f.pacienteId && { pacienteId: f.pacienteId }),
+              ...filtroPacienteQ,
+            } },
+            // Venta directa (sin cita): solo si no hay filtro exclusivo de cita;
+            // paciente/busqueda aplican sobre el paciente directo del cobro.
+            ...(soloCita ? [] : [{
+              citaId: null,
+              ...(f.pacienteId && { pacienteId: f.pacienteId }),
+              ...filtroPacienteQ,
+            }]),
+          ],
+        },
       },
       select: {
         id: true, monto: true, createdAt: true,
         tipoCuenta: { select: { nombre: true, esEfectivo: true } },
         createdBy: { select: { nombre: true } },
-        cobro: { select: { cita: { select: {
-          id: true,
+        cobro: { select: {
           paciente: { select: { nombre: true, apellido: true } },
-          servicio: { select: { nombre: true } },
-        } } } },
+          cita: { select: {
+            id: true,
+            paciente: { select: { nombre: true, apellido: true } },
+            servicio: { select: { nombre: true } },
+          } },
+        } },
       },
       orderBy: { createdAt: f.sortDir ?? 'desc' },
     })
@@ -166,24 +190,40 @@ export class ReportesService {
       cuentas.set(p.tipoCuenta.nombre, (cuentas.get(p.tipoCuenta.nombre) ?? 0) + m)
     }
 
+    // Deuda pendiente del periodo: citas en rango + ventas directas (sin cita)
+    // creadas en rango. Al filtrar por doctor la venta directa queda fuera (no
+    // tiene doctor), igual que en la lista de pagos.
     const deudaAgg = await this.prisma.cobro.aggregate({
       _sum: { saldoPendiente: true },
-      where: { consultorioId, cita: {
-        fechaHora: { gte: ini, lt: fin },
-        ...(doctorId !== undefined && { doctorId }),
-      } },
+      where: {
+        consultorioId,
+        OR: [
+          { cita: {
+            fechaHora: { gte: ini, lt: fin },
+            ...(doctorId !== undefined && { doctorId }),
+          } },
+          ...(doctorId !== undefined ? [] : [{
+            citaId: null,
+            createdAt: { gte: ini, lt: fin },
+          }]),
+        ],
+      },
     })
     const deuda = Number(deudaAgg._sum.saldoPendiente ?? 0)
 
-    const rows: CobranzaReportRow[] = pagos.map((p) => ({
-      id: p.id,
-      fechaPago: p.createdAt.toISOString(),
-      paciente: `${p.cobro.cita!.paciente.nombre} ${p.cobro.cita!.paciente.apellido}`,
-      concepto: `${p.cobro.cita!.servicio.nombre} · Cita #${p.cobro.cita!.id}`,
-      formaPago: p.tipoCuenta.nombre,
-      monto: Number(p.monto),
-      usuario: p.createdBy.nombre,
-    }))
+    const rows: CobranzaReportRow[] = pagos.map((p) => {
+      const cita = p.cobro.cita
+      const pac = cita?.paciente ?? p.cobro.paciente
+      return {
+        id: p.id,
+        fechaPago: p.createdAt.toISOString(),
+        paciente: pac ? `${pac.nombre} ${pac.apellido}` : 'Consumidor final',
+        concepto: cita ? `${cita.servicio.nombre} · Cita #${cita.id}` : 'Venta de productos',
+        formaPago: p.tipoCuenta.nombre,
+        monto: Number(p.monto),
+        usuario: p.createdBy.nombre,
+      }
+    })
     const { slice, total: count } = this.paginar(this.ordenar(rows, f.sortBy, f.sortDir), f)
 
     return {
