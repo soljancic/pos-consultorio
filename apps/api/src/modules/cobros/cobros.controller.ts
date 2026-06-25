@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto } from './cobros.service'
+import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto, SetLineasProductoDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { Rol } from '@pos/types'
@@ -29,26 +29,6 @@ export class CobrosController {
     return this.service.findByCita(user.consultorioId, citaId)
   }
 
-  @Put(':id/total')
-  @ApiOperation({ summary: 'Ajustar el precio del cobro (descuento/recargo, auditado)' })
-  ajustarTotal(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AjustarTotalDto,
-  ) {
-    return this.service.ajustarTotal(user.consultorioId, id, dto, user.sub)
-  }
-
-  @Post(':id/pagos')
-  @ApiOperation({ summary: 'Registrar pago (total o parcial)' })
-  registrarPago(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: RegistrarPagoDto,
-  ) {
-    return this.service.registrarPago(user.consultorioId, id, dto, user.sub)
-  }
-
   @Post('pagos/:id/anular')
   @Roles(Rol.ADMIN)
   @ApiOperation({ summary: 'Anular un pago con asiento de reversa (nunca se borra)' })
@@ -69,5 +49,41 @@ export class CobrosController {
     @Body() dto: DevolverPrepagoDto,
   ) {
     return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, dto.motivo)
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener un cobro por id (con detalles)' })
+  findOne(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(user.consultorioId, id)
+  }
+
+  @Put(':id/total')
+  @ApiOperation({ summary: 'Ajustar el precio del cobro (descuento/recargo, auditado)' })
+  ajustarTotal(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AjustarTotalDto,
+  ) {
+    return this.service.ajustarTotal(user.consultorioId, id, dto, user.sub)
+  }
+
+  @Post(':id/pagos')
+  @ApiOperation({ summary: 'Registrar pago (total o parcial)' })
+  registrarPago(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RegistrarPagoDto,
+  ) {
+    return this.service.registrarPago(user.consultorioId, id, dto, user.sub)
+  }
+
+  @Put(':id/lineas')
+  @ApiOperation({ summary: 'Editar las lineas de producto de un cobro (antes de confirmar)' })
+  setProductos(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetLineasProductoDto,
+  ) {
+    return this.service.setProductos(user.consultorioId, id, dto, user.sub)
   }
 }

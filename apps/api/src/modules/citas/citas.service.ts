@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
+import { descontarStockDeCobro, restituirStockDeCobro } from '../cobros/stock.helper'
 import { EstadoCita, EstadoCobro, EstadoLiquidacion, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum, IsBoolean } from 'class-validator'
 
@@ -454,6 +455,17 @@ export class CitasService {
         })
       }
 
+      // Confirmacion de venta con productos: al salir de ATENDIDA hacia
+      // COBRADO/CON_DEUDA se descuenta el stock de las lineas de producto.
+      if (
+        cita.estado === EstadoCita.ATENDIDA &&
+        (estadoFinal === EstadoCita.COBRADO || estadoFinal === EstadoCita.CON_DEUDA) &&
+        cita.cobro
+      ) {
+        const cobroRow = await tx.cobro.findUnique({ where: { citaId }, select: { id: true } })
+        if (cobroRow) await descontarStockDeCobro(tx, consultorioId, cobroRow.id, usuarioId)
+      }
+
       // El cobro de una cita cancelada/no-show no es deuda ni cuenta abierta
       if (ESTADOS_ANULAN_COBRO.includes(dto.estado) && cita.cobro) {
         await tx.cobro.update({
@@ -480,6 +492,9 @@ export class CitasService {
               ? EstadoCobro.PARCIAL
               : EstadoCobro.PENDIENTE
         await tx.cobro.update({ where: { citaId }, data: { estado: estadoCobro } })
+        // Reabrir restituye el stock que se habia descontado al confirmar
+        const cobroReabrir = await tx.cobro.findUnique({ where: { citaId }, select: { id: true } })
+        if (cobroReabrir) await restituirStockDeCobro(tx, consultorioId, cobroReabrir.id, usuarioId)
       }
 
       // Al cancelar: si hay LiquidacionItem PENDIENTE, eliminarlo (el servicio

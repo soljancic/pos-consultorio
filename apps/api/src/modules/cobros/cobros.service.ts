@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common'
-import { IsNumber, Min, IsInt, IsString, IsOptional } from 'class-validator'
+import { IsNumber, Min, IsInt, IsString, IsOptional, IsArray, ValidateNested, ArrayMaxSize } from 'class-validator'
+import { Type } from 'class-transformer'
 import { PrismaService } from '../../prisma/prisma.service'
 import { EstadoCobro, EstadoCita } from '@pos/types'
 import { Decimal } from '@prisma/client/runtime/library'
 import { diaCajaLocal } from '../caja/caja.service'
+import { descontarStockDeCobro } from './stock.helper'
 
 export class RegistrarPagoDto {
   @IsNumber() @Min(0.01)
@@ -35,6 +37,19 @@ export class DevolverPrepagoDto {
   motivo?: string
 }
 
+export class LineaProductoDto {
+  @IsInt()
+  productoId: number
+
+  @IsInt() @Min(1)
+  cantidad: number
+}
+
+export class SetLineasProductoDto {
+  @IsArray() @ValidateNested({ each: true }) @Type(() => LineaProductoDto) @ArrayMaxSize(100)
+  lineas: LineaProductoDto[]
+}
+
 @Injectable()
 export class CobrosService {
   constructor(private prisma: PrismaService) {}
@@ -62,10 +77,125 @@ export class CobrosService {
           orderBy: { createdAt: 'asc' },
           include: { tipoCuenta: { select: { nombre: true } } },
         },
+        detalles: { orderBy: { id: 'asc' } },
       },
     })
     if (!cobro) throw new NotFoundException('Cobro no encontrado')
     return cobro
+  }
+
+  async findOne(consultorioId: number, cobroId: number) {
+    const cobro = await this.prisma.cobro.findFirst({
+      where: { id: cobroId, consultorioId },
+      include: {
+        pagos: { orderBy: { createdAt: 'asc' }, include: { tipoCuenta: { select: { nombre: true } } } },
+        detalles: { orderBy: { id: 'asc' } },
+      },
+    })
+    if (!cobro) throw new NotFoundException('Cobro no encontrado')
+    return cobro
+  }
+
+  // Reemplaza las lineas de PRODUCTO de un cobro (las de servicio no se tocan)
+  // y recomputa total/saldo/deuda. Solo se permite mientras la venta NO esta
+  // confirmada: cita en ATENDIDA (aun no salio a COBRADO/CON_DEUDA). NO descuenta
+  // stock (eso pasa al confirmar). Devuelve el cobro fresco + advertencias de
+  // stock bajo (informativas; no bloquean).
+  async setProductos(
+    consultorioId: number,
+    cobroId: number,
+    dto: SetLineasProductoDto,
+    usuarioId: number,
+  ) {
+    const cobro = await this.prisma.cobro.findFirst({
+      where: { id: cobroId, consultorioId },
+      include: { cita: { select: { id: true, estado: true, pacienteId: true } } },
+    })
+    if (!cobro) throw new NotFoundException('Cobro no encontrado')
+    if (cobro.estado === EstadoCobro.ANULADO) {
+      throw new BadRequestException('El cobro esta anulado')
+    }
+    // Solo cita en ATENDIDA admite edicion de productos (antes de confirmar).
+    // Venta directa edita sus lineas al crearse (no por aca).
+    if (!cobro.citaId || cobro.cita?.estado !== EstadoCita.ATENDIDA) {
+      throw new BadRequestException('Solo se pueden editar productos antes de confirmar el cobro (cita en atencion finalizada)')
+    }
+
+    // Cargar productos vendibles del consultorio para snapshot + validacion
+    const ids = [...new Set(dto.lineas.map((l) => l.productoId))]
+    const productos = await this.prisma.producto.findMany({
+      where: { id: { in: ids }, consultorioId, deletedAt: null, activo: true, habilitadoVenta: true },
+    })
+    const porId = new Map(productos.map((p) => [p.id, p]))
+    for (const l of dto.lineas) {
+      if (!porId.has(l.productoId)) {
+        throw new BadRequestException(`Producto ${l.productoId} no existe o no esta habilitado para la venta`)
+      }
+    }
+
+    const advertencias: string[] = []
+    const pagado = cobro.total.minus(cobro.saldoPendiente)
+
+    const fresco = await this.prisma.$transaction(async (tx) => {
+      // Borrar lineas de producto previas (las de servicio quedan)
+      await tx.detalleCobro.deleteMany({ where: { cobroId, consultorioId, productoId: { not: null } } })
+
+      // Insertar las nuevas lineas de producto (snapshot del producto)
+      for (const l of dto.lineas) {
+        const p = porId.get(l.productoId)!
+        const subtotal = p.precioVenta.mul(l.cantidad)
+        await tx.detalleCobro.create({
+          data: {
+            consultorioId, cobroId,
+            productoId: p.id,
+            descripcion: p.nombre,
+            cantidad: l.cantidad,
+            precioVenta: p.precioVenta,
+            precioCosto: p.precioCosto,
+            subtotal,
+          },
+        })
+        if (p.controlaStock && l.cantidad > p.stockActual) {
+          advertencias.push(`Stock bajo en "${p.nombre}" (disponible ${p.stockActual})`)
+        }
+      }
+
+      // Recomputar total = SUM(detalles) y saldo = total - pagado
+      const agg = await tx.detalleCobro.aggregate({ where: { cobroId, consultorioId }, _sum: { subtotal: true } })
+      const nuevoTotal = agg._sum.subtotal ?? new Decimal(0)
+      if (nuevoTotal.lt(pagado)) {
+        throw new BadRequestException('El total de la venta no puede quedar por debajo de lo ya pagado')
+      }
+      const nuevoSaldo = nuevoTotal.minus(pagado)
+      const nuevoEstado = nuevoSaldo.lte(0)
+        ? EstadoCobro.COMPLETO
+        : pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
+
+      await tx.cobro.update({
+        where: { id: cobroId },
+        data: { total: nuevoTotal, saldoPendiente: nuevoSaldo, estado: nuevoEstado },
+      })
+
+      // La cita en ATENDIDA ya sumo su saldo a deudaTotal; ajustar por el delta
+      // de saldo que aportan los productos.
+      const deltaSaldo = nuevoSaldo.minus(cobro.saldoPendiente)
+      if (!deltaSaldo.isZero() && cobro.cita) {
+        await tx.paciente.update({
+          where: { id: cobro.cita.pacienteId },
+          data: { deudaTotal: { increment: deltaSaldo } },
+        })
+      }
+
+      return tx.cobro.findFirst({
+        where: { id: cobroId, consultorioId },
+        include: {
+          pagos: { orderBy: { createdAt: 'asc' }, include: { tipoCuenta: { select: { nombre: true } } } },
+          detalles: { orderBy: { id: 'asc' } },
+        },
+      })
+    })
+
+    return { ...fresco, advertencias }
   }
 
   async registrarPago(
@@ -147,6 +277,11 @@ export class CobrosService {
           where: { id: cobro.cita!.pacienteId },
           data: { deudaTotal: { decrement: monto } },
         })
+        // Confirmacion de la venta: la cita sale de ATENDIDA -> COBRADO/CON_DEUDA.
+        // Descontar stock de las lineas de producto una sola vez (en ese borde).
+        if (estadoCita === EstadoCita.ATENDIDA) {
+          await descontarStockDeCobro(tx, consultorioId, cobroId, usuarioId)
+        }
       }
 
       // Actualizar caja diaria (dia LOCAL del negocio, no fecha UTC). Solo el
