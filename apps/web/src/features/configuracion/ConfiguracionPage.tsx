@@ -36,6 +36,7 @@ type Consultorio = {
   qrUrl: string | null
   emailCierreCaja: string | null
   trabajaConAseguradoras: boolean
+  vendeProductos: boolean
 }
 type Usuario = { id: number; nombre: string; email: string; rol: string; activo: boolean }
 
@@ -55,6 +56,7 @@ export function ConfiguracionPage() {
     msjRecordatorio: '', msjDeuda: '', msjContacto: '',
     emailCierreCaja: '',
     trabajaConAseguradoras: false,
+    vendeProductos: false,
   })
   const [linkCopiado, setLinkCopiado] = useState(false)
 
@@ -86,6 +88,7 @@ export function ConfiguracionPage() {
         msjContacto: consultorio.msjContacto ?? '',
         emailCierreCaja: consultorio.emailCierreCaja ?? '',
         trabajaConAseguradoras: consultorio.trabajaConAseguradoras ?? false,
+        vendeProductos: consultorio.vendeProductos ?? false,
       })
     }
   }, [consultorio])
@@ -130,6 +133,7 @@ export function ConfiguracionPage() {
         // valido envia el resumen, vacio lo desactiva
         emailCierreCaja: data.emailCierreCaja,
         trabajaConAseguradoras: data.trabajaConAseguradoras,
+        vendeProductos: data.vendeProductos,
       }).then((r) => r.data),
     onSuccess: (cons) => {
       qc.invalidateQueries({ queryKey: ['consultorio'] })
@@ -137,7 +141,7 @@ export function ConfiguracionPage() {
       // simbolos del front se actualicen apenas se guarda.
       setMonedaActual(consForm.moneda)
       // Propagar el flag al auth store (no hay /auth/me): el admin lo ve sin re-login
-      if (user) setUser({ ...user, trabajaConAseguradoras: cons.trabajaConAseguradoras })
+      if (user) setUser({ ...user, trabajaConAseguradoras: cons.trabajaConAseguradoras, vendeProductos: cons.vendeProductos })
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2000)
     },
@@ -445,6 +449,31 @@ export function ConfiguracionPage() {
                 </span>
                 <span aria-hidden="true" className={cn('relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200', consForm.trabajaConAseguradoras ? 'bg-primary' : 'bg-muted-foreground/30')}>
                   <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', consForm.trabajaConAseguradoras ? 'translate-x-[22px]' : 'translate-x-0.5')} />
+                </span>
+              </button>
+              <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>
+            </div>
+
+            {/* Módulo de productos (P1) */}
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={consForm.vendeProductos}
+                onClick={() => setConsForm((f) => ({ ...f, vendeProductos: !f.vendeProductos }))}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  consForm.vendeProductos ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">Vende productos</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Habilita el catálogo de productos, la venta de productos en el cobro y la venta directa. Si lo apagás, el módulo queda oculto.
+                  </span>
+                </span>
+                <span aria-hidden="true" className={cn('relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200', consForm.vendeProductos ? 'bg-primary' : 'bg-muted-foreground/30')}>
+                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', consForm.vendeProductos ? 'translate-x-[22px]' : 'translate-x-0.5')} />
                 </span>
               </button>
               <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>
