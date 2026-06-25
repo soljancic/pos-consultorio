@@ -178,8 +178,8 @@ export class ReportesService {
     const rows: CobranzaReportRow[] = pagos.map((p) => ({
       id: p.id,
       fechaPago: p.createdAt.toISOString(),
-      paciente: `${p.cobro.cita.paciente.nombre} ${p.cobro.cita.paciente.apellido}`,
-      concepto: `${p.cobro.cita.servicio.nombre} · Cita #${p.cobro.cita.id}`,
+      paciente: `${p.cobro.cita!.paciente.nombre} ${p.cobro.cita!.paciente.apellido}`,
+      concepto: `${p.cobro.cita!.servicio.nombre} · Cita #${p.cobro.cita!.id}`,
       formaPago: p.tipoCuenta.nombre,
       monto: Number(p.monto),
       usuario: p.createdBy.nombre,
@@ -538,8 +538,8 @@ export class ReportesService {
       ingresosTotal += monto
       const cuenta = p.tipoCuenta.nombre
       porFormaPago[cuenta] = (porFormaPago[cuenta] ?? 0) + monto
-      const docId = p.cobro.cita.doctorId
-      ingresosPorDoctor.set(docId, (ingresosPorDoctor.get(docId) ?? 0) + monto)
+      const docId = p.cobro.cita?.doctorId
+      if (docId != null) ingresosPorDoctor.set(docId, (ingresosPorDoctor.get(docId) ?? 0) + monto)
     }
 
     // Citas por estado + actividad por doctor

@@ -106,7 +106,7 @@ export class CobrosService {
       EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO, EstadoCita.EN_ATENCION,
     ]
     const ESTADOS_POST_ATENCION: EstadoCita[] = [EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA]
-    const estadoCita = cobro.cita.estado as EstadoCita
+    const estadoCita = cobro.cita!.estado as EstadoCita
     if (![...ESTADOS_PRE_ATENCION, ...ESTADOS_POST_ATENCION].includes(estadoCita)) {
       throw new BadRequestException('No se puede cobrar una cita en este estado')
     }
@@ -140,11 +140,11 @@ export class CobrosService {
       // siempre (la cita pasa a COBRADO/CON_DEUDA y baja la deuda del paciente).
       if (tocaCita) {
         await tx.cita.update({
-          where: { id: cobro.citaId },
+          where: { id: cobro.citaId! },
           data: { estado: nuevoEstadoCita },
         })
         await tx.paciente.update({
-          where: { id: cobro.cita.pacienteId },
+          where: { id: cobro.cita!.pacienteId },
           data: { deudaTotal: { decrement: monto } },
         })
       }
@@ -181,7 +181,7 @@ export class CobrosService {
       })
     })
 
-    return this.findByCita(consultorioId, cobro.citaId)
+    return this.findByCita(consultorioId, cobro.citaId!)
   }
 
   // Anulacion con asiento de reversa (E2-M1): el pago original nunca se borra
@@ -216,7 +216,7 @@ export class CobrosService {
     const pagado = cobro.total.minus(nuevoSaldo)
     const nuevoEstadoCobro = pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
     // Una cita cobrada vuelve a tener deuda; los demas estados no cambian
-    const revierteCita = cobro.cita.estado === EstadoCita.COBRADO
+    const revierteCita = cobro.cita!.estado === EstadoCita.COBRADO
 
     const { clave: hoy } = diaCajaLocal()
 
@@ -248,14 +248,14 @@ export class CobrosService {
 
       if (revierteCita) {
         await tx.cita.update({
-          where: { id: cobro.cita.id },
+          where: { id: cobro.cita!.id },
           data: { estado: EstadoCita.CON_DEUDA },
         })
       }
 
       // Espejo del decrement de registrarPago
       await tx.paciente.update({
-        where: { id: cobro.cita.pacienteId },
+        where: { id: cobro.cita!.pacienteId },
         data: { deudaTotal: { increment: pago.monto } },
       })
 
@@ -307,7 +307,7 @@ export class CobrosService {
       select: { cerrada: true },
     })
 
-    const cobroFresco = await this.findByCita(consultorioId, cobro.cita.id)
+    const cobroFresco = await this.findByCita(consultorioId, cobro.cita!.id)
     return {
       ...cobroFresco,
       advertencia: cajaOriginal?.cerrada
@@ -437,20 +437,20 @@ export class CobrosService {
 
       // La deuda del paciente sigue al saldo solo si el servicio ya se presto
       const citaConDeuda =
-        cobro.cita.estado === EstadoCita.ATENDIDA ||
-        cobro.cita.estado === EstadoCita.CON_DEUDA
+        cobro.cita!.estado === EstadoCita.ATENDIDA ||
+        cobro.cita!.estado === EstadoCita.CON_DEUDA
       if (citaConDeuda) {
         const delta = nuevoSaldo.minus(cobro.saldoPendiente)
         if (!delta.isZero()) {
           await tx.paciente.update({
-            where: { id: cobro.cita.pacienteId },
+            where: { id: cobro.cita!.pacienteId },
             data: { deudaTotal: { increment: delta } },
           })
         }
         // Si el ajuste deja el cobro saldado, la cita queda cobrada
         if (quedaSaldado) {
           await tx.cita.update({
-            where: { id: cobro.cita.id },
+            where: { id: cobro.cita!.id },
             data: { estado: EstadoCita.COBRADO },
           })
         }
@@ -476,7 +476,7 @@ export class CobrosService {
       })
     })
 
-    return this.findByCita(consultorioId, cobro.cita.id)
+    return this.findByCita(consultorioId, cobro.cita!.id)
   }
 
   async getDeudores(consultorioId: number) {
@@ -508,8 +508,8 @@ export class CobrosService {
     const porPaciente = new Map<number, Deudor>()
 
     for (const cobro of cobros) {
-      const pac = cobro.cita.paciente
-      const fechaCita = new Date(cobro.cita.fechaHora)
+      const pac = cobro.cita!.paciente
+      const fechaCita = new Date(cobro.cita!.fechaHora)
       const fechaPago = cobro.pagos[0]?.createdAt ?? null
       const existing = porPaciente.get(pac.id)
 
@@ -517,7 +517,7 @@ export class CobrosService {
         existing.deudaTotal += Number(cobro.saldoPendiente)
         if (fechaCita > existing.ultimaCitaFecha) {
           existing.ultimaCitaFecha = fechaCita
-          existing.ultimoServicio = cobro.cita.servicio.nombre
+          existing.ultimoServicio = cobro.cita!.servicio.nombre
         }
         if (fechaPago && (!existing.ultimoPago || fechaPago > existing.ultimoPago)) {
           existing.ultimoPago = fechaPago
@@ -532,7 +532,7 @@ export class CobrosService {
           pais: pac.pais,
           deudaTotal: Number(cobro.saldoPendiente),
           ultimaCitaFecha: fechaCita,
-          ultimoServicio: cobro.cita.servicio.nombre,
+          ultimoServicio: cobro.cita!.servicio.nombre,
           ultimoPago: fechaPago,
           cobros: [cobro],
         })
@@ -554,7 +554,7 @@ export class CobrosService {
       }),
     ])
 
-    const pacienteIds = new Set(cobros.map((c) => c.cita.pacienteId))
+    const pacienteIds = new Set(cobros.map((c) => c.cita!.pacienteId))
 
     return {
       totalDeuda: Number(suma._sum.saldoPendiente ?? 0),

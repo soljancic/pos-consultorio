@@ -113,6 +113,7 @@ model Consultorio {
   tarifasCobertura TarifaCobertura[]
   liquidaciones    LiquidacionItem[]
   productos        Producto[]
+  detalleCobros    DetalleCobro[]
   disponibilidades Disponibilidad[]
   seriesDisponibilidad SerieDisponibilidad[]
   plantillasHorario PlantillaHorario[]
@@ -214,6 +215,7 @@ model Servicio {
   preciosDoctor DoctorServicioPrecio[]
   tarifasCobertura TarifaCobertura[]
   liquidaciones LiquidacionItem[]
+  detalleCobros DetalleCobro[]
 
   @@index([consultorioId])
   @@map("servicios")
@@ -308,6 +310,7 @@ model Paciente {
   deletedAt       DateTime?
 
   citas Cita[]
+  cobros Cobro[]
   mensajesPendientes MensajePendiente[]
   liquidaciones LiquidacionItem[]
 
@@ -407,8 +410,15 @@ model Receta {
 
 model Cobro {
   id             Int      @id @default(autoincrement())
-  citaId         Int      @unique
-  cita           Cita        @relation(fields: [citaId], references: [id])
+  // Desacople P1: nullable para venta directa (sin cita). Sigue @unique:
+  // Postgres permite varios NULL (varias ventas directas) y mantiene 1 cobro
+  // por cita.
+  citaId         Int?     @unique
+  cita           Cita?       @relation(fields: [citaId], references: [id])
+  // Venta directa cuelga la deuda aca; en el cobro de una cita se copia del
+  // paciente de la cita.
+  pacienteId     Int?
+  paciente       Paciente?   @relation(fields: [pacienteId], references: [id])
   consultorioId  Int
   consultorio    Consultorio @relation(fields: [consultorioId], references: [id])
   total          Decimal     @db.Decimal(10, 2)
@@ -417,10 +427,12 @@ model Cobro {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  pagos Pago[]
+  pagos    Pago[]
+  detalles DetalleCobro[]
 
   @@index([consultorioId])
   @@index([consultorioId, estado])
+  @@index([consultorioId, pacienteId])
   @@map("cobros")
 }
 
@@ -830,8 +842,36 @@ model Producto {
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
 
+  detalleCobros DetalleCobro[]
+
   @@unique([consultorioId, codigoBarras])
   @@index([consultorioId])
   @@index([consultorioId, nombre])
   @@map("productos")
+}
+
+// Linea de detalle de un cobro: referencia un servicio O un producto (XOR; el
+// CHECK vive en la migracion). precioVenta/precioCosto son snapshot al vender
+// (historico para utilidad en P3). descripcion congela el nombre.
+model DetalleCobro {
+  id            Int      @id @default(autoincrement())
+  consultorioId Int
+  consultorio   Consultorio @relation(fields: [consultorioId], references: [id])
+  cobroId       Int
+  cobro         Cobro    @relation(fields: [cobroId], references: [id])
+  servicioId    Int?
+  servicio      Servicio? @relation(fields: [servicioId], references: [id])
+  productoId    Int?
+  producto      Producto? @relation(fields: [productoId], references: [id])
+  descripcion   String   // snapshot del nombre (servicio o producto) al vender
+  cantidad      Int      @default(1)
+  precioVenta   Decimal  @db.Decimal(10, 2) // snapshot
+  precioCosto   Decimal  @db.Decimal(10, 2) @default(0) // snapshot; 0 en servicios
+  subtotal      Decimal  @db.Decimal(10, 2) // cantidad * precioVenta
+  createdAt     DateTime @default(now())
+
+  @@index([consultorioId])
+  @@index([cobroId])
+  @@index([consultorioId, productoId])
+  @@map("detalle_cobros")
 }
