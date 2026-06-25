@@ -127,7 +127,7 @@ export class ProductosService {
   async remove(consultorioId: number, id: number) {
     const p = await this.prisma.producto.findFirst({ where: { id, consultorioId, deletedAt: null } })
     if (!p) throw new NotFoundException('Producto no encontrado')
-    const usado = await this.prisma.detalleCobro.count({ where: { productoId: id } })
+    const usado = await this.prisma.detalleCobro.count({ where: { productoId: id, consultorioId } })
     if (usado > 0) {
       const producto = await this.prisma.producto.update({ where: { id }, data: { activo: false } })
       return { eliminado: false, enUso: true, producto }
