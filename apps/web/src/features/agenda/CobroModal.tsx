@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Pencil, Check, Undo2, Wallet, AlertCircle } from 'lucide-react'
+import { X, Pencil, Check, Undo2, Wallet, AlertCircle, AlertTriangle, ShoppingCart, Save } from 'lucide-react'
 import type { Cita } from '@pos/types'
+import { EstadoCita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatFecha, simboloMoneda, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
@@ -9,6 +10,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
+import { LineasProductoEditor, type LineaUI } from '../inventario/LineasProductoEditor'
 
 interface CobroModalProps {
   cita: Cita
@@ -21,6 +23,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const esAdmin = user?.rol === 'ADMIN'
+  const vendeProductos = user?.vendeProductos ?? false
   const [pagoAnular, setPagoAnular] = useState<PagoAnulable | null>(null)
   const [monto, setMonto] = useState('')
   const [tipoCuentaId, setTipoCuentaId] = useState(0)
@@ -30,11 +33,42 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   const [motivoAjuste, setMotivoAjuste] = useState('')
   const [errorAjuste, setErrorAjuste] = useState('')
   const [errorPago, setErrorPago] = useState('')
+  // Venta mixta: lineas de producto editables (solo con la cita en ATENDIDA).
+  const [lineas, setLineas] = useState<LineaUI[]>([])
+  const [errorLineas, setErrorLineas] = useState('')
+  const [advertenciasLineas, setAdvertenciasLineas] = useState<string[]>([])
 
   const { data: cobro, isLoading } = useQuery({
     queryKey: ['cobro-cita', cita.id],
     queryFn: () => api.get(`/cobros/cita/${cita.id}`).then((r) => r.data),
   })
+
+  // Solo se editan productos mientras la cita esta ATENDIDA (antes de confirmar
+  // el cobro); luego la grilla queda en solo-lectura.
+  const lineasEditables = vendeProductos && cita.estado === EstadoCita.ATENDIDA
+
+  // Derivar las lineas de PRODUCTO desde los detalles del cobro (las de servicio
+  // tienen productoId null). El snapshot no trae stock vivo, asi que no se
+  // dispara alerta local sobre lineas ya guardadas: el backend devuelve las
+  // advertencias autoritativas en cada PUT. Las lineas nuevas (agregadas por el
+  // buscador) si traen stock real desde /vendibles.
+  useEffect(() => {
+    if (!cobro?.detalles) return
+    setLineas(
+      cobro.detalles
+        .filter((d: any) => d.productoId != null)
+        .map((d: any) => ({
+          productoId: d.productoId,
+          nombre: d.descripcion,
+          precioVenta: Number(d.precioVenta),
+          cantidad: d.cantidad,
+          stockActual: 0,
+          controlaStock: false,
+        })),
+    )
+    // Resetear el feedback al recargar el cobro fresco
+    setErrorLineas('')
+  }, [cobro])
 
   // Formas de pago = cuentas del catalogo (tipos de cuenta activos)
   const { data: tiposCuenta = [] } = useQuery<TipoCuenta[]>({
@@ -94,8 +128,50 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
     },
   })
 
+  // Venta mixta: guarda las lineas de producto del cobro ANTES de cobrar.
+  // Devuelve el cobro fresco (con total/saldo recomputados) + advertencias de
+  // stock bajo (informativas, no bloquean). Se actualiza el cobro en cache y se
+  // invalida finanzas para que el resto de la app quede al dia.
+  const setLineasMut = useMutation({
+    mutationFn: () =>
+      api
+        .put(`/cobros/${cobro.id}/lineas`, {
+          lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })),
+        })
+        .then((r) => r.data),
+    onSuccess: (data: any) => {
+      const { advertencias, ...cobroFresco } = data
+      qc.setQueryData(['cobro-cita', cita.id], cobroFresco)
+      invalidarFinanzas()
+      setAdvertenciasLineas(Array.isArray(advertencias) ? advertencias : [])
+      setErrorLineas('')
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message
+      setErrorLineas(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudieron guardar los productos')
+    },
+  })
+
   const saldo = cobro ? Number(cobro.saldoPendiente) : 0
   const pagado = cobro ? Number(cobro.total) - saldo : 0
+
+  // Desglose del total: servicio (detalles con productoId null) + productos.
+  // Si el cobro aun no tiene detalles de servicio (cobros viejos), el total
+  // menos los productos guardados es el servicio.
+  const subtotalProductosGuardado = cobro?.detalles
+    ? cobro.detalles
+        .filter((d: any) => d.productoId != null)
+        .reduce((s: number, d: any) => s + Number(d.subtotal), 0)
+    : 0
+  const subtotalServicio = cobro ? Number(cobro.total) - subtotalProductosGuardado : 0
+  // Cambios sin guardar: si las lineas locales difieren de lo persistido (por
+  // monto o por cantidad de items). Solo importa cuando se pueden editar.
+  const subtotalLineasLocal = lineas.reduce((s, l) => s + l.precioVenta * l.cantidad, 0)
+  const cantGuardadas = cobro?.detalles?.filter((d: any) => d.productoId != null).length ?? 0
+  const hayCambiosLineas =
+    lineasEditables &&
+    (Math.abs(subtotalLineasLocal - subtotalProductosGuardado) > 0.001 ||
+      lineas.length !== cantGuardadas)
 
   function confirmarAjuste() {
     setErrorAjuste('')
@@ -113,6 +189,12 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErrorPago('')
+    // Hay que guardar los productos antes de cobrar: el total/saldo se
+    // recomputan en el backend al guardar las lineas.
+    if (hayCambiosLineas) {
+      setErrorPago('Guardá los productos antes de registrar el pago')
+      return
+    }
     if (montoNum <= 0 || montoNum > saldo) return
     registrarPago.mutate({
       monto: montoNum,
@@ -138,7 +220,9 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
             <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div className="text-muted-foreground">Total servicio</div>
+                  <div className="text-muted-foreground">
+                    {subtotalProductosGuardado > 0 ? 'Total' : 'Total servicio'}
+                  </div>
                   <div className="font-semibold inline-flex items-center gap-1.5 tabular-nums">
                     {formatMoneda(Number(cobro?.total))}
                     {!editandoPrecio && (
@@ -149,7 +233,7 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                           setEditandoPrecio(true)
                         }}
                         title="Cambiar precio"
-                        aria-label="Cambiar precio del servicio"
+                        aria-label="Cambiar precio del total"
                         className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -162,6 +246,20 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                   <div className="font-semibold text-destructive tabular-nums">{formatMoneda(saldo)}</div>
                 </div>
               </div>
+
+              {/* Desglose servicio + productos cuando la venta es mixta */}
+              {subtotalProductosGuardado > 0 && (
+                <div className="border-t pt-2 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Servicio</span>
+                    <span className="tabular-nums text-foreground">{formatMoneda(subtotalServicio)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Productos</span>
+                    <span className="tabular-nums text-foreground">{formatMoneda(subtotalProductosGuardado)}</span>
+                  </div>
+                </div>
+              )}
 
               {editandoPrecio && (
                 <div className="border-t pt-2 space-y-2">
@@ -216,6 +314,64 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
                 </div>
               )}
             </div>
+
+            {/* Venta mixta: productos del cobro (solo si el consultorio vende
+                productos). Editable mientras la cita esta ATENDIDA; luego
+                solo-lectura. Guardar (PUT lineas) antes de registrar el pago. */}
+            {vendeProductos && (lineasEditables || lineas.length > 0) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  <h3 className="text-sm font-semibold text-foreground">Productos</h3>
+                </div>
+
+                <LineasProductoEditor
+                  lineas={lineas}
+                  onChange={(nuevas) => {
+                    setLineas(nuevas)
+                    setAdvertenciasLineas([])
+                  }}
+                  disabled={!lineasEditables}
+                />
+
+                {/* Advertencias de stock bajo (informativas; no bloquean): bloque
+                    ambar, nunca errorUI (que es para errores duros). */}
+                {advertenciasLineas.length > 0 && (
+                  <div
+                    className="rounded-md bg-amber-500/15 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 space-y-1"
+                    role="status"
+                  >
+                    {advertenciasLineas.map((a, i) => (
+                      <p key={i} className="flex items-start gap-1.5">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{a}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {errorLineas && (
+                  <div className={errorUI} role="alert" aria-live="assertive">
+                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>{errorLineas}</span>
+                  </div>
+                )}
+
+                {/* Guardar lineas: aparece solo con cambios sin guardar. El pago
+                    se registra despues, sobre el total ya recomputado. */}
+                {hayCambiosLineas && (
+                  <button
+                    type="button"
+                    onClick={() => setLineasMut.mutate()}
+                    disabled={setLineasMut.isPending}
+                    className={cn(btnOutlineUI, 'w-full')}
+                  >
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    {setLineasMut.isPending ? 'Guardando productos...' : 'Guardar productos'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Pagos ya registrados (anulables por ADMIN via reversa) */}
             {cobro?.pagos?.length > 0 && (
@@ -355,7 +511,8 @@ export function CobroModal({ cita, onClose }: CobroModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={registrarPago.isPending || montoNum <= 0}
+                disabled={registrarPago.isPending || montoNum <= 0 || hayCambiosLineas}
+                title={hayCambiosLineas ? 'Guardá los productos antes de cobrar' : undefined}
                 className={cn(btnPrimaryUI, 'flex-1')}
               >
                 {registrarPago.isPending ? 'Guardando...' : 'Registrar pago'}
