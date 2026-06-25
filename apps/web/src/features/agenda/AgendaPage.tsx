@@ -3,14 +3,15 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff, ShoppingCart } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
+import { VentaDirectaModal } from '../inventario/VentaDirectaModal'
 import { ReprogramarCitaModal } from './ReprogramarCitaModal'
 import { CancelarCitaModal } from './CancelarCitaModal'
 import { AtencionModal } from './AtencionModal'
@@ -72,6 +73,7 @@ function useEsCelular() {
 
 export function AgendaPage() {
   const user = useAuthStore((s) => s.user)
+  const vendeProductos = useAuthStore((s) => s.user?.vendeProductos) ?? false
   const [fecha, setFecha] = useState(new Date())
   const [vista, setVista] = useState<Vista>(
     () => (localStorage.getItem(VISTA_KEY) as Vista) || 'lista',
@@ -88,6 +90,7 @@ export function AgendaPage() {
   const [citaDetalle, setCitaDetalle] = useState<Cita | null>(null)
   const [modalCobro, setModalCobro] = useState(false)
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
+  const [modalVentaDirecta, setModalVentaDirecta] = useState(false)
   const [modalAtencion, setModalAtencion] = useState(false)
   const [citaReprogramar, setCitaReprogramar] = useState<Cita | null>(null)
   const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
@@ -494,6 +497,19 @@ export function AgendaPage() {
                 : <EyeOff className="h-4 w-4" aria-hidden="true" />}
             </button>
           )}
+          {/* Venta directa: cobro de mostrador sin cita. Solo si el consultorio
+              vende productos. Accion secundaria al lado de "Nueva cita"; en
+              celular solo el icono, en sm+ con texto. */}
+          {vendeProductos && (
+            <button
+              onClick={() => setModalVentaDirecta(true)}
+              className={btnOutlineUI}
+              aria-label="Venta directa"
+            >
+              <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Venta directa</span>
+            </button>
+          )}
           {/* En celular solo el "+" (icono); en sm+ el texto completo. El
               aria-label mantiene el boton accesible cuando se ve solo el icono. */}
           <button
@@ -713,6 +729,12 @@ export function AgendaPage() {
             queryClient.invalidateQueries({ queryKey: ['citas'] })
           }}
         />
+      )}
+
+      {/* Modal venta directa (mostrador, sin cita). El modal invalida finanzas
+          y stock por su cuenta; aca solo se desmonta al cerrar. */}
+      {modalVentaDirecta && (
+        <VentaDirectaModal onClose={() => setModalVentaDirecta(false)} />
       )}
 
       {/* Modal cobro */}
