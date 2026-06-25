@@ -51,12 +51,26 @@ export class SetLineasProductoDto {
   lineas: LineaProductoDto[]
 }
 
+export class PagoVentaDto {
+  @IsInt()
+  tipoCuentaId: number
+
+  @IsNumber() @Min(0.01)
+  monto: number
+
+  @IsString() @IsOptional()
+  referencia?: string
+}
+
 export class CrearVentaDirectaDto {
   @IsInt() @IsOptional()
   pacienteId?: number
 
   @IsArray() @ValidateNested({ each: true }) @Type(() => LineaProductoDto) @ArrayMaxSize(100)
   lineas: LineaProductoDto[]
+
+  @IsArray() @ValidateNested({ each: true }) @Type(() => PagoVentaDto) @IsOptional() @ArrayMaxSize(20)
+  pagos?: PagoVentaDto[]
 }
 
 @Injectable()
@@ -208,9 +222,9 @@ export class CobrosService {
   }
 
   // Venta de mostrador sin cita. El cobro nace YA confirmado: el stock se
-  // descuenta al crearlo. paciente opcional (consumidor final al contado), pero
-  // OBLIGATORIO si queda saldo (para colgar la deuda). No registra el pago aca:
-  // el pago se hace despues con registrarPago sobre este cobro.
+  // descuenta al crearlo. paciente opcional si la venta se paga completa al
+  // contado (pagos[] cubre el total); si queda saldo, paciente es OBLIGATORIO
+  // para colgar la deuda.
   async crearVentaDirecta(consultorioId: number, dto: CrearVentaDirectaDto, usuarioId: number) {
     if (dto.lineas.length === 0) throw new BadRequestException('La venta no tiene productos')
     await this.exigirCajaAbierta(consultorioId)
@@ -236,10 +250,37 @@ export class CobrosService {
 
     let total = new Decimal(0)
     for (const l of dto.lineas) total = total.plus(porId.get(l.productoId)!.precioVenta.mul(l.cantidad))
-    // Sin pago al crear: queda saldo = total. Si hay saldo, exigir paciente.
-    if (total.gt(0) && !dto.pacienteId) {
-      throw new BadRequestException('Si la venta no se paga al contado completo, elegi un paciente para la deuda')
+
+    // Calcular totalPagado y validar sobrepago
+    let totalPagado = new Decimal(0)
+    for (const p of dto.pagos ?? []) totalPagado = totalPagado.plus(new Decimal(p.monto))
+    if (totalPagado.gt(total)) {
+      throw new BadRequestException('Los pagos superan el total de la venta')
     }
+
+    // Validar formas de pago contra el catalogo del consultorio
+    const tipoCuentaIds = [...new Set((dto.pagos ?? []).map((p) => p.tipoCuentaId))]
+    const tiposCuenta = tipoCuentaIds.length > 0
+      ? await this.prisma.tipoCuenta.findMany({
+          where: { id: { in: tipoCuentaIds }, consultorioId, activo: true },
+          select: { id: true, esEfectivo: true },
+        })
+      : []
+    if (tiposCuenta.length !== tipoCuentaIds.length) {
+      throw new BadRequestException('Forma de pago no valida')
+    }
+    const tipoCuentaMap = new Map(tiposCuenta.map((tc) => [tc.id, tc]))
+
+    const saldoPendiente = total.minus(totalPagado)
+
+    // Guard nuevo: solo exigir paciente si queda saldo
+    if (saldoPendiente.gt(0) && !dto.pacienteId) {
+      throw new BadRequestException('Si la venta no se paga completa al contado, elegi un paciente para la deuda')
+    }
+
+    const estado = saldoPendiente.lte(0)
+      ? EstadoCobro.COMPLETO
+      : totalPagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
 
     const advertencias: string[] = []
 
@@ -250,10 +291,11 @@ export class CobrosService {
           consultorioId,
           pacienteId: dto.pacienteId ?? null,
           total,
-          saldoPendiente: total,
-          estado: EstadoCobro.PENDIENTE,
+          saldoPendiente,
+          estado,
         },
       })
+
       for (const l of dto.lineas) {
         const p = porId.get(l.productoId)!
         await tx.detalleCobro.create({
@@ -265,19 +307,67 @@ export class CobrosService {
           },
         })
       }
+
       // Confirmada al crear: descontar stock
       const adv = await descontarStockDeCobro(tx, consultorioId, cobro.id, usuarioId)
       advertencias.push(...adv)
 
-      // Deuda: si hay paciente y saldo, sube a deudaTotal
-      if (dto.pacienteId && total.gt(0)) {
-        await tx.paciente.update({ where: { id: dto.pacienteId }, data: { deudaTotal: { increment: total } } })
+      // Registrar pagos inline
+      for (const p of dto.pagos ?? []) {
+        await tx.pago.create({
+          data: {
+            cobroId: cobro.id,
+            tipoCuentaId: p.tipoCuentaId,
+            monto: new Decimal(p.monto),
+            referencia: p.referencia,
+            createdById: usuarioId,
+          },
+        })
+      }
+
+      // Caja: solo si hay dinero entrante
+      if (totalPagado.gt(0)) {
+        let efectivo = new Decimal(0)
+        for (const p of dto.pagos ?? []) {
+          if (tipoCuentaMap.get(p.tipoCuentaId)?.esEfectivo) {
+            efectivo = efectivo.plus(new Decimal(p.monto))
+          }
+        }
+        const { clave: hoy } = diaCajaLocal()
+        await tx.cajaDiaria.upsert({
+          where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+          create: {
+            consultorioId,
+            fecha: hoy,
+            usuarioAperturaId: usuarioId,
+            ...(efectivo.gt(0) && { totalEfectivo: efectivo }),
+            totalGeneral: totalPagado,
+          },
+          update: {
+            ...(efectivo.gt(0) && { totalEfectivo: { increment: efectivo } }),
+            totalGeneral: { increment: totalPagado },
+          },
+        })
+      }
+
+      // Deuda: si hay paciente y queda saldo, incrementar por el saldo pendiente
+      if (dto.pacienteId && saldoPendiente.gt(0)) {
+        await tx.paciente.update({
+          where: { id: dto.pacienteId },
+          data: { deudaTotal: { increment: saldoPendiente } },
+        })
       }
 
       await tx.log.create({
         data: {
           consultorioId, usuarioId, entidad: 'Cobro', entidadId: cobro.id, accion: 'CREATE',
-          payloadDespues: { evento: 'venta-directa', total: total.toString(), pacienteId: dto.pacienteId ?? null },
+          payloadDespues: {
+            evento: 'venta-directa',
+            total: total.toString(),
+            pagado: totalPagado.toString(),
+            saldo: saldoPendiente.toString(),
+            pacienteId: dto.pacienteId ?? null,
+          },
         },
       })
 
