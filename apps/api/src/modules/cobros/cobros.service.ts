@@ -371,7 +371,7 @@ export class CobrosService {
         },
       })
 
-      return tx.cobro.findFirst({
+      return tx.cobro.findFirstOrThrow({
         where: { id: cobro.id, consultorioId },
         include: {
           pagos: { orderBy: { createdAt: 'asc' }, include: { tipoCuenta: { select: { nombre: true } } } },
