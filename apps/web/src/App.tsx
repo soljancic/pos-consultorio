@@ -19,6 +19,7 @@ import { ReportesPage } from './features/reportes/ReportesPage'
 import { LiquidacionesPage } from './features/liquidaciones/LiquidacionesPage'
 import { MensajesPage } from './features/mensajes/MensajesPage'
 import { CatalogoPage } from './features/catalogo/CatalogoPage'
+import { InventarioPage } from './features/inventario/InventarioPage'
 import { AyudaPage } from './features/ayuda/AyudaPage'
 import { LandingPage } from './features/landing/LandingPage'
 import { NotFoundPage } from './features/notfound/NotFoundPage'
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="deudores" element={<SoloStaff><DeudoresPage /></SoloStaff>} />
         <Route path="mensajes" element={<SoloStaff><MensajesPage /></SoloStaff>} />
         <Route path="catalogo" element={<SoloStaff><CatalogoPage /></SoloStaff>} />
+        <Route path="inventario" element={<AdminRoute><InventarioPage /></AdminRoute>} />
         <Route path="ayuda" element={<AyudaPage />} />
         <Route path="configuracion" element={<AdminRoute><ConfiguracionPage /></AdminRoute>} />
         <Route path="reportes" element={<AdminRoute><ReportesPage /></AdminRoute>} />

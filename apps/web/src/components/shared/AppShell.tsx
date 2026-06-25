@@ -24,6 +24,7 @@ import {
   MessageCircle,
   HelpCircle,
   ShieldCheck,
+  Package,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: '/caja', icon: DollarSign, label: 'Caja', ocultarDoctor: true },
   { to: '/gastos', icon: Receipt, label: 'Gastos', ocultarDoctor: true },
   { to: '/catalogo', icon: Settings, label: 'Catálogo', ocultarDoctor: true },
+  { to: '/inventario', icon: Package, label: 'Inventario', soloAdmin: true, requiereProductos: true },
   { to: '/liquidaciones', icon: ShieldCheck, label: 'Liquidaciones', soloAdmin: true, requiereAseguradoras: true },
   { to: '/reportes', icon: BarChart3, label: 'Reportes', soloAdmin: true },
   { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
@@ -191,7 +193,7 @@ export function AppShell() {
 
         {/* Navegacion */}
         <nav className="flex-1 py-3 space-y-1 px-2 overflow-y-auto">
-          {NAV_ITEMS.filter((item) => (!item.soloAdmin || esAdmin) && !(esDoctor && item.ocultarDoctor) && (!item.requiereAseguradoras || user?.trabajaConAseguradoras)).map(
+          {NAV_ITEMS.filter((item) => (!item.soloAdmin || esAdmin) && !(esDoctor && item.ocultarDoctor) && (!item.requiereAseguradoras || user?.trabajaConAseguradoras) && (!item.requiereProductos || user?.vendeProductos)).map(
             ({ to, icon: Icon, label, end }) => (
               <NavLink
                 key={to}
