@@ -75,7 +75,7 @@ export class AuthService {
     const usuario = await this.prisma.usuario.findFirst({
       // Email case-insensitive: el correo no distingue mayus/minus al loguear
       where: { email: { equals: dto.email.trim(), mode: 'insensitive' }, activo: true },
-      include: { consultorio: { select: { nombre: true, trabajaConAseguradoras: true } } },
+      include: { consultorio: { select: { nombre: true, trabajaConAseguradoras: true, vendeProductos: true } } },
     })
 
     if (!usuario) throw new UnauthorizedException('Credenciales invalidas')
@@ -102,6 +102,7 @@ export class AuthService {
         consultorioId: usuario.consultorioId,
         consultorioNombre: usuario.consultorio.nombre,
         trabajaConAseguradoras: usuario.consultorio.trabajaConAseguradoras,
+        vendeProductos: usuario.consultorio.vendeProductos,
       },
     }
   }
@@ -130,7 +131,7 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findFirst({
       where: { email: { equals: email, mode: 'insensitive' }, activo: true },
-      include: { consultorio: { select: { nombre: true, trabajaConAseguradoras: true } } },
+      include: { consultorio: { select: { nombre: true, trabajaConAseguradoras: true, vendeProductos: true } } },
     })
 
     if (!usuario) {
@@ -155,6 +156,7 @@ export class AuthService {
         consultorioId: usuario.consultorioId,
         consultorioNombre: usuario.consultorio.nombre,
         trabajaConAseguradoras: usuario.consultorio.trabajaConAseguradoras,
+        vendeProductos: usuario.consultorio.vendeProductos,
       },
     }
   }

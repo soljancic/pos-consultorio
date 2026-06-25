@@ -62,6 +62,9 @@ export class UpdateConsultorioDto {
 
   @IsBoolean() @IsOptional()
   trabajaConAseguradoras?: boolean
+
+  @IsBoolean() @IsOptional()
+  vendeProductos?: boolean
 }
 
 const CONSULTORIO_SELECT = {
@@ -83,6 +86,7 @@ const CONSULTORIO_SELECT = {
   qrUrl: true,
   emailCierreCaja: true,
   trabajaConAseguradoras: true,
+  vendeProductos: true,
 } as const
 
 // QR de pagos: solo imagenes chicas; Cloudinary lo normaliza a jpg

@@ -55,6 +55,7 @@ export interface AuthUser {
   consultorioId: number
   consultorioNombre: string
   trabajaConAseguradoras: boolean
+  vendeProductos: boolean
 }
 
 // Citas
