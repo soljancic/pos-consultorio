@@ -1179,7 +1179,6 @@ export class CobrosService {
           cobro: {
             select: {
               estado: true,
-              createdAt: true,
               total: true,
               descuento: true,
               paciente: { select: { nombre: true, apellido: true } },
