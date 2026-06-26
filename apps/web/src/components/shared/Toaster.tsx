@@ -2,21 +2,18 @@ import { AlertCircle, AlertTriangle, CheckCircle2, X, type LucideIcon } from 'lu
 import { useToastStore, type ToastTipo } from '../../stores/toast.store'
 import { cn } from '../../lib/utils'
 
-const ESTILO: Record<ToastTipo, { icon: LucideIcon; clase: string; rol: 'alert' | 'status' }> = {
+const ESTILO: Record<ToastTipo, { icon: LucideIcon; clase: string }> = {
   error: {
     icon: AlertCircle,
     clase: 'border-destructive/30 bg-destructive/10 text-destructive',
-    rol: 'alert',
   },
   warning: {
     icon: AlertTriangle,
     clase: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-    rol: 'alert',
   },
   success: {
     icon: CheckCircle2,
     clase: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    rol: 'status',
   },
 }
 
@@ -26,18 +23,20 @@ export function Toaster() {
   const toasts = useToastStore((s) => s.toasts)
   const dismiss = useToastStore((s) => s.dismiss)
 
-  // El contenedor se renderiza SIEMPRE (region estable). El anuncio del lector de
-  // pantalla lo dan los role="alert"/"status" de cada toast al insertarse; sin
-  // aria-live aca para no duplicar el anuncio (assertive del alert + polite del
-  // contenedor).
+  // Region viva ESTABLE (siempre montada) con aria-live polite: asi los lectores
+  // de pantalla (incluido iOS VoiceOver, que necesita la region preexistente)
+  // anuncian cada toast al insertarse. Un solo mecanismo de anuncio (la region),
+  // sin role por toast, para no duplicar el anuncio en NVDA/JAWS.
   return (
-    <div className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2">
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2"
+    >
       {toasts.map((t) => {
-        const { icon: Icon, clase, rol } = ESTILO[t.tipo]
+        const { icon: Icon, clase } = ESTILO[t.tipo]
         return (
           <div
             key={t.id}
-            role={rol}
             className={cn(
               'modal-fade modal-pop pointer-events-auto flex w-full items-start gap-2.5 rounded-lg border px-3.5 py-3 shadow-lg backdrop-blur-sm',
               clase,
