@@ -12,6 +12,17 @@ import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { LineasProductoEditor, type LineaUI } from '../inventario/LineasProductoEditor'
 
+const CLAVES_INVALIDAR = [
+  'citas',
+  'cobro-cita',
+  'deudores',
+  'deudores-resumen',
+  'liquidaciones',
+  'caja-hoy',
+  'pacientes',
+  'paciente',
+] as const
+
 interface Props {
   cita: Cita
   onClose: () => void
@@ -27,6 +38,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
   const [usaSeguro, setUsaSeguro] = useState(cita.usaSeguro ?? false)
   const [codigoSeguro, setCodigoSeguro] = useState(cita.codigoSeguro ?? '')
   const [lineas, setLineas] = useState<LineaUI[]>([])
+  const [guardandoProductos, setGuardandoProductos] = useState(false)
 
   // --- Queries ---
   const { data: servicios = [] } = useQuery<Servicio[]>({
@@ -126,16 +138,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
       }
     },
     onSuccess: () => {
-      for (const key of [
-        'citas',
-        'cobro-cita',
-        'deudores',
-        'deudores-resumen',
-        'liquidaciones',
-        'caja-hoy',
-        'pacientes',
-        'paciente',
-      ]) {
+      for (const key of CLAVES_INVALIDAR) {
         qc.invalidateQueries({ queryKey: [key] })
       }
       onClose()
@@ -304,28 +307,31 @@ export function EditarCitaModal({ cita, onClose }: Props) {
                       {hayCambiosLineas && cobro?.id && (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!cobro?.id) return
-                            api
-                              .put(`/cobros/${cobro.id}/lineas`, {
+                          disabled={guardandoProductos}
+                          onClick={async () => {
+                            if (!cobro?.id || guardandoProductos) return
+                            setGuardandoProductos(true)
+                            try {
+                              await api.put(`/cobros/${cobro.id}/lineas`, {
                                 lineas: lineas.map((l) => ({
                                   productoId: l.productoId,
                                   cantidad: l.cantidad,
                                 })),
                               })
-                              .then(() => {
-                                qc.invalidateQueries({ queryKey: ['cobro-cita', cita.id] })
-                                qc.invalidateQueries({ queryKey: ['citas'] })
-                                toast.success('Productos guardados')
-                              })
-                              .catch((err) =>
-                                toast.fromError(err, 'No se pudieron guardar los productos'),
-                              )
+                              for (const key of CLAVES_INVALIDAR) {
+                                qc.invalidateQueries({ queryKey: [key] })
+                              }
+                              toast.success('Productos guardados')
+                            } catch (err) {
+                              toast.fromError(err, 'No se pudieron guardar los productos')
+                            } finally {
+                              setGuardandoProductos(false)
+                            }
                           }}
                           className={cn(btnOutlineUI, 'w-full')}
                         >
                           <Save className="h-4 w-4" aria-hidden="true" />
-                          Guardar productos
+                          {guardandoProductos ? 'Guardando...' : 'Guardar productos'}
                         </button>
                       )}
                     </>
