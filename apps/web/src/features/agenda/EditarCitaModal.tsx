@@ -116,7 +116,15 @@ export function EditarCitaModal({ cita, onClose }: Props) {
   // --- Mutación de guardado ---
   const guardar = useMutation({
     mutationFn: async () => {
-      // Endpoint 1: PUT /citas/:id/editar — solo si cambió algo de cita/seguro
+      // Endpoint 1: PUT /cobros/:id/lineas — va PRIMERO para que un fallo de productos
+      // no deje el servicio/seguro ya cambiado sin los productos actualizados.
+      if (cita.estado === EstadoCita.ATENDIDA && hayCambiosLineas && cobro?.id) {
+        await api.put(`/cobros/${cobro.id}/lineas`, {
+          lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })),
+        })
+      }
+
+      // Endpoint 2: PUT /citas/:id/editar — solo si cambió algo de cita/seguro
       const cambioCitaBody: {
         servicioId?: number
         usaSeguro?: boolean
@@ -128,13 +136,6 @@ export function EditarCitaModal({ cita, onClose }: Props) {
 
       if (Object.keys(cambioCitaBody).length > 0) {
         await api.put(`/citas/${cita.id}/editar`, cambioCitaBody)
-      }
-
-      // Endpoint 2: PUT /cobros/:id/lineas — solo si ATENDIDA y cambios de productos
-      if (cita.estado === EstadoCita.ATENDIDA && hayCambiosLineas && cobro?.id) {
-        await api.put(`/cobros/${cobro.id}/lineas`, {
-          lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })),
-        })
       }
     },
     onSuccess: () => {
@@ -307,7 +308,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
                       {hayCambiosLineas && cobro?.id && (
                         <button
                           type="button"
-                          disabled={guardandoProductos}
+                          disabled={guardandoProductos || guardar.isPending}
                           onClick={async () => {
                             if (!cobro?.id || guardandoProductos) return
                             setGuardandoProductos(true)
@@ -360,7 +361,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
             </button>
             <button
               type="submit"
-              disabled={guardar.isPending || !hayCambios}
+              disabled={guardar.isPending || !hayCambios || guardandoProductos}
               className={cn(btnPrimaryUI, 'flex-1')}
             >
               {guardar.isPending ? 'Guardando...' : 'Guardar'}

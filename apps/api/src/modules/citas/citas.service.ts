@@ -1063,14 +1063,23 @@ export class CitasService {
       // 5. LiquidacionItem: upsert si hay cobertura con monto > 0; borrar el PENDIENTE si no
       if (cobertura && cobertura.montoAseguradora.gt(0)) {
         if (cita.liquidacion) {
-          await tx.liquidacionItem.update({
-            where: { id: cita.liquidacion.id },
-            data: {
-              montoAseguradora: cobertura.montoAseguradora, servicioId: servicio.id,
-              categoriaSeguroId: cobertura.categoriaSeguroId, aseguradoraId: cobertura.aseguradoraId,
-              codigoSeguro: cobertura.codigoSeguro, fecha: cita.fechaHora,
-            },
-          })
+          if (cita.liquidacion.estado === EstadoLiquidacion.PENDIENTE) {
+            await tx.liquidacionItem.update({
+              where: { id: cita.liquidacion.id },
+              data: {
+                montoAseguradora: cobertura.montoAseguradora, servicioId: servicio.id,
+                categoriaSeguroId: cobertura.categoriaSeguroId, aseguradoraId: cobertura.aseguradoraId,
+                codigoSeguro: cobertura.codigoSeguro, fecha: cita.fechaHora,
+              },
+            })
+          } else {
+            await tx.log.create({
+              data: {
+                consultorioId, usuarioId, entidad: 'LiquidacionItem', entidadId: cita.liquidacion.id, accion: 'UPDATE',
+                payloadDespues: { motivo: 'edicion de cita con liquidacion no-PENDIENTE; item no modificado', citaId, estado: cita.liquidacion.estado },
+              },
+            })
+          }
         } else {
           await tx.liquidacionItem.create({
             data: {
