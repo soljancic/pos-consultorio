@@ -10,6 +10,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App'
 import { OfflineBanner } from './components/shared/OfflineBanner'
 import { PwaUpdatePrompt } from './components/shared/PwaUpdatePrompt'
+import { Toaster } from './components/shared/Toaster'
 import { iniciarTema } from './lib/theme'
 import './index.css'
 
@@ -34,6 +35,7 @@ const appContent = (
       <App />
       <OfflineBanner />
       <PwaUpdatePrompt />
+      <Toaster />
     </BrowserRouter>
   </QueryClientProvider>
 )
