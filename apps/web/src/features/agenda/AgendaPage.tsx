@@ -107,11 +107,15 @@ export function AgendaPage() {
   useEffect(() => {
     const f = searchParams.get('fecha')
     const cid = searchParams.get('citaId')
+    // Sin params no hay nada que hacer (cubre el re-run tras limpiarlos).
+    if (!f && !cid) return
     if (f) setFecha(new Date(`${f}T00:00:00`))
     if (cid) citaIdObjetivo.current = Number(cid)
-    if (f || cid) setSearchParams({}, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    setSearchParams({}, { replace: true })
+    // Reacciona a cada cambio de la URL: si YA estabas en /agenda y tocas otra
+    // notificacion, el deep-link igual se procesa (antes solo corria al montar,
+    // por eso "a veces" no abria la cita).
+  }, [searchParams, setSearchParams])
 
   // En celular se quita solo la vista Mes del toggle (el calendario completo no
   // entra bien en pantalla chica); el resto de las vistas siguen disponibles.
@@ -208,17 +212,6 @@ export function AgendaPage() {
     refetchInterval: 30_000,
   })
 
-  // Cuando el deep-link fijo un citaId objetivo y ya cargaron las citas del dia,
-  // abrir el detalle de esa cita y limpiar el objetivo.
-  useEffect(() => {
-    if (citaIdObjetivo.current == null) return
-    const obj = citas.find((c) => c.id === citaIdObjetivo.current)
-    if (obj) {
-      setCitaDetalle(obj)
-      citaIdObjetivo.current = null
-    }
-  }, [citas])
-
   // Semana (rango)
   const inicioSemanaStr = format(inicioSemana, 'yyyy-MM-dd')
   const { data: citasSemana = [], isLoading: cargandoSemana, isError: errorSemana, refetch: refetchSemana } = useQuery<Cita[]>({
@@ -248,6 +241,23 @@ export function AgendaPage() {
     enabled: vista === 'mes',
     refetchInterval: 30_000,
   })
+
+  // Cuando el deep-link fijo un citaId objetivo y llegaron las citas, abrir el
+  // detalle de esa cita y limpiar el objetivo. Busca en la vista activa (dia,
+  // semana o mes): setFecha ya posiciono el dia en la fecha de la cita, asi que
+  // el rango cargado de la vista actual la contiene aunque sea de otro dia.
+  useEffect(() => {
+    if (citaIdObjetivo.current == null) return
+    const id = citaIdObjetivo.current
+    const obj =
+      citas.find((c) => c.id === id) ??
+      citasSemana.find((c) => c.id === id) ??
+      citasMes.find((c) => c.id === id)
+    if (obj) {
+      setCitaDetalle(obj)
+      citaIdObjetivo.current = null
+    }
+  }, [citas, citasSemana, citasMes])
 
   const cambiarEstado = useMutation({
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
