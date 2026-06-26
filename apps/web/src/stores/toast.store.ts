@@ -40,10 +40,11 @@ export const toast = {
   error: (mensaje: string) => useToastStore.getState()._push('error', mensaje),
   warning: (mensaje: string) => useToastStore.getState()._push('warning', mensaje),
   success: (mensaje: string) => useToastStore.getState()._push('success', mensaje),
-  // Regla de negocio del backend -> warning; fallo inesperado/red -> error.
+  // Falla de accion del backend: error (rojo). Incluye reglas de negocio como
+  // "caja cerrada" (son errores para el usuario) y fallos inesperados. Usa el
+  // mensaje del backend si vino, si no el fallback.
   fromError: (err: unknown, fallback: string) => {
     const msg = mensajeDeError(err)
-    if (msg) useToastStore.getState()._push('warning', msg)
-    else useToastStore.getState()._push('error', fallback)
+    useToastStore.getState()._push('error', msg ?? fallback)
   },
 }
