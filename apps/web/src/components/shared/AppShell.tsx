@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../lib/api-client'
 import {
@@ -25,6 +25,9 @@ import {
   HelpCircle,
   ShieldCheck,
   Package,
+  Stethoscope,
+  ChevronRight,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth.store'
 import { aplicarTema, temaActual, type Tema } from '../../lib/theme'
@@ -32,29 +35,82 @@ import { cn, setMonedaActual } from '../../lib/utils'
 import { AbrirCajaModal } from '../../features/caja/AbrirCajaModal'
 import { NotificacionesBell } from '../../features/notificaciones/NotificacionesBell'
 
-const NAV_ITEMS = [
+type NavItem = {
+  to: string
+  icon: LucideIcon
+  label: string
+  end?: boolean
+  soloAdmin?: boolean
+  ocultarDoctor?: boolean
+  requiereProductos?: boolean
+  requiereAseguradoras?: boolean
+}
+
+// Items sueltos (arriba) + grupos colapsables. El gateo por rol se aplica por
+// item; un grupo sin items visibles para el rol no se muestra.
+const NAV_TOP: NavItem[] = [
   { to: '/inicio', icon: LayoutDashboard, label: 'Inicio', end: true },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
-  { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
-  { to: '/pacientes', icon: Users, label: 'Pacientes' },
-  { to: '/deudores', icon: AlertCircle, label: 'Deudores', ocultarDoctor: true },
-  { to: '/mensajes', icon: MessageCircle, label: 'Mensajes', ocultarDoctor: true },
-  { to: '/caja', icon: DollarSign, label: 'Caja', ocultarDoctor: true },
-  { to: '/gastos', icon: Receipt, label: 'Gastos', ocultarDoctor: true },
-  { to: '/catalogo', icon: Settings, label: 'Catálogo', ocultarDoctor: true },
-  { to: '/inventario', icon: Package, label: 'Inventario', soloAdmin: true, requiereProductos: true },
-  { to: '/liquidaciones', icon: ShieldCheck, label: 'Liquidaciones', soloAdmin: true, requiereAseguradoras: true },
-  { to: '/reportes', icon: BarChart3, label: 'Reportes', soloAdmin: true },
-  { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
-  { to: '/configuracion', icon: Cog, label: 'Configuración', soloAdmin: true },
-  { to: '/ayuda', icon: HelpCircle, label: 'Ayuda' },
+]
+
+const NAV_GROUPS: { id: string; label: string; icon: LucideIcon; items: NavItem[] }[] = [
+  {
+    id: 'atencion',
+    label: 'Atención',
+    icon: Stethoscope,
+    items: [
+      { to: '/calendario-atencion', icon: CalendarClock, label: 'Horarios' },
+      { to: '/pacientes', icon: Users, label: 'Pacientes' },
+      { to: '/mensajes', icon: MessageCircle, label: 'Mensajes', ocultarDoctor: true },
+    ],
+  },
+  {
+    id: 'finanzas',
+    label: 'Finanzas',
+    icon: DollarSign,
+    items: [
+      { to: '/caja', icon: DollarSign, label: 'Caja', ocultarDoctor: true },
+      { to: '/deudores', icon: AlertCircle, label: 'Deudores', ocultarDoctor: true },
+      { to: '/gastos', icon: Receipt, label: 'Gastos', ocultarDoctor: true },
+      { to: '/liquidaciones', icon: ShieldCheck, label: 'Liquidaciones', soloAdmin: true, requiereAseguradoras: true },
+    ],
+  },
+  {
+    id: 'inventario',
+    label: 'Inventario',
+    icon: Package,
+    items: [
+      { to: '/catalogo', icon: Settings, label: 'Catálogo', ocultarDoctor: true },
+      { to: '/inventario', icon: Package, label: 'Inventario', soloAdmin: true, requiereProductos: true },
+    ],
+  },
+  {
+    id: 'reportes',
+    label: 'Reportes',
+    icon: BarChart3,
+    items: [
+      { to: '/reportes', icon: BarChart3, label: 'Reportes', soloAdmin: true },
+      { to: '/actividad', icon: History, label: 'Actividad', soloAdmin: true },
+    ],
+  },
+  {
+    id: 'config',
+    label: 'Configuración',
+    icon: Cog,
+    items: [
+      { to: '/configuracion', icon: Cog, label: 'Configuración', soloAdmin: true },
+      { to: '/ayuda', icon: HelpCircle, label: 'Ayuda' },
+    ],
+  },
 ]
 
 const COLAPSADO_KEY = 'pos-sidebar-colapsado'
+const GRUPOS_KEY = 'pos-sidebar-grupos'
 
 export function AppShell() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   // Desktop: colapsado a iconos (persistido). Movil: drawer abierto/cerrado.
   const [colapsado, setColapsado] = useState(
     () => localStorage.getItem(COLAPSADO_KEY) === 'true',
@@ -62,6 +118,14 @@ export function AppShell() {
   const [abiertoMovil, setAbiertoMovil] = useState(false)
   const [tema, setTema] = useState<Tema>(temaActual)
   const [modalAbrirCaja, setModalAbrirCaja] = useState(false)
+  // Grupos del nav abiertos (persistido). Por defecto se abre el de la ruta actual.
+  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(GRUPOS_KEY) ?? '{}') as Record<string, boolean>
+    } catch {
+      return {}
+    }
+  })
 
   function toggleColapsado() {
     setColapsado((c) => {
@@ -131,6 +195,95 @@ export function AppShell() {
   const ocultarTexto = colapsado ? 'lg:hidden' : ''
   const centrarItem = colapsado ? 'lg:justify-center lg:px-0' : ''
 
+  // --- Helpers de navegacion (grupos + gateo por rol) ---
+  const itemVisible = (item: NavItem) =>
+    (!item.soloAdmin || esAdmin) &&
+    !(esDoctor && item.ocultarDoctor) &&
+    (!item.requiereAseguradoras || user?.trabajaConAseguradoras) &&
+    (!item.requiereProductos || user?.vendeProductos)
+
+  const grupoActivo = NAV_GROUPS.find((g) =>
+    g.items.some((i) => pathname === i.to || pathname.startsWith(i.to + '/')),
+  )?.id
+  const grupoEstaAbierto = (id: string) => gruposAbiertos[id] ?? id === grupoActivo
+  function toggleGrupo(id: string) {
+    setGruposAbiertos((prev) => {
+      const next = { ...prev, [id]: !(prev[id] ?? id === grupoActivo) }
+      localStorage.setItem(GRUPOS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const renderItem = (item: NavItem, dentroGrupo = false) => {
+    const { to, icon: Icon, label, end } = item
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        end={end}
+        title={colapsado ? label : undefined}
+        onClick={() => setAbiertoMovil(false)}
+        className={({ isActive }) =>
+          cn(
+            'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+            // Items dentro de un grupo van indentados (alineados bajo el label del grupo)
+            dentroGrupo ? 'px-3 py-2 pl-9' : 'px-3 py-2.5',
+            centrarItem,
+            isActive
+              ? 'bg-primary text-white'
+              : 'text-teal-200/80 hover:bg-white/10 hover:text-white',
+          )
+        }
+      >
+        <span className="relative shrink-0">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+          {to === '/mensajes' && badgeMensajes > 0 && colapsado && (
+            <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-amber-400" aria-hidden="true" />
+          )}
+        </span>
+        <span className={cn('flex-1 truncate', ocultarTexto)}>{label}</span>
+        {to === '/mensajes' && badgeMensajes > 0 && (
+          <span
+            className={cn(
+              'min-w-5 px-1.5 py-0.5 rounded-full bg-amber-400 text-teal-950 text-xs font-bold text-center tabular-nums',
+              ocultarTexto,
+            )}
+            aria-label={`${badgeMensajes} mensajes pendientes`}
+          >
+            {badgeMensajes > 99 ? '99+' : badgeMensajes}
+          </span>
+        )}
+      </NavLink>
+    )
+  }
+
+  const renderGrupo = (grupo: (typeof NAV_GROUPS)[number]) => {
+    const visibles = grupo.items.filter(itemVisible)
+    if (visibles.length === 0) return null
+    const abierto = grupoEstaAbierto(grupo.id)
+    const GIcon = grupo.icon
+    return (
+      <div key={grupo.id}>
+        <button
+          type="button"
+          onClick={() => toggleGrupo(grupo.id)}
+          aria-expanded={abierto}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        >
+          <GIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span className="flex-1 text-left truncate">{grupo.label}</span>
+          <ChevronRight
+            className={cn('h-4 w-4 shrink-0 transition-transform duration-200', abierto && 'rotate-90')}
+            aria-hidden="true"
+          />
+        </button>
+        {abierto && (
+          <div className="mt-0.5 space-y-0.5">{visibles.map((it) => renderItem(it, true))}</div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Backdrop del drawer (solo movil) */}
@@ -193,45 +346,20 @@ export function AppShell() {
 
         {/* Navegacion */}
         <nav className="flex-1 py-3 space-y-1 px-2 overflow-y-auto scrollbar-thin-light">
-          {NAV_ITEMS.filter((item) => (!item.soloAdmin || esAdmin) && !(esDoctor && item.ocultarDoctor) && (!item.requiereAseguradoras || user?.trabajaConAseguradoras) && (!item.requiereProductos || user?.vendeProductos)).map(
-            ({ to, icon: Icon, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                title={colapsado ? label : undefined}
-                onClick={() => setAbiertoMovil(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                    centrarItem,
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'text-teal-200/80 hover:bg-white/10 hover:text-white',
-                  )
-                }
-              >
-                <span className="relative shrink-0">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  {to === '/mensajes' && badgeMensajes > 0 && colapsado && (
-                    <span className="absolute -top-1.5 -right-1.5 h-2.5 w-2.5 rounded-full bg-amber-400" aria-hidden="true" />
-                  )}
-                </span>
-                <span className={cn('flex-1 truncate', ocultarTexto)}>{label}</span>
-                {to === '/mensajes' && badgeMensajes > 0 && (
-                  <span
-                    className={cn(
-                      'min-w-5 px-1.5 py-0.5 rounded-full bg-amber-400 text-teal-950 text-xs font-bold text-center tabular-nums',
-                      ocultarTexto,
-                    )}
-                    aria-label={`${badgeMensajes} mensajes pendientes`}
-                  >
-                    {badgeMensajes > 99 ? '99+' : badgeMensajes}
-                  </span>
-                )}
-              </NavLink>
-            ),
-          )}
+          {/* Items sueltos arriba (Inicio, Agenda) */}
+          {NAV_TOP.filter(itemVisible).map((it) => renderItem(it))}
+
+          {/* Colapsado (solo desktop icon-only): lista plana de iconos, sin grupos */}
+          <div className={cn('space-y-1', colapsado ? 'hidden lg:block' : 'hidden')}>
+            {NAV_GROUPS.flatMap((g) => g.items)
+              .filter(itemVisible)
+              .map((it) => renderItem(it))}
+          </div>
+
+          {/* Expandido / movil: grupos colapsables */}
+          <div className={cn('space-y-1', colapsado && 'lg:hidden')}>
+            {NAV_GROUPS.map(renderGrupo)}
+          </div>
         </nav>
 
         {/* Estado del turno (E2-M9): visible siempre, apertura desde aca */}
