@@ -3,13 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Lock, Pencil, Save, ShieldCheck, ShoppingCart, Stethoscope } from 'lucide-react'
 import { EstadoCita, type Cita, type Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { cn } from '../../lib/utils'
+import { cn, formatMoneda } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
 import { toast } from '../../stores/toast.store'
 import { useAuthStore } from '../../stores/auth.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
-import { FloatingInput } from '../../components/shared/FloatingInput'
 import { LineasProductoEditor, type LineaUI } from '../inventario/LineasProductoEditor'
 
 const CLAVES_INVALIDAR = [
@@ -60,6 +59,18 @@ export function EditarCitaModal({ cita, onClose }: Props) {
     staleTime: 2 * 60 * 1000,
   })
 
+  // Preview de tarifa (paga paciente / cubre aseguradora) del servicio elegido
+  const categoriaSeguroId = pacienteSeguro?.categoriaSeguro?.id
+  const { data: tarifasPreview = [] } = useQuery<
+    { servicioId: number; montoPaciente: string; montoAseguradora: string }[]
+  >({
+    queryKey: ['tarifa-preview', categoriaSeguroId, servicioId],
+    queryFn: () =>
+      api.get(`/tarifas-cobertura?categoriaSeguroId=${categoriaSeguroId}`).then((r) => r.data),
+    enabled: usaSeguro && !!categoriaSeguroId && !!servicioId,
+    staleTime: 5 * 60 * 1000,
+  })
+
   // Cobro de la cita (para la sección de productos)
   const { data: cobro } = useQuery({
     queryKey: ['cobro-cita', cita.id],
@@ -84,6 +95,13 @@ export function EditarCitaModal({ cita, onClose }: Props) {
         })),
     )
   }, [cobro])
+
+  // Si la cita no traia codigo y el paciente tiene uno configurado, prefill
+  // (mismo comportamiento que NuevaCita: el codigo sale del seguro del paciente).
+  useEffect(() => {
+    if (pacienteSeguro?.codigoSeguro && !codigoSeguro) setCodigoSeguro(pacienteSeguro.codigoSeguro)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pacienteSeguro])
 
   // --- Visibilidad de la sección de cobertura ---
   // Solo cuando el consultorio trabaja con aseguradoras Y el paciente tiene seguro
@@ -267,17 +285,52 @@ export function EditarCitaModal({ cita, onClose }: Props) {
                     </span>
                   </button>
 
-                  {/* Código de asegurado: visible solo cuando el toggle está ON */}
-                  {usaSeguro && (
-                    <FloatingInput
-                      id="editar-codigo-seguro"
-                      label="Código de asegurado"
-                      Icon={ShieldCheck}
-                      value={codigoSeguro}
-                      onChange={(e) => setCodigoSeguro(e.target.value)}
-                      className="tabular-nums"
-                    />
-                  )}
+                  {/* Detalles de la cobertura cuando el toggle está ON: tarjeta
+                      read-only con aseguradora/categoría/código + preview de montos,
+                      igual que NuevaCitaModal (todo en una sola tarjeta). */}
+                  {usaSeguro && (() => {
+                    const tarifaFila = tarifasPreview.find((r) => r.servicioId === servicioIdNum)
+                    return (
+                      <div className="rounded-lg border border-input bg-muted/20 px-4 py-3 space-y-3">
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                          <div>
+                            <span className="block text-xs text-muted-foreground mb-0.5">Aseguradora</span>
+                            <span className="font-medium text-foreground">{pacienteSeguro?.aseguradora?.nombre ?? '—'}</span>
+                          </div>
+                          <div>
+                            <span className="block text-xs text-muted-foreground mb-0.5">Categoría</span>
+                            <span className="font-medium text-foreground">{pacienteSeguro?.categoriaSeguro?.nombre ?? '—'}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="block text-xs text-muted-foreground mb-0.5">Código de asegurado</span>
+                            <span className="font-medium text-foreground tabular-nums">{codigoSeguro || '—'}</span>
+                          </div>
+                        </div>
+
+                        {tarifaFila ? (
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            <div className="rounded-md bg-card border border-input px-3 py-2 text-center">
+                              <span className="block text-xs text-muted-foreground mb-0.5">Paga el paciente</span>
+                              <span className="text-base font-semibold tabular-nums text-foreground">
+                                {formatMoneda(Number(tarifaFila.montoPaciente))}
+                              </span>
+                            </div>
+                            <div className="rounded-md bg-card border border-input px-3 py-2 text-center">
+                              <span className="block text-xs text-muted-foreground mb-0.5">Cubre la aseguradora</span>
+                              <span className="text-base font-semibold tabular-nums text-primary">
+                                {formatMoneda(Number(tarifaFila.montoAseguradora))}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            Sin tarifa para este servicio: se atenderá como particular.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               </>
             )}
