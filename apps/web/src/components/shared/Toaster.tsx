@@ -2,26 +2,31 @@ import { AlertCircle, AlertTriangle, CheckCircle2, X, type LucideIcon } from 'lu
 import { useToastStore, DURACION_MS, type ToastTipo } from '../../stores/toast.store'
 import { cn } from '../../lib/utils'
 
-// Fondo SOLIDO (bg-card) + barra de acento de color a la izquierda + icono de
-// color: legible sobre cualquier fondo (sin transparencia que se pierda).
-const ESTILO: Record<ToastTipo, { icon: LucideIcon; accent: string; text: string; bar: string }> = {
+// Toast RELLENO: toda la caja del color del tipo, para que resalte. Formato de
+// la foto: icono + titulo en negrita + mensaje, X a la derecha, barra de
+// progreso abajo. Texto de alto contraste (oscuro sobre ambar; blanco sobre
+// rojo/verde).
+const ESTILO: Record<ToastTipo, { icon: LucideIcon; titulo: string; box: string; bar: string; closeHover: string }> = {
   error: {
     icon: AlertCircle,
-    accent: 'border-l-destructive',
-    text: 'text-destructive',
-    bar: 'bg-destructive',
+    titulo: 'Error',
+    box: 'bg-destructive text-white',
+    bar: 'bg-white/70',
+    closeHover: 'hover:bg-white/15',
   },
   warning: {
     icon: AlertTriangle,
-    accent: 'border-l-amber-500',
-    text: 'text-amber-600 dark:text-amber-400',
-    bar: 'bg-amber-500',
+    titulo: 'Atención',
+    box: 'bg-amber-500 text-amber-950',
+    bar: 'bg-amber-950/40',
+    closeHover: 'hover:bg-amber-950/10',
   },
   success: {
     icon: CheckCircle2,
-    accent: 'border-l-emerald-500',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    bar: 'bg-emerald-500',
+    titulo: 'Listo',
+    box: 'bg-emerald-600 text-white',
+    bar: 'bg-white/70',
+    closeHover: 'hover:bg-white/15',
   },
 }
 
@@ -41,26 +46,30 @@ export function Toaster() {
       className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2"
     >
       {toasts.map((t) => {
-        const { icon: Icon, accent, text, bar } = ESTILO[t.tipo]
+        const { icon: Icon, titulo, box, bar, closeHover } = ESTILO[t.tipo]
         return (
           <div
             key={t.id}
             className={cn(
-              // overflow-hidden recorta la barra de progreso a las esquinas redondeadas.
-              'modal-fade modal-pop pointer-events-auto relative w-full overflow-hidden rounded-lg border border-l-4 bg-card px-3.5 py-3 shadow-lg',
-              accent,
+              // Caja rellena de color; overflow-hidden recorta la barra a las esquinas.
+              'modal-fade modal-pop pointer-events-auto relative w-full overflow-hidden rounded-lg px-3.5 py-3 shadow-lg',
+              box,
             )}
           >
             <div className="flex items-start gap-2.5">
-              <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', text)} aria-hidden="true" />
-              <p className="flex-1 text-sm font-medium leading-snug text-foreground select-text">
-                {t.mensaje}
+              <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <p className="flex-1 text-sm leading-snug select-text">
+                <span className="font-bold">¡{titulo}!</span> {t.mensaje}
               </p>
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Cerrar aviso"
-                className="-m-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                className={cn(
+                  '-m-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md cursor-pointer transition-colors duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current',
+                  closeHover,
+                )}
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
