@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { Decimal } from '@prisma/client/runtime/library'
 import { diaCajaLocal } from '../caja/caja.service'
 import { descontarStockDeCobro } from './stock.helper'
+import { calcularRepartoDevolucion, planificarReembolso } from './devolucion.helper'
 
 export class RegistrarPagoDto {
   @IsNumber() @Min(0.01)
@@ -758,6 +759,172 @@ export class CobrosService {
         data: { saldoPendiente: pagos[0].cobro.total, estado: EstadoCobro.PENDIENTE },
       })
     })
+  }
+
+  // Devolucion a nivel de linea (deshacer la venta de un item): restituye el
+  // stock del producto (si controla inventario), recomputa el cobro conservando
+  // el descuento, baja la deuda por la parte aun adeudada y reembolsa la parte
+  // ya pagada en la misma forma cobrada (pagos negativos que descuentan la caja
+  // de hoy). La linea no se borra: queda marcada con devueltoAt.
+  async devolverDetalle(consultorioId: number, detalleId: number, usuarioId: number) {
+    const detalle = await this.prisma.detalleCobro.findFirst({
+      where: { id: detalleId, consultorioId, productoId: { not: null } },
+      include: {
+        producto: { select: { id: true, controlaStock: true } },
+        cobro: {
+          include: {
+            cita: { select: { id: true, pacienteId: true, estado: true } },
+            pagos: {
+              where: { anuladoAt: null, monto: { gt: 0 } },
+              orderBy: { createdAt: 'desc' },
+              include: { tipoCuenta: { select: { esEfectivo: true } } },
+            },
+          },
+        },
+      },
+    })
+    if (!detalle) throw new NotFoundException('Linea de venta no encontrada')
+    if (detalle.devueltoAt) throw new BadRequestException('Esta linea ya fue devuelta')
+
+    const cobro = detalle.cobro
+    if (cobro.estado === EstadoCobro.ANULADO) {
+      throw new BadRequestException('El cobro esta anulado: no se puede devolver')
+    }
+    // Solo ventas confirmadas (stock ya descontado). Cita en ATENDIDA aun no
+    // confirmo: los productos se editan desde el cobro (setProductos).
+    if (cobro.citaId && cobro.cita?.estado === EstadoCita.ATENDIDA) {
+      throw new BadRequestException('La venta aun no se confirmo: edita los productos desde el cobro')
+    }
+
+    const reparto = calcularRepartoDevolucion(
+      cobro.total,
+      cobro.descuento,
+      cobro.saldoPendiente,
+      detalle.subtotal,
+    )
+
+    // El reembolso (parte ya pagada) sale de la caja de hoy: exigir turno abierto.
+    // Si solo baja deuda, no se toca caja y no se exige.
+    if (reparto.reembolso.gt(0)) {
+      await this.exigirCajaAbierta(consultorioId)
+    }
+
+    const movimientos = planificarReembolso(
+      cobro.pagos.map((p) => ({
+        id: p.id,
+        monto: p.monto,
+        tipoCuentaId: p.tipoCuentaId,
+        esEfectivo: p.tipoCuenta.esEfectivo,
+      })),
+      reparto.reembolso,
+    )
+
+    const pagadoNuevo = reparto.totalNuevo.minus(reparto.nuevoSaldo)
+    const nuevoEstadoCobro = reparto.nuevoSaldo.lte(0)
+      ? EstadoCobro.COMPLETO
+      : pagadoNuevo.gt(0)
+        ? EstadoCobro.PARCIAL
+        : EstadoCobro.PENDIENTE
+
+    const { clave: hoy } = diaCajaLocal()
+    const pacienteDeuda = cobro.cita?.pacienteId ?? cobro.pacienteId
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Marcar la linea como devuelta (no se borra)
+      await tx.detalleCobro.update({
+        where: { id: detalleId },
+        data: { devueltoAt: new Date(), devueltoPorId: usuarioId },
+      })
+
+      // 2. Restituir stock si el producto controla inventario
+      if (detalle.producto?.controlaStock) {
+        await tx.producto.update({
+          where: { id: detalle.productoId! },
+          data: { stockActual: { increment: detalle.cantidad } },
+        })
+      }
+
+      // 3-4. Recomputar el cobro (total/descuento/saldo/estado)
+      await tx.cobro.update({
+        where: { id: cobro.id },
+        data: {
+          total: reparto.totalNuevo,
+          descuento: reparto.descuentoNuevo,
+          saldoPendiente: reparto.nuevoSaldo,
+          estado: nuevoEstadoCobro,
+        },
+      })
+
+      // 5. Bajar la deuda del paciente por la parte que aun se debia. Como
+      // deudaReduccion <= saldoPendiente, solo baja lo que realmente estaba
+      // colgado como deuda (saldo 0 => deudaReduccion 0 => no toca nada).
+      if (pacienteDeuda && reparto.deudaReduccion.gt(0)) {
+        await tx.paciente.update({
+          where: { id: pacienteDeuda },
+          data: { deudaTotal: { decrement: reparto.deudaReduccion } },
+        })
+      }
+
+      // 6. Reembolso: un pago negativo por cada forma, que descuenta la caja de hoy
+      for (const m of movimientos) {
+        await tx.pago.create({
+          data: {
+            cobroId: cobro.id,
+            tipoCuentaId: m.tipoCuentaId,
+            monto: m.monto.negated(),
+            referencia: 'Devolucion producto',
+            createdById: usuarioId,
+          },
+        })
+        await tx.cajaDiaria.upsert({
+          where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
+          create: {
+            consultorioId,
+            fecha: hoy,
+            usuarioAperturaId: usuarioId,
+            ...(m.esEfectivo && { totalEfectivo: m.monto.negated() }),
+            totalGeneral: m.monto.negated(),
+          },
+          update: {
+            ...(m.esEfectivo && { totalEfectivo: { decrement: m.monto } }),
+            totalGeneral: { decrement: m.monto },
+          },
+        })
+      }
+
+      // 7. Cita CON_DEUDA que queda saldada -> COBRADO
+      if (cobro.cita && reparto.nuevoSaldo.lte(0) && cobro.cita.estado === EstadoCita.CON_DEUDA) {
+        await tx.cita.update({
+          where: { id: cobro.cita.id },
+          data: { estado: EstadoCita.COBRADO },
+        })
+      }
+
+      // 8. Log de auditoria con el desglose
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'Cobro',
+          entidadId: cobro.id,
+          accion: 'UPDATE',
+          payloadDespues: {
+            evento: 'devolucion-producto',
+            detalleId,
+            productoId: detalle.productoId,
+            cantidad: detalle.cantidad,
+            delta: reparto.delta.toString(),
+            deudaReduccion: reparto.deudaReduccion.toString(),
+            reembolso: reparto.reembolso.toString(),
+            reembolsos: movimientos.map((m) => ({ tipoCuentaId: m.tipoCuentaId, monto: m.monto.toString() })),
+          },
+        },
+      })
+    })
+
+    return cobro.citaId
+      ? this.findByCita(consultorioId, cobro.citaId)
+      : this.findOne(consultorioId, cobro.id)
   }
 
   // Deuda real = saldo de cobros cuya cita fue prestada (ATENDIDA/CON_DEUDA),

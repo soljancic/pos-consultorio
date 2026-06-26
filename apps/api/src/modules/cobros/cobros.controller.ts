@@ -51,6 +51,16 @@ export class CobrosController {
     return this.service.reversarPagosDeCita(user.consultorioId, citaId, user.sub, dto.motivo)
   }
 
+  @Post('detalle/:detalleId/devolver')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Deshacer la venta de un item: devuelve stock y revierte la plata del item' })
+  devolverDetalle(
+    @CurrentUser() user: JwtPayload,
+    @Param('detalleId', ParseIntPipe) detalleId: number,
+  ) {
+    return this.service.devolverDetalle(user.consultorioId, detalleId, user.sub)
+  }
+
   @Post('venta-directa')
   @ApiOperation({ summary: 'Crear una venta directa de productos (sin cita)' })
   crearVentaDirecta(@CurrentUser() user: JwtPayload, @Body() dto: CrearVentaDirectaDto) {
