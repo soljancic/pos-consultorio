@@ -84,7 +84,7 @@ export class ReportesService {
           select: {
             total: true, descuento: true, saldoPendiente: true,
             // subtotales de PRODUCTO para separar la porcion servicio del bruto
-            detalles: { where: { productoId: { not: null } }, select: { subtotal: true } },
+            detalles: { where: { productoId: { not: null }, devueltoAt: null }, select: { subtotal: true } },
           },
         },
       },
@@ -268,6 +268,7 @@ export class ReportesService {
       where: {
         consultorioId,
         productoId: { not: null },
+        devueltoAt: null,
         cobro: {
           estado: { not: 'ANULADO' },
           OR: [
