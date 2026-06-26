@@ -987,12 +987,18 @@ export class CitasService {
     }
     const servicioMonto = cobertura ? cobertura.montoPaciente : precioParticular
 
-    const oldSaldo = cita.cobro.saldoPendiente
-    const pagado = cita.cobro.total.minus(oldSaldo)
     const esAtendida = cita.estado === EstadoCita.ATENDIDA
     const cobroId = cita.cobro.id
 
     const fresco = await this.prisma.$transaction(async (tx) => {
+      // Re-leer el cobro DENTRO de la tx: no perder un pago concurrente entre el
+      // findFirst de arriba y este recalculo (lost update sobre saldoPendiente).
+      const cobroActual = await tx.cobro.findUniqueOrThrow({
+        where: { id: cobroId },
+        select: { total: true, saldoPendiente: true, descuento: true },
+      })
+      const oldSaldo = cobroActual.saldoPendiente
+      const pagado = cobroActual.total.minus(oldSaldo)
       // 1. Actualizar (o crear, auto-heal de cobros legacy) la linea de servicio
       const lineaServicio = await tx.detalleCobro.findFirst({
         where: { cobroId, consultorioId, servicioId: { not: null } }, select: { id: true },
@@ -1016,7 +1022,7 @@ export class CitasService {
         where: { cobroId, consultorioId, devueltoAt: null }, _sum: { subtotal: true },
       })
       const bruto = agg._sum.subtotal ?? new Decimal(0)
-      const descuento = cita.cobro!.descuento.gt(bruto) ? bruto : cita.cobro!.descuento
+      const descuento = cobroActual.descuento.gt(bruto) ? bruto : cobroActual.descuento
       const nuevoTotal = bruto.minus(descuento)
       const nuevoSaldo = nuevoTotal.minus(pagado)
       if (nuevoSaldo.lt(0)) {
@@ -1083,6 +1089,12 @@ export class CitasService {
       await tx.log.create({
         data: {
           consultorioId, usuarioId, entidad: 'Cita', entidadId: citaId, accion: 'UPDATE',
+          payloadAntes: {
+            servicioId: cita.servicioId,
+            total: cobroActual.total.toString(),
+            saldo: oldSaldo.toString(),
+            usaSeguro: cita.usaSeguro,
+          },
           payloadDespues: {
             evento: 'editar-cita',
             servicioId: servicio.id,
