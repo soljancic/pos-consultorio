@@ -144,6 +144,7 @@ model Usuario {
   cajasRevisadas   CajaDiaria[] @relation("CajaRevisadaPor")
   gastosRegistrados Gasto[]     @relation("GastoRegistradoPor")
   detallesDevueltos DetalleCobro[] @relation("DetalleDevueltoPor")
+  detallesCreados   DetalleCobro[] @relation("DetalleCreadoPor")
   logs             Log[]
   doctor           Doctor?
   passwordTokens   PasswordToken[]
@@ -878,6 +879,8 @@ model DetalleCobro {
   devueltoAt    DateTime?
   devueltoPorId Int?
   devueltoPor   Usuario?  @relation("DetalleDevueltoPor", fields: [devueltoPorId], references: [id])
+  createdById   Int?
+  createdBy     Usuario?  @relation("DetalleCreadoPor", fields: [createdById], references: [id])
 
   @@index([consultorioId])
   @@index([cobroId])

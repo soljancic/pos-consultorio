@@ -201,6 +201,7 @@ export class CobrosService {
             precioVenta: p.precioVenta,
             precioCosto: p.precioCosto,
             subtotal,
+            createdById: usuarioId,
           },
         })
         if (p.controlaStock && l.cantidad > p.stockActual) {
@@ -334,6 +335,7 @@ export class CobrosService {
             descripcion: p.nombre, cantidad: l.cantidad,
             precioVenta: p.precioVenta, precioCosto: p.precioCosto,
             subtotal: p.precioVenta.mul(l.cantidad),
+            createdById: usuarioId,
           },
         })
       }
