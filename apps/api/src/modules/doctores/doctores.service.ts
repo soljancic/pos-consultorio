@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common'
 import { v2 as cloudinary } from 'cloudinary'
 import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, IsArray, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer'
@@ -51,6 +51,19 @@ export class SetServiciosDto {
 @Injectable()
 export class DoctoresService {
   constructor(private prisma: PrismaService) {}
+
+  private async exigirNombreUnico(consultorioId: number, nombre: string, exceptoId?: number) {
+    const existe = await this.prisma.doctor.findFirst({
+      where: {
+        consultorioId,
+        activo: true,
+        nombre: { equals: nombre, mode: 'insensitive' },
+        ...(exceptoId ? { id: { not: exceptoId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (existe) throw new ConflictException('Ya existe un doctor con ese nombre')
+  }
 
   findAll(consultorioId: number, incluirInactivos = false) {
     return this.prisma.doctor.findMany({
@@ -119,7 +132,8 @@ export class DoctoresService {
     return match > 0
   }
 
-  create(consultorioId: number, dto: CreateDoctorDto) {
+  async create(consultorioId: number, dto: CreateDoctorDto) {
+    await this.exigirNombreUnico(consultorioId, dto.nombre)
     return this.prisma.doctor.create({ data: { ...dto, consultorioId } })
   }
 
@@ -182,6 +196,7 @@ export class DoctoresService {
   async update(consultorioId: number, id: number, dto: UpdateDoctorDto) {
     const d = await this.prisma.doctor.findFirst({ where: { id, consultorioId } })
     if (!d) throw new NotFoundException()
+    if (dto.nombre) await this.exigirNombreUnico(consultorioId, dto.nombre, id)
     return this.prisma.doctor.update({ where: { id }, data: dto })
   }
 

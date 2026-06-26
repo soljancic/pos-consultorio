@@ -132,7 +132,15 @@ export class UsuariosService {
     }
 
     const { password, doctorId, ...rest } = dto
-    if (rest.email) rest.email = rest.email.trim().toLowerCase()
+    if (rest.email) {
+      rest.email = rest.email.trim().toLowerCase()
+      // Email unico por consultorio (mismo criterio que create), excluyendo al propio.
+      const otro = await this.prisma.usuario.findFirst({
+        where: { consultorioId, email: rest.email, id: { not: id } },
+        select: { id: true },
+      })
+      if (otro) throw new ConflictException('Ya existe un usuario con ese email')
+    }
     const data: Record<string, unknown> = { ...rest }
     if (password) data.passwordHash = await argon2.hash(password)
 

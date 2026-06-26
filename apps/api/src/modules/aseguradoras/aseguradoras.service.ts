@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean, ValidateIf, MaxLength, IsInt, IsNumber, Min, Max, ValidateNested, ArrayMaxSize, IsArray } from 'class-validator'
 import { PartialType } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
@@ -75,6 +75,33 @@ export class SetTarifasDto {
 export class AseguradorasService {
   constructor(private prisma: PrismaService) {}
 
+  private async exigirNombreUnicoAseguradora(consultorioId: number, nombre: string, exceptoId?: number) {
+    const existe = await this.prisma.aseguradora.findFirst({
+      where: {
+        consultorioId,
+        activa: true,
+        nombre: { equals: nombre, mode: 'insensitive' },
+        ...(exceptoId ? { id: { not: exceptoId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (existe) throw new ConflictException('Ya existe una aseguradora con ese nombre')
+  }
+
+  private async exigirNombreUnicoCategoria(consultorioId: number, aseguradoraId: number, nombre: string, exceptoId?: number) {
+    const existe = await this.prisma.categoriaSeguro.findFirst({
+      where: {
+        consultorioId,
+        aseguradoraId,
+        activa: true,
+        nombre: { equals: nombre, mode: 'insensitive' },
+        ...(exceptoId ? { id: { not: exceptoId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (existe) throw new ConflictException('Ya existe una categoría con ese nombre para esta aseguradora')
+  }
+
   findAll(consultorioId: number, incluirInactivas = false) {
     return this.prisma.aseguradora.findMany({
       where: { consultorioId, ...(incluirInactivas ? {} : { activa: true }) },
@@ -82,13 +109,15 @@ export class AseguradorasService {
     })
   }
 
-  create(consultorioId: number, dto: CreateAseguradoraDto) {
+  async create(consultorioId: number, dto: CreateAseguradoraDto) {
+    await this.exigirNombreUnicoAseguradora(consultorioId, dto.nombre)
     return this.prisma.aseguradora.create({ data: { ...dto, consultorioId } })
   }
 
   async update(consultorioId: number, id: number, dto: UpdateAseguradoraDto) {
     const a = await this.prisma.aseguradora.findFirst({ where: { id, consultorioId } })
     if (!a) throw new NotFoundException()
+    if (dto.nombre) await this.exigirNombreUnicoAseguradora(consultorioId, dto.nombre, id)
     return this.prisma.aseguradora.update({ where: { id }, data: dto })
   }
 
@@ -120,6 +149,7 @@ export class AseguradorasService {
       select: { id: true },
     })
     if (!aseg) throw new NotFoundException('Aseguradora inexistente')
+    await this.exigirNombreUnicoCategoria(consultorioId, dto.aseguradoraId, dto.nombre)
     return this.prisma.categoriaSeguro.create({
       data: {
         consultorioId,
@@ -133,6 +163,7 @@ export class AseguradorasService {
   async updateCategoria(consultorioId: number, id: number, dto: UpdateCategoriaSeguroDto) {
     const c = await this.prisma.categoriaSeguro.findFirst({ where: { id, consultorioId } })
     if (!c) throw new NotFoundException()
+    if (dto.nombre) await this.exigirNombreUnicoCategoria(consultorioId, c.aseguradoraId, dto.nombre, id)
     return this.prisma.categoriaSeguro.update({ where: { id }, data: dto })
   }
 

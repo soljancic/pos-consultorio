@@ -17,6 +17,20 @@ export class UpdateTipoGastoDto extends PartialType(CreateTipoGastoDto) {
 export class TiposGastoService {
   constructor(private prisma: PrismaService) {}
 
+  // Nombre unico por consultorio entre los tipos activos (case-insensitive).
+  private async exigirNombreUnico(consultorioId: number, nombre: string, exceptoId?: number) {
+    const existe = await this.prisma.tipoGasto.findFirst({
+      where: {
+        consultorioId,
+        activo: true,
+        nombre: { equals: nombre, mode: 'insensitive' },
+        ...(exceptoId ? { id: { not: exceptoId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (existe) throw new ConflictException('Ya existe un tipo de gasto con ese nombre')
+  }
+
   findAll(consultorioId: number, incluirInactivos = false) {
     return this.prisma.tipoGasto.findMany({
       where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
@@ -24,13 +38,15 @@ export class TiposGastoService {
     })
   }
 
-  create(consultorioId: number, dto: CreateTipoGastoDto) {
+  async create(consultorioId: number, dto: CreateTipoGastoDto) {
+    await this.exigirNombreUnico(consultorioId, dto.nombre)
     return this.prisma.tipoGasto.create({ data: { ...dto, consultorioId } })
   }
 
   async update(consultorioId: number, id: number, dto: UpdateTipoGastoDto) {
     const t = await this.prisma.tipoGasto.findFirst({ where: { id, consultorioId } })
     if (!t) throw new NotFoundException()
+    if (dto.nombre) await this.exigirNombreUnico(consultorioId, dto.nombre, id)
     // No inactivar un tipo con gastos no borrados
     if (dto.activo === false) {
       const enUso = await this.prisma.gasto.count({

@@ -20,6 +20,22 @@ export class UpdateTipoCuentaDto extends PartialType(CreateTipoCuentaDto) {
 export class TiposCuentaService {
   constructor(private prisma: PrismaService) {}
 
+  // Nombre unico por consultorio entre las cuentas activas (case-insensitive).
+  // Chequeo a nivel servicio (no constraint de BD) para no romper duplicados ya
+  // existentes; solo previene crear/renombrar a un nombre ya en uso.
+  private async exigirNombreUnico(consultorioId: number, nombre: string, exceptoId?: number) {
+    const existe = await this.prisma.tipoCuenta.findFirst({
+      where: {
+        consultorioId,
+        activo: true,
+        nombre: { equals: nombre, mode: 'insensitive' },
+        ...(exceptoId ? { id: { not: exceptoId } } : {}),
+      },
+      select: { id: true },
+    })
+    if (existe) throw new ConflictException('Ya existe una cuenta con ese nombre')
+  }
+
   findAll(consultorioId: number, incluirInactivos = false) {
     return this.prisma.tipoCuenta.findMany({
       where: { consultorioId, ...(incluirInactivos ? {} : { activo: true }) },
@@ -28,6 +44,7 @@ export class TiposCuentaService {
   }
 
   async create(consultorioId: number, dto: CreateTipoCuentaDto) {
+    await this.exigirNombreUnico(consultorioId, dto.nombre)
     return this.prisma.$transaction(async (tx) => {
       // Solo 0 o 1 cuenta con esEfectivo por consultorio: la nueva desplaza
       if (dto.esEfectivo) {
@@ -43,6 +60,7 @@ export class TiposCuentaService {
   async update(consultorioId: number, id: number, dto: UpdateTipoCuentaDto) {
     const t = await this.prisma.tipoCuenta.findFirst({ where: { id, consultorioId } })
     if (!t) throw new NotFoundException()
+    if (dto.nombre) await this.exigirNombreUnico(consultorioId, dto.nombre, id)
     if (dto.activo === false) {
       const enUso = await this.prisma.gasto.count({
         where: { consultorioId, tipoCuentaId: id, deletedAt: null },
