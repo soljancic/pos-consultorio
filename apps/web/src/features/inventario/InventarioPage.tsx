@@ -6,13 +6,15 @@ import { chipIconUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import { ProductosTab } from './ProductosTab'
+import { VentasDetalleTab } from './VentasDetalleTab'
 
-type TabId = 'productos' | 'compras' | 'ajustes'
+type TabId = 'productos' | 'ventas' | 'compras' | 'ajustes'
 
 // Compras (P2) y Ajustes (P3) llegan en etapas siguientes: se muestran como
 // pestañas deshabilitadas para señalar el roadmap sin prometer lo que no existe.
 const TABS: { id: TabId; label: string; disponible: boolean }[] = [
   { id: 'productos', label: 'Productos', disponible: true },
+  { id: 'ventas', label: 'Ventas', disponible: true },
   { id: 'compras', label: 'Compras', disponible: false },
   { id: 'ajustes', label: 'Ajustes', disponible: false },
 ]
@@ -73,6 +75,7 @@ export function InventarioPage() {
 
       <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-5xl mx-auto w-full">
         {tab === 'productos' && <ProductosTab />}
+        {tab === 'ventas' && <VentasDetalleTab />}
       </div>
     </div>
   )
