@@ -14,6 +14,7 @@ import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
 import { VentaDirectaModal } from '../inventario/VentaDirectaModal'
 import { ReprogramarCitaModal } from './ReprogramarCitaModal'
+import { EditarCitaModal } from './EditarCitaModal'
 import { CancelarCitaModal } from './CancelarCitaModal'
 import { AtencionModal } from './AtencionModal'
 import { AgendaDiaGrid } from './AgendaDiaGrid'
@@ -94,6 +95,7 @@ export function AgendaPage() {
   const [modalVentaDirecta, setModalVentaDirecta] = useState(false)
   const [modalAtencion, setModalAtencion] = useState(false)
   const [citaReprogramar, setCitaReprogramar] = useState<Cita | null>(null)
+  const [citaEditar, setCitaEditar] = useState<Cita | null>(null)
   const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
   const [citaNoAsistio, setCitaNoAsistio] = useState<Cita | null>(null)
   const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
@@ -587,6 +589,7 @@ export function AgendaPage() {
                     onCobrar={() => abrirCobro(cita)}
                     onAtencion={() => abrirAtencion(cita)}
                     onReprogramar={() => setCitaReprogramar(cita)}
+                    onEditar={() => setCitaEditar(cita)}
                     onCancelar={() => setCitaCancelar(cita)}
                     onNoAsistio={() => setCitaNoAsistio(cita)}
                   />
@@ -667,6 +670,10 @@ export function AgendaPage() {
             setCitaDetalle(null)
             setCitaReprogramar(citaDetalle)
           }}
+          onEditar={() => {
+            setCitaDetalle(null)
+            setCitaEditar(citaDetalle)
+          }}
           onCancelar={() => {
             setCitaDetalle(null)
             setCitaCancelar(citaDetalle)
@@ -684,6 +691,14 @@ export function AgendaPage() {
         <ReprogramarCitaModal
           cita={citaReprogramar}
           onClose={() => setCitaReprogramar(null)}
+        />
+      )}
+
+      {/* Modal editar cita */}
+      {citaEditar && (
+        <EditarCitaModal
+          cita={citaEditar}
+          onClose={() => setCitaEditar(null)}
         />
       )}
 

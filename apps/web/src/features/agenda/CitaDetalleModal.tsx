@@ -13,12 +13,13 @@ interface Props {
   onCobrar: () => void
   onAtencion: () => void
   onReprogramar: () => void
+  onEditar: () => void
   onCancelar: () => void
   onNoAsistio: () => void
   onClose: () => void
 }
 
-export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio, onClose }: Props) {
+export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onEditar, onCancelar, onNoAsistio, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg lg:max-w-xl">
@@ -35,6 +36,7 @@ export function CitaDetalleModal({ cita, onCambiarEstado, onCobrar, onAtencion, 
             onCobrar={onCobrar}
             onAtencion={onAtencion}
             onReprogramar={onReprogramar}
+            onEditar={onEditar}
             onCancelar={onCancelar}
             onNoAsistio={onNoAsistio}
           />

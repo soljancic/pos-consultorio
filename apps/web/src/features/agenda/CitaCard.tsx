@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe } from 'lucide-react'
+import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe, Pencil } from 'lucide-react'
 import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, abrirWhatsApp, fechaRelativa, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderRecordatorio } from '../../lib/whatsapp'
@@ -30,6 +30,15 @@ const LABEL_ESTADO: Record<EstadoCita, string> = {
 // Una cita en curso o cerrada no se mueve de horario (espejo del backend)
 const ESTADOS_REPROGRAMABLES = [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO]
 
+// Editar: servicio, seguro y productos (productos solo en ATENDIDA)
+const ESTADOS_EDITABLES: EstadoCita[] = [
+  EstadoCita.PENDIENTE,
+  EstadoCita.CONFIRMADA,
+  EstadoCita.LLEGO,
+  EstadoCita.EN_ATENCION,
+  EstadoCita.ATENDIDA,
+]
+
 const ESTADOS_COBRABLES: EstadoCita[] = [
   EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA, EstadoCita.LLEGO,
   EstadoCita.EN_ATENCION, EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA,
@@ -45,6 +54,7 @@ interface CitaCardProps {
   onCobrar: () => void
   onAtencion: () => void
   onReprogramar: () => void
+  onEditar: () => void
   onCancelar: () => void
   onNoAsistio: () => void
   // En el modal de detalle (PC) se apilan las acciones abajo (como en celular)
@@ -52,7 +62,7 @@ interface CitaCardProps {
   apilado?: boolean
 }
 
-export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onCancelar, onNoAsistio, apilado }: CitaCardProps) {
+export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprogramar, onEditar, onCancelar, onNoAsistio, apilado }: CitaCardProps) {
   const user = useAuthStore((s) => s.user)
   const color = COLORES_ESTADO[cita.estado]
   const transicionesDisponibles = TRANSICIONES_VALIDAS[cita.estado]
@@ -81,9 +91,10 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   }, [menuAbierto])
 
   const puedeReprogramar = ESTADOS_REPROGRAMABLES.includes(cita.estado)
+  const puedeEditar = ESTADOS_EDITABLES.includes(cita.estado)
   const puedeCancelar = transicionValida(cita.estado, EstadoCita.CANCELADA)
   const puedeNoAsistio = transicionValida(cita.estado, EstadoCita.NO_ASISTIO)
-  const tieneMenu = puedeReprogramar || puedeCancelar || puedeNoAsistio
+  const tieneMenu = puedeReprogramar || puedeEditar || puedeCancelar || puedeNoAsistio
 
   function handleNoAsistio() {
     setMenuAbierto(false)
@@ -266,6 +277,16 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                   >
                     <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     Reprogramar
+                  </button>
+                )}
+                {puedeEditar && (
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuAbierto(false); onEditar() }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    Editar
                   </button>
                 )}
                 {puedeNoAsistio && (
