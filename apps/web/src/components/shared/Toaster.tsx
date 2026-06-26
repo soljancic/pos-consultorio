@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { AlertCircle, AlertTriangle, CheckCircle2, X, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, X, type LucideIcon } from 'lucide-react'
 import { useToastStore, DURACION_MS, type ToastTipo } from '../../stores/toast.store'
 import { cn } from '../../lib/utils'
 
@@ -9,8 +9,8 @@ import { cn } from '../../lib/utils'
 // rojo/verde). La barra usa bg-black/20 = version mas oscura del fondo.
 const ESTILO: Record<ToastTipo, { icon: LucideIcon; titulo: string; box: string; closeHover: string }> = {
   error: {
-    icon: AlertCircle,
-    titulo: 'Error',
+    icon: AlertTriangle,
+    titulo: 'Atención',
     box: 'bg-destructive text-white',
     closeHover: 'hover:bg-white/15',
   },
