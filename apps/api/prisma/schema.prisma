@@ -143,6 +143,7 @@ model Usuario {
   cajasCerradas    CajaDiaria[] @relation("CajaCerradaPor")
   cajasRevisadas   CajaDiaria[] @relation("CajaRevisadaPor")
   gastosRegistrados Gasto[]     @relation("GastoRegistradoPor")
+  detallesDevueltos DetalleCobro[] @relation("DetalleDevueltoPor")
   logs             Log[]
   doctor           Doctor?
   passwordTokens   PasswordToken[]
@@ -872,6 +873,11 @@ model DetalleCobro {
   precioCosto   Decimal  @db.Decimal(10, 2) @default(0) // snapshot; 0 en servicios
   subtotal      Decimal  @db.Decimal(10, 2) // cantidad * precioVenta
   createdAt     DateTime @default(now())
+  // Devolucion a nivel de linea (soft): la linea no se borra; devueltoAt!=null
+  // la excluye de los recomputos de cobro y de los reportes de ventas.
+  devueltoAt    DateTime?
+  devueltoPorId Int?
+  devueltoPor   Usuario?  @relation("DetalleDevueltoPor", fields: [devueltoPorId], references: [id])
 
   @@index([consultorioId])
   @@index([cobroId])
