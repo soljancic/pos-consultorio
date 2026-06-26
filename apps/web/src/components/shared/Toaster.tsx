@@ -25,13 +25,13 @@ const ESTILO: Record<ToastTipo, { icon: LucideIcon; clase: string; rol: 'alert' 
 export function Toaster() {
   const toasts = useToastStore((s) => s.toasts)
   const dismiss = useToastStore((s) => s.dismiss)
-  if (toasts.length === 0) return null
 
+  // El contenedor se renderiza SIEMPRE (region estable). El anuncio del lector de
+  // pantalla lo dan los role="alert"/"status" de cada toast al insertarse; sin
+  // aria-live aca para no duplicar el anuncio (assertive del alert + polite del
+  // contenedor).
   return (
-    <div
-      aria-live="polite"
-      className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2"
-    >
+    <div className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2">
       {toasts.map((t) => {
         const { icon: Icon, clase, rol } = ESTILO[t.tipo]
         return (
