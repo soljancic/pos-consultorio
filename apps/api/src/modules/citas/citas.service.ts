@@ -11,6 +11,7 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
 import { descontarStockDeCobro, restituirStockDeCobro } from '../cobros/stock.helper'
 import { EstadoCita, EstadoCobro, EstadoLiquidacion, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
+import { Decimal } from '@prisma/client/runtime/library'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum, IsBoolean } from 'class-validator'
 
 export class CreateCitaDto {
@@ -67,6 +68,17 @@ export class ReprogramarCitaDto {
   notasSecretaria?: string
 }
 
+export class EditarCitaDto {
+  @IsInt() @IsOptional()
+  servicioId?: number
+
+  @IsBoolean() @IsOptional()
+  usaSeguro?: boolean
+
+  @IsString() @IsOptional()
+  codigoSeguro?: string
+}
+
 // Estados que dejan el cobro sin efecto: el servicio no se presto
 const ESTADOS_ANULAN_COBRO: EstadoCita[] = [EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO]
 
@@ -79,6 +91,15 @@ const ESTADOS_REPROGRAMABLES: EstadoCita[] = [
   EstadoCita.PENDIENTE,
   EstadoCita.CONFIRMADA,
   EstadoCita.LLEGO,
+]
+
+// Citas en las que aun se puede editar servicio / cobertura
+const ESTADOS_EDITABLES: EstadoCita[] = [
+  EstadoCita.PENDIENTE,
+  EstadoCita.CONFIRMADA,
+  EstadoCita.LLEGO,
+  EstadoCita.EN_ATENCION,
+  EstadoCita.ATENDIDA,
 ]
 
 // El portal permite mover citas aun en SOLICITADA (link reusable); no LLEGO
@@ -887,6 +908,198 @@ export class CitasService {
     void this.notificarReservaAceptada(citaId, 'reprogramada')
 
     return reprogramada
+  }
+
+  // Editar una cita antes del cobro: cambia servicio y/o prende-apaga el seguro,
+  // recalculando el cobro en Modelo-A (actualiza la linea de servicio + total =
+  // SUM(detalles vivos) - descuento, preservando productos), ajusta la deuda solo
+  // en ATENDIDA y maneja el LiquidacionItem. Espeja la resolucion de cobertura de
+  // create(). Los productos se editan aparte (PUT /cobros/:id/lineas).
+  async editarCita(
+    consultorioId: number,
+    citaId: number,
+    dto: EditarCitaDto,
+    usuarioId: number,
+  ) {
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+      include: {
+        cobro: true,
+        liquidacion: { select: { id: true, estado: true } },
+        paciente: {
+          select: {
+            id: true, tieneSeguro: true, aseguradoraId: true,
+            categoriaSeguroId: true, codigoSeguro: true,
+          },
+        },
+      },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    if (!ESTADOS_EDITABLES.includes(cita.estado as EstadoCita)) {
+      throw new BadRequestException(`No se puede editar una cita en estado ${cita.estado}`)
+    }
+    if (!cita.cobro || cita.cobro.estado === EstadoCobro.ANULADO) {
+      throw new BadRequestException('El cobro de la cita no admite edicion')
+    }
+
+    // Servicio final (el del dto si cambia, si no el actual). Valida que exista.
+    const cambiaServicio = dto.servicioId != null && dto.servicioId !== cita.servicioId
+    const servicio = await this.prisma.servicio.findFirst({
+      where: { id: cambiaServicio ? dto.servicioId! : cita.servicioId, consultorioId, ...(cambiaServicio && { activo: true }) },
+      select: { id: true, nombre: true, precioBase: true, duracionMin: true },
+    })
+    if (!servicio) throw new NotFoundException('Servicio no encontrado')
+
+    // Precio particular = override del doctor de la cita o precioBase
+    const override = await this.prisma.doctorServicioPrecio.findUnique({
+      where: { doctorId_servicioId: { doctorId: cita.doctorId, servicioId: servicio.id } },
+      select: { precio: true },
+    })
+    const precioParticular = override?.precio ?? servicio.precioBase
+
+    // Resolver cobertura segun el usaSeguro final
+    const usaSeguroFinal = dto.usaSeguro ?? cita.usaSeguro
+    let cobertura:
+      | { categoriaSeguroId: number; aseguradoraId: number; montoPaciente: Decimal; montoAseguradora: Decimal; codigoSeguro: string | null }
+      | null = null
+    if (usaSeguroFinal) {
+      const consultorio = await this.prisma.consultorio.findUnique({
+        where: { id: consultorioId }, select: { trabajaConAseguradoras: true },
+      })
+      const p = cita.paciente
+      if (!consultorio?.trabajaConAseguradoras || !p.tieneSeguro || !p.categoriaSeguroId || !p.aseguradoraId) {
+        throw new BadRequestException('El paciente no tiene un seguro configurado para usar cobertura')
+      }
+      const tarifa = await this.prisma.tarifaCobertura.findFirst({
+        where: { consultorioId, categoriaSeguroId: p.categoriaSeguroId, servicioId: servicio.id, activa: true },
+        select: { montoPaciente: true, montoAseguradora: true },
+      })
+      if (!tarifa) {
+        throw new BadRequestException('No hay tarifa de seguro para este servicio con la categoria del paciente')
+      }
+      cobertura = {
+        categoriaSeguroId: p.categoriaSeguroId,
+        aseguradoraId: p.aseguradoraId,
+        montoPaciente: tarifa.montoPaciente,
+        montoAseguradora: tarifa.montoAseguradora,
+        codigoSeguro: dto.codigoSeguro ?? p.codigoSeguro ?? null,
+      }
+    }
+    const servicioMonto = cobertura ? cobertura.montoPaciente : precioParticular
+
+    const oldSaldo = cita.cobro.saldoPendiente
+    const pagado = cita.cobro.total.minus(oldSaldo)
+    const esAtendida = cita.estado === EstadoCita.ATENDIDA
+    const cobroId = cita.cobro.id
+
+    const fresco = await this.prisma.$transaction(async (tx) => {
+      // 1. Actualizar (o crear, auto-heal de cobros legacy) la linea de servicio
+      const lineaServicio = await tx.detalleCobro.findFirst({
+        where: { cobroId, consultorioId, servicioId: { not: null } }, select: { id: true },
+      })
+      if (lineaServicio) {
+        await tx.detalleCobro.update({
+          where: { id: lineaServicio.id },
+          data: { servicioId: servicio.id, descripcion: servicio.nombre, precioVenta: servicioMonto, subtotal: servicioMonto },
+        })
+      } else {
+        await tx.detalleCobro.create({
+          data: {
+            consultorioId, cobroId, servicioId: servicio.id, descripcion: servicio.nombre,
+            cantidad: 1, precioVenta: servicioMonto, precioCosto: 0, subtotal: servicioMonto,
+          },
+        })
+      }
+
+      // 2. Recomputar total = SUM(detalles vivos) - descuento (recortado al bruto)
+      const agg = await tx.detalleCobro.aggregate({
+        where: { cobroId, consultorioId, devueltoAt: null }, _sum: { subtotal: true },
+      })
+      const bruto = agg._sum.subtotal ?? new Decimal(0)
+      const descuento = cita.cobro!.descuento.gt(bruto) ? bruto : cita.cobro!.descuento
+      const nuevoTotal = bruto.minus(descuento)
+      const nuevoSaldo = nuevoTotal.minus(pagado)
+      if (nuevoSaldo.lt(0)) {
+        throw new BadRequestException('Los pagos registrados superan el nuevo total: anule pagos antes de editar')
+      }
+      const nuevoEstadoCobro = nuevoSaldo.lte(0)
+        ? EstadoCobro.COMPLETO
+        : pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
+      await tx.cobro.update({
+        where: { id: cobroId },
+        data: { total: nuevoTotal, descuento, saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+      })
+
+      // 3. Deuda del paciente: solo si la cita ya genero deuda (ATENDIDA)
+      if (esAtendida) {
+        const deltaSaldo = nuevoSaldo.minus(oldSaldo)
+        if (!deltaSaldo.isZero()) {
+          await tx.paciente.update({
+            where: { id: cita.pacienteId },
+            data: { deudaTotal: { increment: deltaSaldo } },
+          })
+        }
+      }
+
+      // 4. Snapshot de cobertura + servicio en la cita
+      await tx.cita.update({
+        where: { id: citaId },
+        data: {
+          ...(cambiaServicio && { servicioId: servicio.id, duracionMin: servicio.duracionMin }),
+          usaSeguro: !!cobertura,
+          categoriaSeguroId: cobertura?.categoriaSeguroId ?? null,
+          montoPaciente: cobertura?.montoPaciente ?? null,
+          montoAseguradora: cobertura?.montoAseguradora ?? null,
+          codigoSeguro: cobertura?.codigoSeguro ?? null,
+        },
+      })
+
+      // 5. LiquidacionItem: upsert si hay cobertura con monto > 0; borrar el PENDIENTE si no
+      if (cobertura && cobertura.montoAseguradora.gt(0)) {
+        if (cita.liquidacion) {
+          await tx.liquidacionItem.update({
+            where: { id: cita.liquidacion.id },
+            data: {
+              montoAseguradora: cobertura.montoAseguradora, servicioId: servicio.id,
+              categoriaSeguroId: cobertura.categoriaSeguroId, aseguradoraId: cobertura.aseguradoraId,
+              codigoSeguro: cobertura.codigoSeguro, fecha: cita.fechaHora,
+            },
+          })
+        } else {
+          await tx.liquidacionItem.create({
+            data: {
+              consultorioId, citaId, aseguradoraId: cobertura.aseguradoraId,
+              categoriaSeguroId: cobertura.categoriaSeguroId, pacienteId: cita.pacienteId,
+              servicioId: servicio.id, fecha: cita.fechaHora,
+              montoAseguradora: cobertura.montoAseguradora, codigoSeguro: cobertura.codigoSeguro,
+            },
+          })
+        }
+      } else if (cita.liquidacion && cita.liquidacion.estado === EstadoLiquidacion.PENDIENTE) {
+        await tx.liquidacionItem.delete({ where: { id: cita.liquidacion.id } })
+      }
+
+      // 6. Log
+      await tx.log.create({
+        data: {
+          consultorioId, usuarioId, entidad: 'Cita', entidadId: citaId, accion: 'UPDATE',
+          payloadDespues: {
+            evento: 'editar-cita',
+            servicioId: servicio.id,
+            usaSeguro: !!cobertura,
+            total: nuevoTotal.toString(),
+            saldo: nuevoSaldo.toString(),
+          },
+        },
+      })
+
+      return tx.cita.findFirst({
+        where: { id: citaId, consultorioId },
+        include: { cobro: { include: { detalles: { orderBy: { id: 'asc' } } } } },
+      })
+    })
+
+    return fresco
   }
 
   // Detalle de una cita: expone campos de cobertura (usaSeguro, montoPaciente,

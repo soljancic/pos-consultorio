@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@n
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { Rol } from '@pos/types'
 import { Roles } from '../../common/decorators/roles.decorator'
-import { CitasService, CreateCitaDto, CambiarEstadoDto, ReprogramarCitaDto } from './citas.service'
+import { CitasService, CreateCitaDto, CambiarEstadoDto, ReprogramarCitaDto, EditarCitaDto } from './citas.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Citas')
@@ -78,5 +78,15 @@ export class CitasController {
     @Body() dto: ReprogramarCitaDto,
   ) {
     return this.service.reprogramar(user.consultorioId, id, dto, user.sub)
+  }
+
+  @Put(':id/editar')
+  @ApiOperation({ summary: 'Editar cita (servicio y/o seguro); recalcula el cobro' })
+  editar(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EditarCitaDto,
+  ) {
+    return this.service.editarCita(user.consultorioId, id, dto, user.sub)
   }
 }
