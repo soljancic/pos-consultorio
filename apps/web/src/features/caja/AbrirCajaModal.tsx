@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Unlock } from 'lucide-react'
+import { Unlock } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, simboloMoneda } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
+import { toast } from '../../stores/toast.store'
 
 interface Props {
   onClose: () => void
@@ -18,7 +19,6 @@ export function AbrirCajaModal({ onClose }: Props) {
   const qc = useQueryClient()
   const [monto, setMonto] = useState('')
   const [notas, setNotas] = useState('')
-  const [error, setError] = useState('')
 
   const abrir = useMutation({
     mutationFn: () =>
@@ -33,8 +33,7 @@ export function AbrirCajaModal({ onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al abrir la caja')
+      toast.fromError(err, 'Error al abrir la caja')
     },
   })
 
@@ -44,7 +43,7 @@ export function AbrirCajaModal({ onClose }: Props) {
         <ModalHeader icon={Unlock} title="Abrir caja" onClose={onClose} />
 
         <form
-          onSubmit={(e) => { e.preventDefault(); setError(''); abrir.mutate() }}
+          onSubmit={(e) => { e.preventDefault(); abrir.mutate() }}
           className="p-6 sm:p-7 space-y-5"
         >
           <p className="text-sm text-muted-foreground">
@@ -78,13 +77,6 @@ export function AbrirCajaModal({ onClose }: Props) {
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
           />
-
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Info, Save } from 'lucide-react'
+import { Info, Save } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, cardUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, cardUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 
 interface Servicio {
   id: number
@@ -31,7 +32,6 @@ interface Props {
 export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
   const qc = useQueryClient()
   const [montos, setMontos] = useState<Record<number, MontosPair>>({})
-  const [error, setError] = useState('')
   const [guardado, setGuardado] = useState(false)
 
   const { data: servicios = [], isLoading: cargandoServicios } = useQuery<Servicio[]>({
@@ -58,7 +58,6 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
     const cambioCategoria = categoriaPrevia.current !== categoriaSeguroId
     categoriaPrevia.current = categoriaSeguroId
     if (cambioCategoria) {
-      setError('')
       setGuardado(false)
     }
     setMontos((prev) => {
@@ -96,14 +95,10 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
     onSuccess: () => {
       setMontos({})
       qc.invalidateQueries({ queryKey: ['tarifas-cobertura', categoriaSeguroId] })
-      setError('')
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2500)
     },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar el tarifario')
-    },
+    onError: (err: any) => toast.fromError(err, 'Error al guardar el tarifario'),
   })
 
   function setMonto(servicioId: number, campo: keyof MontosPair, valor: string) {
@@ -196,13 +191,6 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
         </div>
       </div>
 
-      {error && (
-        <p role="alert" className={errorUI}>
-          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          {error}
-        </p>
-      )}
-
       <div className="flex items-center justify-end gap-3">
         {guardado && (
           <span className="text-sm text-emerald-600 dark:text-emerald-400 transition-opacity duration-300">
@@ -211,7 +199,7 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
         )}
         <button
           type="button"
-          onClick={() => { setError(''); mutation.mutate() }}
+          onClick={() => mutation.mutate()}
           disabled={mutation.isPending || cargando}
           className={cn(btnPrimaryUI, 'h-9 px-4')}
         >

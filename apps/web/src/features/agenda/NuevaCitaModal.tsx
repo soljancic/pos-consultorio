@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail, ShieldCheck } from 'lucide-react'
+import { toast } from '../../stores/toast.store'
 import { api } from '../../lib/api-client'
 import { cn, abrirWhatsApp, publicBaseUrl, formatMoneda } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
@@ -123,7 +124,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
       onClose()
     },
     onError: (err: any) => {
-      setError(err.response?.data?.message || 'Error al crear la cita')
+      toast.fromError(err, 'Error al crear la cita')
     },
   })
 

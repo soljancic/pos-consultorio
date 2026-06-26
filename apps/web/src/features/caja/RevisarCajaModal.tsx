@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, formatDia, cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 
@@ -25,7 +26,6 @@ interface Props {
 export function RevisarCajaModal({ caja, onClose }: Props) {
   const qc = useQueryClient()
   const [nota, setNota] = useState('')
-  const [error, setError] = useState('')
 
   const revisar = useMutation({
     mutationFn: () => api.put(`/caja/${caja.id}/revisar`, { nota: nota || undefined }),
@@ -35,8 +35,7 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al revisar')
+      toast.fromError(err, 'Error al revisar')
     },
   })
 
@@ -77,20 +76,13 @@ export function RevisarCajaModal({ caja, onClose }: Props) {
             onChange={(e) => setNota(e.target.value)}
           />
 
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
-
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>
             <button
               type="button"
-              onClick={() => { setError(''); revisar.mutate() }}
+              onClick={() => revisar.mutate()}
               disabled={revisar.isPending}
               className={cn(btnPrimaryUI, 'flex-1')}
             >

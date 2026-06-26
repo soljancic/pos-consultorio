@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Lock, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Lock, EyeOff, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, simboloMoneda, cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
@@ -26,8 +27,6 @@ export function CerrarCajaModal({ onClose }: Props) {
   const [monto, setMonto] = useState('')
   const [notas, setNotas] = useState('')
   const [resultado, setResultado] = useState<Resultado | null>(null)
-  const [error, setError] = useState('')
-
   const cerrar = useMutation({
     mutationFn: () =>
       api.post('/caja/cerrar', {
@@ -41,14 +40,12 @@ export function CerrarCajaModal({ onClose }: Props) {
       setResultado(res.data)
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al cerrar la caja')
+      toast.fromError(err, 'Error al cerrar la caja')
     },
   })
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     cerrar.mutate()
   }
 
@@ -93,13 +90,6 @@ export function CerrarCajaModal({ onClose }: Props) {
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
             />
-
-            {error && (
-              <p role="alert" className={errorUI}>
-                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {error}
-              </p>
-            )}
 
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>

@@ -5,6 +5,7 @@ import type { Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
 
@@ -38,8 +39,11 @@ export function RecetaModal({ cita, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message ?? err.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al emitir la receta')
+      if (err.response) {
+        toast.fromError(err, 'Error al emitir la receta')
+      } else {
+        setError(err.message ?? 'Error al emitir la receta')
+      }
     },
   })
 

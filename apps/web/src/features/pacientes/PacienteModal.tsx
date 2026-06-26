@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, UserPlus, User, IdCard, Cake, PersonStanding, Mail, MapPin, FileText, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, UserPlus, User, IdCard, Cake, PersonStanding, Mail, MapPin, FileText, ShieldCheck } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { PAIS_DEFAULT } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
 import { ModalHeader } from '../../components/shared/ModalHeader'
@@ -24,7 +25,6 @@ interface Props {
 export function PacienteModal({ paciente, onClose, onCreated }: Props) {
   const qc = useQueryClient()
   const editando = !!paciente?.id
-  const [error, setError] = useState('')
   const trabajaConAseguradoras = useAuthStore((s) => s.user?.trabajaConAseguradoras)
 
   const [form, setForm] = useState({
@@ -88,8 +88,7 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+      toast.fromError(err, 'Error al guardar')
     },
   })
 
@@ -146,7 +145,6 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     mutation.mutate(form)
   }
 
@@ -383,13 +381,6 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
                 </div>
               )}
             </div>
-          )}
-
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
           )}
 
           <div className="flex gap-3 pt-1">

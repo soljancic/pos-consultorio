@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
+import { Paperclip, Trash2, FileText, Image as ImageIcon, FileSignature, Download } from 'lucide-react'
 import { EstadoCita, type Cita, type Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatHora, cn } from '../../lib/utils'
 import { abrirAdjunto, abrirRecetaPdf, formatTamano, type AdjuntoMeta } from '../../lib/adjuntos'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
 import { FloatingTextarea } from '../../components/shared/FloatingTextarea'
@@ -22,7 +23,6 @@ interface Props {
 export function AtencionModal({ cita, onClose }: Props) {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
-  const [error, setError] = useState('')
   // Guard duro en backend (E2-M4): solo ADMIN o el doctor de la cita escriben;
   // el resto consulta en modo solo lectura
   const puedeEditar = user?.rol === 'ADMIN' || user?.rol === 'DOCTOR'
@@ -81,8 +81,7 @@ export function AtencionModal({ cita, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+      toast.fromError(err, 'Error al guardar')
     },
   })
 
@@ -103,8 +102,7 @@ export function AtencionModal({ cita, onClose }: Props) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['atencion', cita.id] }),
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al subir el adjunto')
+      toast.fromError(err, 'Error al subir el adjunto')
     },
   })
 
@@ -124,8 +122,7 @@ export function AtencionModal({ cita, onClose }: Props) {
     },
     onError: (err: any) => {
       setAdjuntoABorrar(null)
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al eliminar el adjunto')
+      toast.fromError(err, 'Error al eliminar el adjunto')
     },
   })
 
@@ -208,7 +205,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0]
-                        if (f) { setError(''); subirAdjunto.mutate(f) }
+                        if (f) { subirAdjunto.mutate(f) }
                         e.target.value = ''
                       }}
                     />
@@ -303,27 +300,20 @@ export function AtencionModal({ cita, onClose }: Props) {
               )}
             </div>
 
-            {error && (
-              <p role="alert" className={errorUI}>
-                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {error}
-              </p>
-            )}
-
             <div className="flex flex-wrap gap-2 pt-1">
               <button type="button" onClick={onClose} className={btnOutlineUI}>
                 {puedeEditar ? 'Cancelar' : 'Cerrar'}
               </button>
               {puedeEditar && (
                 <button type="button" disabled={guardar.isPending}
-                  onClick={() => { setError(''); guardar.mutate({ marcarAtendida: false }) }}
+                  onClick={() => guardar.mutate({ marcarAtendida: false })}
                   className="inline-flex items-center justify-center flex-1 h-11 px-4 border border-primary text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
                   Guardar
                 </button>
               )}
               {puedeMarcarAtendida && (
                 <button type="button" disabled={guardar.isPending}
-                  onClick={() => { setError(''); guardar.mutate({ marcarAtendida: true }) }}
+                  onClick={() => guardar.mutate({ marcarAtendida: true })}
                   className={cn(btnPrimaryUI, 'flex-1')}>
                   {guardar.isPending ? 'Guardando...' : 'Guardar y marcar Atendida'}
                 </button>

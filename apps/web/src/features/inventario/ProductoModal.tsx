@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Archive, Package } from 'lucide-react'
+import { Archive, Package } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, btnDestructiveUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI, btnDestructiveUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { toast } from '../../stores/toast.store'
 
 export interface Producto {
   id: number
@@ -98,7 +99,6 @@ export function ProductoModal({ producto, onClose }: Props) {
     queryFn: () => api.get('/productos/categorias').then((r) => r.data),
   })
 
-  const [error, setError] = useState('')
   const [errores, setErrores] = useState<Errores>({})
   const [archivarOpen, setArchivarOpen] = useState(false)
   // Aviso cuando el backend archiva (en uso) en vez de borrar
@@ -152,8 +152,7 @@ export function ProductoModal({ producto, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo guardar el producto.')
+      toast.fromError(err, 'No se pudo guardar el producto.')
     },
   })
 
@@ -172,15 +171,14 @@ export function ProductoModal({ producto, onClose }: Props) {
         onClose()
       }
     },
-    onError: () => {
+    onError: (err: any) => {
       setArchivarOpen(false)
-      setError('No se pudo archivar el producto. Probá de nuevo.')
+      toast.fromError(err, 'No se pudo archivar el producto. Probá de nuevo.')
     },
   })
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     const errs = validar()
     setErrores(errs)
     if (Object.keys(errs).length > 0) return
@@ -304,13 +302,6 @@ export function ProductoModal({ producto, onClose }: Props) {
               />
             )}
           </div>
-
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
 
           <div className="flex flex-wrap gap-3 pt-1">
             {editando && (

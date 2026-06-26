@@ -7,14 +7,14 @@ import {
   X,
   Plus,
   Trash2,
-  AlertCircle,
   AlertTriangle,
   CheckCircle2,
   Wallet,
 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn, formatMoneda, simboloMoneda } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { PacienteModal } from '../pacientes/PacienteModal'
 import { LineasProductoEditor, type LineaUI } from './LineasProductoEditor'
@@ -53,7 +53,6 @@ export function VentaDirectaModal({ onClose }: Props) {
   const [lineas, setLineas] = useState<LineaUI[]>([])
   const [filas, setFilas] = useState<FilaPago[]>([])
   const [advertencias, setAdvertencias] = useState<string[]>([])
-  const [error, setError] = useState('')
 
   // Paciente OPCIONAL (mismo buscador que NuevaCitaModal)
   const [pacienteQuery, setPacienteQuery] = useState('')
@@ -168,8 +167,7 @@ export function VentaDirectaModal({ onClose }: Props) {
       setExito({ saldo: Number(data?.saldoPendiente ?? 0) })
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo registrar la venta')
+      toast.fromError(err, 'No se pudo registrar la venta')
     },
   })
 
@@ -196,7 +194,6 @@ export function VentaDirectaModal({ onClose }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     if (lineas.length === 0) return
     crear.mutate()
   }
@@ -343,7 +340,6 @@ export function VentaDirectaModal({ onClose }: Props) {
                   lineas={lineas}
                   onChange={(nuevas) => {
                     setLineas(nuevas)
-                    setError('')
                   }}
                 />
               </section>
@@ -460,14 +456,6 @@ export function VentaDirectaModal({ onClose }: Props) {
                   </div>
                 </div>
               </section>
-
-              {/* Error del backend (saldo sin paciente / sobrepago / caja cerrada) */}
-              {error && (
-                <div className={errorUI} role="alert" aria-live="assertive">
-                  <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>{error}</span>
-                </div>
-              )}
 
               {/* Acciones */}
               <div className="flex gap-2 pt-1">

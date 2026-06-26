@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 import type { Servicio } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { DoctorAvatar } from '../../components/shared/DoctorAvatar'
@@ -28,7 +29,6 @@ interface Props { doctor?: Doctor | null; onClose: () => void }
 export function DoctorModal({ doctor, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!doctor?.id
-  const [error, setError] = useState('')
   const [form, setForm] = useState({
     nombre: doctor?.nombre ?? '',
     especialidad: doctor?.especialidad ?? '',
@@ -84,10 +84,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
       }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['doctores'] }); onClose() },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
-    },
+    onError: (err: any) => toast.fromError(err, 'Error al guardar'),
   })
 
   return (
@@ -99,7 +96,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
           onClose={onClose}
         />
         <form
-          onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
+          onSubmit={(e) => { e.preventDefault(); mutation.mutate(form) }}
           className="p-6 sm:p-7 space-y-5"
         >
           {/* Estado del doctor arriba: la lista de servicios puede ser larga y lo enterraria */}
@@ -255,12 +252,6 @@ export function DoctorModal({ doctor, onClose }: Props) {
               El precio es opcional: vacío toma el precio del servicio; si lo cargás, la cita usa ese precio.
             </p>
           </div>
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className={cn(btnPrimaryUI, 'flex-1')}>

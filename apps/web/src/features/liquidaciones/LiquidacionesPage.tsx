@@ -12,6 +12,7 @@ import { ExportButtons } from '../reportes/components/ExportButtons'
 import { CampanaHeader } from '../notificaciones/CampanaHeader'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { RechazarLiquidacionModal } from './RechazarLiquidacionModal'
+import { toast } from '../../stores/toast.store'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
 
@@ -203,8 +204,6 @@ export function LiquidacionesPage() {
   // Estado de modales de acción
   const [confirmPendiente, setConfirmPendiente] = useState<ConfirmPendiente | null>(null)
   const [rechazoPendiente, setRechazoPendiente] = useState<RechazoPendiente | null>(null)
-  const [errorAccion, setErrorAccion] = useState<string | null>(null)
-
   const qc = useQueryClient()
 
   const cambiarEstado = useMutation({
@@ -214,13 +213,9 @@ export function LiquidacionesPage() {
       qc.invalidateQueries({ queryKey: ['liquidaciones'] })
       setConfirmPendiente(null)
       setRechazoPendiente(null)
-      setErrorAccion(null)
     },
-    onError: (err: unknown) => {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Error al cambiar el estado. Intenta de nuevo.'
-      setErrorAccion(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    onError: (err: any) => {
+      toast.fromError(err, 'Error al cambiar el estado. Intenta de nuevo.')
     },
   })
 
@@ -452,22 +447,6 @@ export function LiquidacionesPage() {
           </div>
         )}
       </div>
-
-      {/* Banner de error de acción */}
-      {errorAccion && (
-        <div
-          role="alert"
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg max-w-sm text-center"
-        >
-          {errorAccion}
-          <button
-            className="ml-3 underline underline-offset-2 opacity-80 hover:opacity-100"
-            onClick={() => setErrorAccion(null)}
-          >
-            Cerrar
-          </button>
-        </div>
-      )}
 
       {/* Modal confirmar acción (Facturar / Marcar pagado / Reabrir) */}
       {confirmPendiente && (

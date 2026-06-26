@@ -8,6 +8,7 @@ import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
+import { toast } from '../../stores/toast.store'
 
 interface TipoGasto { id: number; nombre: string }
 interface TipoCuenta { id: number; nombre: string; esEfectivo: boolean }
@@ -30,7 +31,6 @@ interface Props {
 export function GastoModal({ gasto, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!gasto?.id
-  const [error, setError] = useState('')
   const [errores, setErrores] = useState<{ monto?: string; descripcion?: string }>({})
 
   const { data: tiposGasto = [] } = useQuery<TipoGasto[]>({
@@ -85,8 +85,7 @@ export function GastoModal({ gasto, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+      toast.fromError(err, 'Error al guardar')
     },
   })
 
@@ -99,7 +98,6 @@ export function GastoModal({ gasto, onClose }: Props) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     const errs: typeof errores = {}
     const montoNum = parseFloat(form.monto)
     if (!form.monto || isNaN(montoNum) || montoNum <= 0) errs.monto = 'Ingresá un monto mayor a 0.'
@@ -202,13 +200,6 @@ export function GastoModal({ gasto, onClose }: Props) {
             value={form.personal}
             onChange={(e) => set('personal', e.target.value)}
           />
-
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>

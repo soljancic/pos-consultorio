@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Tag } from 'lucide-react'
+import { Tag } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 
@@ -21,7 +22,6 @@ interface Props {
 export function TipoGastoModal({ tipo, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!tipo?.id
-  const [error, setError] = useState('')
   const [form, setForm] = useState({
     nombre: tipo?.nombre ?? '',
     activo: tipo?.activo ?? true,
@@ -38,10 +38,7 @@ export function TipoGastoModal({ tipo, onClose }: Props) {
       qc.invalidateQueries({ queryKey: ['tipos-gasto'] })
       onClose()
     },
-    onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
-    },
+    onError: (err: any) => toast.fromError(err, 'Error al guardar'),
   })
 
   return (
@@ -53,7 +50,7 @@ export function TipoGastoModal({ tipo, onClose }: Props) {
           onClose={onClose}
         />
         <form
-          onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }}
+          onSubmit={(e) => { e.preventDefault(); mutation.mutate(form) }}
           className="p-6 sm:p-7 space-y-5"
         >
           <FloatingInput
@@ -70,12 +67,6 @@ export function TipoGastoModal({ tipo, onClose }: Props) {
                 className="rounded" />
               Activo
             </label>
-          )}
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
           )}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>

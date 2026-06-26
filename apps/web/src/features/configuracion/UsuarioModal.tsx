@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, UserCog } from 'lucide-react'
+import { UserCog } from 'lucide-react'
 import type { Doctor } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { btnPrimaryUI, btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
@@ -24,7 +25,6 @@ interface Props { usuario?: Usuario | null; onClose: () => void }
 export function UsuarioModal({ usuario, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!usuario?.id
-  const [error, setError] = useState('')
   const [form, setForm] = useState({
     nombre: usuario?.nombre ?? '',
     email: usuario?.email ?? '',
@@ -69,8 +69,7 @@ export function UsuarioModal({ usuario, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+      toast.fromError(err, 'Error al guardar')
     },
   })
 
@@ -82,7 +81,7 @@ export function UsuarioModal({ usuario, onClose }: Props) {
           title={editando ? 'Editar usuario' : 'Nuevo usuario'}
           onClose={onClose}
         />
-        <form onSubmit={(e) => { e.preventDefault(); setError(''); mutation.mutate(form) }} className="p-6 sm:p-7 space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(form) }} className="p-6 sm:p-7 space-y-5">
           <FloatingInput
             label="Nombre"
             required
@@ -137,12 +136,6 @@ export function UsuarioModal({ usuario, onClose }: Props) {
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))} className="rounded" />
               Usuario activo
             </label>
-          )}
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
           )}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>Cancelar</button>

@@ -6,6 +6,7 @@ import { descargarBlob } from '../../lib/descargas'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { cardUI, btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
 import { cn } from '../../lib/utils'
+import { toast } from '../../stores/toast.store'
 
 type Resultado = {
   creados: number
@@ -33,6 +34,9 @@ export function ImportarPacientesModal({ onClose }: { onClose: () => void }) {
     onSuccess: (data) => {
       setResultado(data)
       void qc.invalidateQueries({ queryKey: ['pacientes'] })
+    },
+    onError: (err: any) => {
+      toast.fromError(err, 'No se pudo importar el archivo. Revisá el formato e intentá de nuevo.')
     },
   })
 
@@ -134,15 +138,6 @@ export function ImportarPacientesModal({ onClose }: { onClose: () => void }) {
                   </p>
                 )}
 
-                {/* Error de importación */}
-                {importar.isError && (
-                  <p role="alert" className={errorUI}>
-                    <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {importar.error instanceof Error
-                      ? importar.error.message
-                      : 'No se pudo importar el archivo. Revisá el formato e intentá de nuevo.'}
-                  </p>
-                )}
               </div>
             ) : (
               /* Resumen de resultado post-importación */

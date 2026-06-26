@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Trash2, BookmarkPlus, CalendarClock, Clock, Calendar } from 'lucide-react'
+import { Trash2, BookmarkPlus, CalendarClock, Clock, Calendar } from 'lucide-react'
 import { TipoDisponibilidad } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
@@ -54,7 +55,6 @@ type Alcance = 'uno' | 'serie' | 'desde'
 export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onClose }: Props) {
   const qc = useQueryClient()
   const editando = !!bloque
-  const [error, setError] = useState('')
   const [horaInicio, setHoraInicio] = useState(bloque?.horaInicio ?? '09:00')
   const [horaFin, setHoraFin] = useState(bloque?.horaFin ?? '17:00')
   const [tipo, setTipo] = useState<TipoDisponibilidad>(bloque?.tipo ?? TipoDisponibilidad.DISPONIBLE)
@@ -91,8 +91,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
   }
 
   function onError(err: any) {
-    const msg = err.response?.data?.message
-    setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+    toast.fromError(err, 'Error al guardar')
   }
 
   const crear = useMutation({
@@ -130,7 +129,6 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError('')
     if (editando) editar.mutate()
     else crear.mutate()
   }
@@ -331,13 +329,6 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
             </fieldset>
           )}
 
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
-
           <div className="flex gap-2 pt-1">
             {editando && (
               <button
@@ -366,7 +357,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
           mensaje={`Se elimina ${avisoEliminar} de ${doctorNombre}.`}
           confirmLabel="Eliminar"
           pendiente={eliminar.isPending}
-          onConfirm={() => { setError(''); eliminar.mutate() }}
+          onConfirm={() => eliminar.mutate()}
           onClose={() => setConfirmandoEliminar(false)}
         />
       )}
