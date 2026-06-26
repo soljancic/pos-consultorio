@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail, ShieldCheck } from 'lucide-react'
+import { Search, AlertCircle, AlertTriangle, MessageCircle, CalendarPlus, Copy, Check, UserPlus, UserRound, Stethoscope, Calendar, Clock, FileText, Mail, Phone, ShieldCheck } from 'lucide-react'
 import { toast } from '../../stores/toast.store'
 import { api } from '../../lib/api-client'
 import { cn, abrirWhatsApp, publicBaseUrl, formatMoneda } from '../../lib/utils'
@@ -240,60 +240,104 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
           {/* Paciente: buscador con autocompletado y floating label.
               Usa el patron peer-* de Tailwind (label flota por CSS, sin estado). */}
           <div ref={searchRef}>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 z-10 text-muted-foreground/45 peer-focus:text-primary transition-colors duration-150"
-                  aria-hidden="true"
-                />
-                <input
-                  id="cita-paciente"
-                  value={pacienteQuery}
-                  onChange={(e) => {
-                    setPacienteQuery(e.target.value)
-                    setPacienteSeleccionado(null)
-                    setShowPacienteList(true)
-                  }}
-                  onFocus={() => setShowPacienteList(true)}
-                  placeholder=" "
-                  className="peer w-full h-14 rounded-xl border border-input bg-card pl-10 pr-4 text-base sm:text-sm text-foreground hover:border-muted-foreground/35 focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/15 transition-colors duration-150"
-                  required
-                />
-                <label
-                  htmlFor="cita-paciente"
-                  className="pointer-events-none select-none absolute -translate-y-1/2 bg-card px-1 transition-all duration-150
-                    top-0 left-3 text-xs font-semibold text-muted-foreground/75
-                    peer-placeholder-shown:top-1/2 peer-placeholder-shown:left-10 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-muted-foreground/50
-                    peer-focus:top-0 peer-focus:left-3 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-primary"
-                >
-                  Paciente
-                </label>
-                {showPacienteList && pacientesResultado.length > 0 && (
-                  <div className="absolute z-20 top-full w-full mt-1.5 bg-card border rounded-xl shadow-lg max-h-48 overflow-auto">
-                    {pacientesResultado.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => seleccionarPaciente(p)}
-                        className="w-full text-left px-4 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
-                      >
-                        {p.nombre} {p.apellido}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Alta rapida de un paciente sin salir del modal: al guardar queda
-                  seleccionado en la cita (no navega a su ficha). */}
-              <button
-                type="button"
-                onClick={() => setModalNuevoPaciente(true)}
-                aria-label="Nuevo paciente"
-                title="Nuevo paciente"
-                className="inline-flex items-center justify-center h-14 w-14 shrink-0 rounded-xl border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 z-10 text-muted-foreground/45 peer-focus:text-primary transition-colors duration-150"
+                aria-hidden="true"
+              />
+              <input
+                id="cita-paciente"
+                value={pacienteQuery}
+                onChange={(e) => {
+                  setPacienteQuery(e.target.value)
+                  setPacienteSeleccionado(null)
+                  setShowPacienteList(true)
+                }}
+                onFocus={() => setShowPacienteList(true)}
+                placeholder=" "
+                className="peer w-full h-14 rounded-xl border border-input bg-card pl-10 pr-4 text-base sm:text-sm text-foreground hover:border-muted-foreground/35 focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/15 transition-colors duration-150"
+                required
+              />
+              <label
+                htmlFor="cita-paciente"
+                className="pointer-events-none select-none absolute -translate-y-1/2 bg-card px-1 transition-all duration-150
+                  top-0 left-3 text-xs font-semibold text-muted-foreground/75
+                  peer-placeholder-shown:top-1/2 peer-placeholder-shown:left-10 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-muted-foreground/50
+                  peer-focus:top-0 peer-focus:left-3 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-primary"
               >
-                <UserPlus className="h-4 w-4" aria-hidden="true" />
-              </button>
+                Paciente
+              </label>
+
+              {/* Dropdown enriquecido: avatar + nombre + email + telefono, y la
+                  opcion de alta rapida fija abajo. */}
+              {showPacienteList && (
+                <div className="absolute z-20 top-full w-full mt-1.5 overflow-hidden rounded-xl border bg-card shadow-lg">
+                  <div className="max-h-56 overflow-auto">
+                    {pacientesResultado.length > 0 ? (
+                      pacientesResultado.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => seleccionarPaciente(p)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                        >
+                          <span
+                            className="h-9 w-9 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center"
+                            aria-hidden="true"
+                          >
+                            {`${p.nombre[0] ?? ''}${p.apellido[0] ?? ''}`.toUpperCase()}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-foreground truncate">
+                              {p.nombre} {p.apellido}
+                            </span>
+                            {(p.email || p.telefono) && (
+                              <span className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
+                                {p.email && (
+                                  <span className="inline-flex min-w-0 items-center gap-1">
+                                    <Mail className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                    <span className="truncate">{p.email}</span>
+                                  </span>
+                                )}
+                                {p.telefono && (
+                                  <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
+                                    <Phone className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                    {p.telefono}
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      ))
+                    ) : pacienteQuery.length >= 2 ? (
+                      <p className="px-4 py-3 text-sm text-muted-foreground">
+                        Sin resultados para «{pacienteQuery}».
+                      </p>
+                    ) : (
+                      <p className="px-4 py-3 text-sm text-muted-foreground">
+                        Escribí un nombre para buscar.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Alta rapida de un paciente sin salir del modal: al guardar queda
+                      seleccionado en la cita (no navega a su ficha). */}
+                  <button
+                    type="button"
+                    onClick={() => { setModalNuevoPaciente(true); setShowPacienteList(false) }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-t bg-muted/30 cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                  >
+                    <span
+                      className="h-9 w-9 shrink-0 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground flex items-center justify-center"
+                      aria-hidden="true"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </span>
+                    <span className="text-sm font-medium text-primary">Agregar nuevo paciente</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
