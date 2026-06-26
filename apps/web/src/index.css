@@ -94,6 +94,14 @@
 .modal-fade { animation: modal-fade-in 0.18s ease-out; }
 .modal-pop { animation: modal-pop-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* Barra de progreso del toast: se vacia de izquierda a derecha en lo que dura
+   el auto-cierre (la duracion se pasa inline desde el store). prefers-reduced-
+   motion la anula via la regla global. */
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 /* Scrollbar fina y pareja en todos los SO/navegadores: Windows dibuja la
    scrollbar clasica gruesa y gris (se ve fea); aca la hacemos delgada, con
    thumb redondeado sutil y track transparente. Variante -light para superficies

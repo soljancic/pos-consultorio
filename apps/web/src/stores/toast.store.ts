@@ -14,7 +14,9 @@ interface ToastState {
 }
 
 let nextId = 1
-const DURACION_MS = 5000
+// Duracion del auto-cierre. Exportada para que el Toaster sincronice la barra
+// de progreso con el mismo tiempo.
+export const DURACION_MS = 5000
 
 export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
