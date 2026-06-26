@@ -150,10 +150,7 @@ export function VentasDetalleTab() {
                     <td className="px-4 py-3 text-right">
                       {f.devueltoAt ? (
                         // Badge color + forma: ícono RotateCcw + texto (no solo color).
-                        <span
-                          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium"
-                          aria-label="Devuelto"
-                        >
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
                           <RotateCcw className="h-3 w-3" aria-hidden="true" />
                           Devuelto
                         </span>
@@ -164,8 +161,8 @@ export function VentasDetalleTab() {
                           // aria-label descriptivo por fila para lectores de pantalla.
                           aria-label={`Deshacer venta de ${f.producto}`}
                           className={cn(
-                            // h-10 = 40px, safe floor con el py-3 de la celda sumando contexto.
-                            'inline-flex h-10 items-center gap-1.5 rounded-lg border border-input px-3',
+                            // h-11 = 44px, toque minimo accesible.
+                            'inline-flex h-11 items-center gap-1.5 rounded-lg border border-input px-3',
                             'text-sm font-medium text-foreground cursor-pointer',
                             'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
                             'transition-colors duration-150',
