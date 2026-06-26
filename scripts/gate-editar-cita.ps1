@@ -38,14 +38,16 @@ $manana = (Get-Date).AddDays(1).ToString("yyyy-MM-dd")
 $cita1 = Invoke-RestMethod -Uri "$base/citas" -Method Post -Headers $h -ContentType "application/json" `
   -Body (@{ pacienteId = $pac.id; doctorId = $doc.id; servicioId = $svcA.id; fechaHora = "${manana}T09:00:00Z" } | ConvertTo-Json)
 $cobro1a = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita1.id)" -Headers $h
+$total1pre = [double]$cobro1a.total
 Invoke-RestMethod -Uri "$base/citas/$($cita1.id)/editar" -Method Put -Headers $h -ContentType "application/json" `
   -Body (@{ servicioId = $svcB.id } | ConvertTo-Json) | Out-Null
 $cobro1b = Invoke-RestMethod -Uri "$base/cobros/cita/$($cita1.id)" -Headers $h
 $total1 = [double]$cobro1b.total
 $sum1 = [double](($cobro1b.detalles | Measure-Object -Property subtotal -Sum).Sum)
-if ($total1 -eq 250 -and [math]::Round($sum1,2) -eq 250) {
-  Write-Output "S1 CAMBIO SERVICIO: OK (total $($cobro1a.total)->$total1 SUM=$sum1)"
-} else { Write-Output "S1 CAMBIO SERVICIO: FALLO (total=$total1 SUM=$sum1 esperado 250)" }
+# Asserta el pre (100=svcA) ademas del post (250=svcB): un edit no-op no debe pasar.
+if ($total1pre -eq 100 -and $total1 -eq 250 -and [math]::Round($sum1,2) -eq 250) {
+  Write-Output "S1 CAMBIO SERVICIO: OK (total $total1pre->$total1 SUM=$sum1)"
+} else { Write-Output "S1 CAMBIO SERVICIO: FALLO (pre=$total1pre esperado 100; total=$total1 SUM=$sum1 esperado 250)" }
 
 # ---- S2: editar en estado no editable (COBRADO) -> 400 ----
 # Llevar la cita a ATENDIDA y cobrar total para que quede COBRADO
