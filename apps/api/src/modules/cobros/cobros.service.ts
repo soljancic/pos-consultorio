@@ -1175,10 +1175,13 @@ export class CobrosService {
         take: limit,
         include: {
           producto: { select: { controlaStock: true } },
+          createdBy: { select: { nombre: true } },
           cobro: {
             select: {
               estado: true,
               createdAt: true,
+              total: true,
+              descuento: true,
               paciente: { select: { nombre: true, apellido: true } },
               cita: { select: { fechaHora: true, paciente: { select: { nombre: true, apellido: true } } } },
             },
@@ -1190,14 +1193,21 @@ export class CobrosService {
 
     const items = rows.map((d) => {
       const pac = d.cobro.cita?.paciente ?? d.cobro.paciente
+      const cobroDescuento = Number(d.cobro.descuento)
+      const bruto = Number(d.cobro.total) + cobroDescuento
+      const descuento = cobroDescuento > 0 && bruto > 0
+        ? cobroDescuento * (Number(d.subtotal) / bruto)
+        : 0
       return {
         detalleId: d.id,
-        fecha: d.cobro.cita?.fechaHora ?? d.cobro.createdAt,
+        fecha: d.createdAt,
         producto: d.descripcion,
         cantidad: d.cantidad,
         precioVenta: d.precioVenta,
         subtotal: d.subtotal,
+        descuento,
         paciente: pac ? `${pac.nombre} ${pac.apellido}` : null,
+        vendedor: d.createdBy?.nombre ?? null,
         cobroEstado: d.cobro.estado,
         controlaStock: d.producto?.controlaStock ?? false,
         devueltoAt: d.devueltoAt,

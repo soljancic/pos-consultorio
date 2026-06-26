@@ -54,6 +54,13 @@ $detId1 = ($vd1.detalles | Where-Object { $_.productoId -eq $prod.id })[0].id
 $ventas1 = Invoke-RestMethod -Uri "$base/cobros/ventas-detalle" -Headers $h
 $enReporte = @($ventas1.items | Where-Object { $_.detalleId -eq $detId1 }).Count
 
+$fila1 = @($ventas1.items | Where-Object { $_.detalleId -eq $detId1 })[0]
+if ($null -ne $fila1 -and $null -ne $fila1.vendedor -and $null -ne $fila1.descuento) {
+  Write-Output "S1b CAMPOS GRILLA (vendedor/descuento): OK (vendedor=$($fila1.vendedor) descuento=$($fila1.descuento))"
+} else {
+  Write-Output "S1b CAMPOS GRILLA (vendedor/descuento): FALLO (vendedor=$($fila1.vendedor) descuento=$($fila1.descuento))"
+}
+
 $dev1 = Invoke-RestMethod -Uri "$base/cobros/detalle/$detId1/devolver" -Method Post -Headers $h
 $prodPost1 = (Invoke-RestMethod -Uri "$base/productos" -Headers $h).items | Where-Object { $_.id -eq $prod.id }
 $saldo1 = [double]$dev1.saldoPendiente
