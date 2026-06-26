@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, ParseIntPipe } from '@nestjs/common'
+import { Controller, Get, Post, Put, Body, Param, ParseIntPipe, Query } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { CobrosService, RegistrarPagoDto, AjustarTotalDto, AnularPagoDto, DevolverPrepagoDto, SetLineasProductoDto, CrearVentaDirectaDto } from './cobros.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
@@ -55,6 +55,26 @@ export class CobrosController {
   @ApiOperation({ summary: 'Crear una venta directa de productos (sin cita)' })
   crearVentaDirecta(@CurrentUser() user: JwtPayload, @Body() dto: CrearVentaDirectaDto) {
     return this.service.crearVentaDirecta(user.consultorioId, dto, user.sub)
+  }
+
+  @Get('ventas-detalle')
+  @Roles(Rol.ADMIN)
+  @ApiOperation({ summary: 'Detalle de ventas de productos (linea por linea), para devoluciones' })
+  listarVentasDetalle(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q?: string,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.listarDetalleVentas(user.consultorioId, {
+      q: q || undefined,
+      desde: desde || undefined,
+      hasta: hasta || undefined,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    })
   }
 
   @Get(':id')

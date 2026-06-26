@@ -957,4 +957,83 @@ export class CobrosService {
       cantidadPacientes: pacienteIds.size,
     }
   }
+
+  // Detalle de ventas de productos (linea por linea) para el reporte de
+  // devoluciones en Inventario. Solo lineas de PRODUCTO de cobros confirmados
+  // (venta directa, o cita COBRADO/CON_DEUDA), excluyendo cobros ANULADO.
+  async listarDetalleVentas(
+    consultorioId: number,
+    opts: { q?: string; desde?: string; hasta?: string; page?: number; limit?: number },
+  ) {
+    const page = opts.page && opts.page > 0 ? opts.page : 1
+    const limit = opts.limit && opts.limit > 0 ? Math.min(opts.limit, 100) : 50
+
+    const and: Prisma.DetalleCobroWhereInput[] = [
+      {
+        cobro: {
+          estado: { not: EstadoCobro.ANULADO },
+          OR: [
+            { cita: { estado: { in: [EstadoCita.COBRADO, EstadoCita.CON_DEUDA] } } },
+            { citaId: null },
+          ],
+        },
+      },
+    ]
+    if (opts.q) {
+      const q = opts.q
+      and.push({
+        OR: [
+          { descripcion: { contains: q, mode: 'insensitive' } },
+          { cobro: { paciente: { OR: [{ nombre: { contains: q, mode: 'insensitive' } }, { apellido: { contains: q, mode: 'insensitive' } }] } } },
+          { cobro: { cita: { paciente: { OR: [{ nombre: { contains: q, mode: 'insensitive' } }, { apellido: { contains: q, mode: 'insensitive' } }] } } } },
+        ],
+      })
+    }
+    if (opts.desde) and.push({ createdAt: { gte: new Date(`${opts.desde}T00:00:00Z`) } })
+    if (opts.hasta) and.push({ createdAt: { lte: new Date(`${opts.hasta}T23:59:59Z`) } })
+
+    const where: Prisma.DetalleCobroWhereInput = {
+      consultorioId,
+      productoId: { not: null },
+      AND: and,
+    }
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.detalleCobro.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          producto: { select: { controlaStock: true } },
+          cobro: {
+            select: {
+              estado: true,
+              createdAt: true,
+              paciente: { select: { nombre: true, apellido: true } },
+              cita: { select: { fechaHora: true, paciente: { select: { nombre: true, apellido: true } } } },
+            },
+          },
+        },
+      }),
+      this.prisma.detalleCobro.count({ where }),
+    ])
+
+    const items = rows.map((d) => {
+      const pac = d.cobro.cita?.paciente ?? d.cobro.paciente
+      return {
+        detalleId: d.id,
+        fecha: d.cobro.cita?.fechaHora ?? d.cobro.createdAt,
+        producto: d.descripcion,
+        cantidad: d.cantidad,
+        precioVenta: d.precioVenta,
+        subtotal: d.subtotal,
+        paciente: pac ? `${pac.nombre} ${pac.apellido}` : null,
+        cobroEstado: d.cobro.estado,
+        controlaStock: d.producto?.controlaStock ?? false,
+        devueltoAt: d.devueltoAt,
+      }
+    })
+    return { items, total }
+  }
 }
