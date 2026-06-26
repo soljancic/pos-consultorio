@@ -872,7 +872,7 @@ export class CobrosService {
             cobroId: cobro.id,
             tipoCuentaId: m.tipoCuentaId,
             monto: m.monto.negated(),
-            referencia: 'Devolucion producto',
+            referencia: 'Devolución producto',
             createdById: usuarioId,
           },
         })
