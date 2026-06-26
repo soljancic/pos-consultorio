@@ -3,7 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Undo2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
-import { btnOutlineUI, errorUI, btnPrimaryUI, btnDestructiveUI } from '../../lib/ui'
+import { btnOutlineUI, btnPrimaryUI, btnDestructiveUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 
@@ -24,7 +25,6 @@ interface Props {
 export function AnularPagoModal({ pago, onClose }: Props) {
   const qc = useQueryClient()
   const [motivo, setMotivo] = useState('')
-  const [error, setError] = useState('')
   const [advertencia, setAdvertencia] = useState('')
 
   const anular = useMutation({
@@ -42,8 +42,7 @@ export function AnularPagoModal({ pago, onClose }: Props) {
       else onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al anular el pago')
+      toast.fromError(err, 'Error al anular el pago')
     },
   })
 
@@ -80,20 +79,13 @@ export function AnularPagoModal({ pago, onClose }: Props) {
             hint="Ej: se cargó el monto equivocado"
           />
 
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
-
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className={cn(btnOutlineUI, 'flex-1')}>
               Volver
             </button>
             <button
               type="button"
-              onClick={() => { setError(''); anular.mutate() }}
+              onClick={() => anular.mutate()}
               disabled={anular.isPending}
               className={cn(btnDestructiveUI, 'flex-1')}
             >

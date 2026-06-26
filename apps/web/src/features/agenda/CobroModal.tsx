@@ -8,6 +8,7 @@ import { formatMoneda, formatFecha, simboloMoneda, abrirWhatsApp, cn } from '../
 import { usePlantillasWhatsApp, renderDeuda } from '../../lib/whatsapp'
 import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
+import { toast } from '../../stores/toast.store'
 import { AnularPagoModal, type PagoAnulable } from '../caja/AnularPagoModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
@@ -130,8 +131,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setErrorPago(Array.isArray(msg) ? msg.join(', ') : msg ?? 'No se pudo registrar el pago')
+      toast.fromError(err, 'No se pudo registrar el pago')
     },
   })
 
@@ -145,8 +145,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
       setMotivoAjuste('')
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setErrorAjuste(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al ajustar el precio')
+      toast.fromError(err, 'Error al ajustar el precio')
     },
   })
 

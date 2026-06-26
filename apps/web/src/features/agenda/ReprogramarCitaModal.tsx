@@ -6,6 +6,7 @@ import { api } from '../../lib/api-client'
 import { formatHora, abrirWhatsApp, publicBaseUrl, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp } from '../../lib/whatsapp'
 import { btnPrimaryUI, btnOutlineUI, errorUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 import { FloatingSelect } from '../../components/shared/FloatingSelect'
@@ -72,8 +73,7 @@ export function ReprogramarCitaModal({ cita, onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al reprogramar')
+      toast.fromError(err, 'Error al reprogramar')
     },
   })
 

@@ -4,6 +4,7 @@ import { RotateCcw } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { btnOutlineUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 
 export interface VentaDetalleRow {
   detalleId: number
@@ -37,6 +38,8 @@ export function DevolverItemModal({
       qc.invalidateQueries({ queryKey: ['caja'] })
       onClose()
     },
+    onError: (err) =>
+      toast.fromError(err, 'No se pudo deshacer la venta. Revisá que la caja esté abierta e intentá de nuevo.'),
   })
 
   // Escape-to-close — no cierra si la mutación está en curso.
@@ -121,18 +124,6 @@ export function DevolverItemModal({
               </span>
             </li>
           </ul>
-
-          {/* Error del backend */}
-          {mutation.isError && (
-            <p role="alert" className="text-sm text-destructive">
-              {(
-                mutation.error as {
-                  response?: { data?: { message?: string } }
-                }
-              )?.response?.data?.message ??
-                'No se pudo deshacer la venta. Revisá que la caja esté abierta e intentá de nuevo.'}
-            </p>
-          )}
 
           {/* Acciones */}
           <div className="flex justify-end gap-3 pt-2">

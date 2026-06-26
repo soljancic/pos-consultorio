@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, AlertTriangle, UserX } from 'lucide-react'
+import { AlertTriangle, UserX } from 'lucide-react'
 import { EstadoCita, type Cita } from '@pos/types'
 import { api } from '../../lib/api-client'
 import { formatFecha, formatHora, formatMoneda, cn } from '../../lib/utils'
-import { btnOutlineUI, errorUI, btnDestructiveUI } from '../../lib/ui'
+import { btnOutlineUI, btnDestructiveUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { FloatingInput } from '../../components/shared/FloatingInput'
 
@@ -44,7 +45,6 @@ const TEXTOS: Record<Modo, {
 export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   const qc = useQueryClient()
   const [motivo, setMotivo] = useState('')
-  const [error, setError] = useState('')
   const t = TEXTOS[modo]
   const Icono = modo === 'cancelar' ? AlertTriangle : UserX
 
@@ -68,8 +68,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
       onClose()
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Error al guardar')
+      toast.fromError(err, 'Error al guardar')
     },
   })
 
@@ -96,13 +95,6 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
             hint={t.placeholderMotivo}
           />
 
-          {error && (
-            <p role="alert" className={errorUI}>
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {error}
-            </p>
-          )}
-
           {tienePrepago && (
             <div className="rounded-lg border border-amber-300/60 bg-amber-500/10 p-3 text-sm text-foreground">
               Esta cita tiene <span className="font-semibold tabular-nums">{formatMoneda(pagado)}</span> prepagados.
@@ -116,17 +108,17 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
             </button>
             {tienePrepago ? (
               <>
-                <button type="button" onClick={() => { setError(''); cancelar.mutate(false) }}
+                <button type="button" onClick={() => cancelar.mutate(false)}
                   disabled={cancelar.isPending} className={cn(btnOutlineUI, 'flex-1')}>
                   {cancelar.isPending ? 'Procesando...' : 'Mantener'}
                 </button>
-                <button type="button" onClick={() => { setError(''); cancelar.mutate(true) }}
+                <button type="button" onClick={() => cancelar.mutate(true)}
                   disabled={cancelar.isPending} className={cn(btnDestructiveUI, 'flex-1')}>
                   {cancelar.isPending ? 'Procesando...' : 'Devolver y cancelar'}
                 </button>
               </>
             ) : (
-              <button type="button" onClick={() => { setError(''); cancelar.mutate(false) }}
+              <button type="button" onClick={() => cancelar.mutate(false)}
                 disabled={cancelar.isPending} className={cn(btnDestructiveUI, 'flex-1')}>
                 {cancelar.isPending ? t.botonCargando : t.boton}
               </button>

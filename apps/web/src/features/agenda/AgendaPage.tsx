@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, addDays, addMonths, startOfWeek, startOfMonth, endOfMonth, endOfWeek } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, List, Columns3, CalendarRange, CalendarDays, AlertTriangle, X, ArrowUpDown, Check, Eye, EyeOff, ShoppingCart } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, List, Columns3, CalendarRange, CalendarDays, ArrowUpDown, Check, Eye, EyeOff, ShoppingCart } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
-import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI, errorUI } from '../../lib/ui'
+import { inputUI, btnPrimaryUI, btnOutlineUI, btnIconUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { CitaCard } from './CitaCard'
 import { CobroModal } from './CobroModal'
 import { NuevaCitaModal } from './NuevaCitaModal'
@@ -96,7 +97,6 @@ export function AgendaPage() {
   const [citaCancelar, setCitaCancelar] = useState<Cita | null>(null)
   const [citaNoAsistio, setCitaNoAsistio] = useState<Cita | null>(null)
   const [slotPrefill, setSlotPrefill] = useState<{ doctorId: number; hora: string } | null>(null)
-  const [accionError, setAccionError] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Deep-link del centro de notificaciones: /agenda?fecha=YYYY-MM-DD&citaId=N.
@@ -263,7 +263,6 @@ export function AgendaPage() {
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
     onSuccess: () => {
-      setAccionError(null)
       // ATENDIDA genera deuda: refrescar tambien deudores, ficha y caja
       for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
         queryClient.invalidateQueries({ queryKey: [key] })
@@ -272,9 +271,7 @@ export function AgendaPage() {
     // Un cambio de estado caido (p.ej. sin conexion en la PWA) no puede pasar
     // en silencio: ATENDIDA genera deuda y el usuario debe saber si fallo.
     onError: (err: any) => {
-      setAccionError(
-        err?.response?.data?.message || 'No se pudo actualizar la cita. Revisá la conexión y reintentá.',
-      )
+      toast.fromError(err, 'No se pudo actualizar la cita. Revisá la conexión y reintentá.')
     },
   })
 
@@ -533,26 +530,6 @@ export function AgendaPage() {
           <CampanaHeader />
         </div>
       </div>
-
-      {/* Aviso de accion fallida (cambio de estado) */}
-      {accionError && (
-        <div className="px-4 sm:px-6 pt-3">
-          <div className={cn(errorUI, 'justify-between')} role="alert">
-            <span className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              {accionError}
-            </span>
-            <button
-              type="button"
-              onClick={() => setAccionError(null)}
-              aria-label="Cerrar aviso"
-              className="shrink-0 rounded p-0.5 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Contenido segun vista */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
