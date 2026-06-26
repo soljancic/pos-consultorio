@@ -723,7 +723,9 @@ export function AgendaPage() {
       {modalNuevaCita && (
         <NuevaCitaModal
           fechaInicial={fecha}
-          doctorIdInicial={slotPrefill?.doctorId}
+          // Desde un slot: el doctor del slot. Desde el boton (sin slot): si el
+          // usuario es DOCTOR, viene preseleccionado el mismo.
+          doctorIdInicial={slotPrefill?.doctorId ?? doctorPropio?.id}
           horaInicial={slotPrefill?.hora}
           onClose={() => {
             setModalNuevaCita(false)
