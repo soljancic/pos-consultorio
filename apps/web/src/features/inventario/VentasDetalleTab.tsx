@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { Search, RotateCcw, ShoppingCart } from 'lucide-react'
 import { api } from '../../lib/api-client'
-import { formatMoneda, formatFecha, cn } from '../../lib/utils'
+import { formatMoneda, formatFecha, formatHora, cn } from '../../lib/utils'
 import { inputUI, cardUI } from '../../lib/ui'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ErrorState } from '../../components/shared/ErrorState'
@@ -12,8 +13,11 @@ import { DevolverItemModal, type VentaDetalleRow } from './DevolverItemModal'
 const LIMIT = 50
 
 export function VentasDetalleTab() {
+  const hoy = format(new Date(), 'yyyy-MM-dd')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [desde, setDesde] = useState(hoy)
+  const [hasta, setHasta] = useState(hoy)
   const [aDevolver, setADevolver] = useState<VentaDetalleRow | null>(null)
   const sentinelRef = useRef<HTMLTableRowElement | null>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -33,13 +37,14 @@ export function VentasDetalleTab() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<{ items: VentaDetalleRow[]; total: number }>({
-    queryKey: ['ventas-detalle', { search: debouncedSearch }],
+    queryKey: ['ventas-detalle', { search: debouncedSearch, desde, hasta }],
     queryFn: ({ pageParam }) =>
       api
         .get(
-          `/cobros/ventas-detalle?page=${pageParam}&limit=${LIMIT}${
-            debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ''
-          }`,
+          `/cobros/ventas-detalle?page=${pageParam}&limit=${LIMIT}` +
+            (debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : '') +
+            (desde ? `&desde=${desde}` : '') +
+            (hasta ? `&hasta=${hasta}` : ''),
         )
         .then((r) => r.data),
     initialPageParam: 1,
@@ -67,25 +72,49 @@ export function VentasDetalleTab() {
 
   return (
     <div className="space-y-4">
-      {/* Búsqueda */}
-      <div className="relative sm:max-w-md">
-        <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
-          aria-hidden="true"
-        />
-        <input
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Buscar por producto o paciente..."
-          aria-label="Buscar ventas"
-          className={cn(inputUI, 'pl-9')}
-        />
+      {/* Barra: búsqueda + rango de fechas (default hoy) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1 sm:max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
+            aria-hidden="true"
+          />
+          <input
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Buscar por producto o paciente..."
+            aria-label="Buscar ventas"
+            className={cn(inputUI, 'pl-9')}
+          />
+        </div>
+        <fieldset className="flex items-center gap-2 border-0 m-0 p-0 min-w-0">
+          <legend className="sr-only">Período</legend>
+          <input
+            type="date"
+            value={desde}
+            max={hasta}
+            onChange={(e) => setDesde(e.target.value)}
+            aria-label="Desde"
+            className={cn(inputUI, 'w-auto min-w-[8.5rem]')}
+          />
+          <span className="text-muted-foreground/60 text-sm select-none" aria-hidden="true">
+            –
+          </span>
+          <input
+            type="date"
+            value={hasta}
+            min={desde}
+            onChange={(e) => setHasta(e.target.value)}
+            aria-label="Hasta"
+            className={cn(inputUI, 'w-auto min-w-[8.5rem]')}
+          />
+        </fieldset>
       </div>
 
       {/* Contenido principal — aria-live para anunciar cambios de resultados */}
       <div aria-live="polite" aria-atomic="false">
         {isLoading ? (
-          <TableSkeleton cols={6} />
+          <TableSkeleton cols={8} />
         ) : isError ? (
           <ErrorState onRetry={() => refetch()} />
         ) : filas.length === 0 ? (
@@ -95,7 +124,7 @@ export function VentasDetalleTab() {
             description={
               debouncedSearch
                 ? 'Probá con otro término.'
-                : 'Las ventas confirmadas aparecerán acá.'
+                : 'No hay ventas en el rango seleccionado.'
             }
             className="py-12"
           />
@@ -105,7 +134,7 @@ export function VentasDetalleTab() {
               <thead className="bg-muted/50 border-b">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                    Fecha
+                    Fecha y hora
                   </th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                     Producto
@@ -113,8 +142,14 @@ export function VentasDetalleTab() {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                     Paciente
                   </th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                    Vendedor
+                  </th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">
                     Cant.
+                  </th>
+                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">
+                    Descuento
                   </th>
                   <th className="text-right px-4 py-3 font-medium text-muted-foreground">
                     Subtotal
@@ -135,7 +170,7 @@ export function VentasDetalleTab() {
                     )}
                   >
                     <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted-foreground">
-                      {formatFecha(f.fecha)}
+                      {formatFecha(f.fecha)} {formatHora(f.fecha)}
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate">
                       {f.producto}
@@ -143,8 +178,14 @@ export function VentasDetalleTab() {
                     <td className="px-4 py-3 text-muted-foreground max-w-[180px] truncate">
                       {f.paciente ?? 'Mostrador'}
                     </td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-[140px] truncate">
+                      {f.vendedor ?? '—'}
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums">{f.cantidad}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {Number(f.descuento) > 0 ? `-${formatMoneda(Number(f.descuento))}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-medium">
                       {formatMoneda(Number(f.subtotal))}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -178,7 +219,7 @@ export function VentasDetalleTab() {
                 {hasNextPage && (
                   <tr ref={sentinelRef}>
                     <td
-                      colSpan={6}
+                      colSpan={8}
                       className="px-4 py-4 text-center text-sm text-muted-foreground"
                     >
                       {isFetchingNextPage ? 'Cargando más...' : ''}

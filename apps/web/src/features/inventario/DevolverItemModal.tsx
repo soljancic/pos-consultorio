@@ -14,6 +14,8 @@ export interface VentaDetalleRow {
   precioVenta: string
   subtotal: string
   paciente: string | null
+  vendedor: string | null
+  descuento: number
   cobroEstado: string
   controlaStock: boolean
   devueltoAt: string | null
