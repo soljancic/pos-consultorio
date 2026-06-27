@@ -19,3 +19,4 @@ allowBuilds:
   core-js: false
   esbuild: true
   prisma: true
+  unrs-resolver: false

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { IsNumber, Min, IsString, IsOptional } from 'class-validator'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../common/decimal'
 import { PrismaService } from '../../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 

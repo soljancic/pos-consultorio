@@ -9,6 +9,10 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    // TS6 dejo de auto-incluir @types que no se importan en codigo (jest y multer
+    // son ambientales puros: globals de test y la augmentacion Express.Multer.File).
+    // Declararlos explicitos los vuelve a cargar. "node" mantiene los globals de Node.
+    "types": ["node", "jest", "multer"],
     "target": "ES2022",
     "sourceMap": true,
     "incremental": true,
@@ -16,6 +20,10 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
+    // TS6 activa strictPropertyInitialization junto con strictNullChecks; los DTOs
+    // de NestJS declaran props sin initializer a proposito (las valida class-validator
+    // en runtime, no el compilador). Lo dejamos en false como siempre estuvo de facto.
+    "strictPropertyInitialization": false,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true

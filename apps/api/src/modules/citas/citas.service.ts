@@ -11,7 +11,7 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { transicionValida } from '@pos/types'
 import { descontarStockDeCobro, restituirStockDeCobro } from '../cobros/stock.helper'
 import { EstadoCita, EstadoCobro, EstadoLiquidacion, OrigenCita, TipoDisponibilidad, Prisma, TipoNotificacion } from '@prisma/client'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../common/decimal'
 import { IsString, IsInt, IsOptional, IsISO8601, IsEnum, IsBoolean } from 'class-validator'
 
 export class CreateCitaDto {

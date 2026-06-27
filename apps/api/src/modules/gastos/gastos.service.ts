@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common'
 import { PartialType } from '@nestjs/swagger'
 import { IsNumber, Min, IsString, IsOptional, IsInt, IsISO8601, IsNotEmpty } from 'class-validator'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../common/decimal'
 import { PrismaService } from '../../prisma/prisma.service'
 import { diaCajaLocal } from '../caja/caja.service'
 

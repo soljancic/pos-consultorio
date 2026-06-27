@@ -2,7 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
+    // node10 quedo deprecado en TS6 (TS5107) y se quita en TS7; emitimos CJS para
+    // que el API lo consuma con require(), asi que no aplica "Bundler".
+    // ignoreDeprecations lo mantiene valido en TS6 (deuda: migrar a NodeNext en TS7).
     "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "rootDir": "src",
     "outDir": "dist",
     "noEmit": false,
     "declarationMap": false,

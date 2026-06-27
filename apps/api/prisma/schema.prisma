@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7: la url ya no va en el schema. Para el CLI/Migrate vive en
+  // prisma.config.ts; en runtime el PrismaClient recibe el adapter (@prisma/adapter-pg).
 }
 
 // ─── ENUMS ───────────────────────────────────────────────────────────────────

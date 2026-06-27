@@ -1,4 +1,4 @@
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../common/decimal'
 import { calcularRepartoDevolucion, planificarReembolso } from './devolucion.helper'
 
 const D = (n: number | string) => new Decimal(n)

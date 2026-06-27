@@ -1,4 +1,4 @@
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '../../common/decimal'
 
 export interface RepartoDevolucion {
   totalNuevo: Decimal
