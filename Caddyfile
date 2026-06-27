@@ -1,0 +1,57 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+
+	log {
+		format json
+	}
+
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:{$PORT:80} {
+	log {
+		format json
+	}
+
+	respond /health 200
+
+	header {
+		# Igual que el default de Railpack: solo nosniff + quitar Server.
+		# (No agregamos CSP/XSS aca para no cambiar el comportamiento actual.)
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# El service worker (y su import) NO deben cachearse en el edge de Railway
+	# (Cloudflare). Cloudflare cachea por defecto cualquier .js (max-age=14400),
+	# asi que tras un deploy el sw.js nuevo no se detecta hasta que expira ese TTL
+	# y la PWA no auto-actualiza (solo Ctrl+Shift+R lo arregla salteando el SW).
+	# Con un Cache-Control explicito el edge revalida contra el origen en cada
+	# request y sirve el sw.js nuevo apenas se deploya -> autoUpdate vuelve a andar.
+	@serviceworker path /sw.js /sw-push.js
+	header @serviceworker Cache-Control "no-cache"
+
+	root * apps/web/dist
+
+	file_server {
+		hide .git
+		hide .env*
+	}
+
+	encode {
+		gzip
+		zstd
+	}
+
+	# SPA: si la ruta no existe como archivo, cae a index.html (router del cliente)
+	try_files {path} {path}.html {path}/index.html /index.html
+
+	handle_errors {
+		rewrite * /{err.status_code}.html
+		file_server
+	}
+}
