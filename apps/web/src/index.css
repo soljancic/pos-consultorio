@@ -128,6 +128,15 @@ layer(base);
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+    /* Excepcion: la barra del toast es informativa (refleja el tiempo restante
+       del auto-cierre), no decorativa, asi que conserva su duracion real. Debe
+       vivir en ESTE mismo @layer que la regla universal de arriba: en Tailwind
+       v4 (cascade layers nativas) una regla !important dentro de una capa gana a
+       una !important sin capa, por lo que la excepcion suelta perdia. En la
+       misma capa gana por especificidad (.toast-progress-bar > *). */
+    .toast-progress-bar {
+      animation-duration: var(--toast-dur, 5000ms) !important;
+    }
   }
 }
 
@@ -155,12 +164,9 @@ layer(base);
 .toast-progress-bar {
   animation: toast-progress var(--toast-dur, 5000ms) linear forwards;
 }
-@media (prefers-reduced-motion: reduce) {
-  /* La barra refleja el tiempo restante de auto-cierre: es informativa, no
-     decorativa, asi que corre aun con reduced-motion (mas especifica que la
-     regla universal de arriba, que la dejaria en 0.01ms). */
-  .toast-progress-bar { animation-duration: var(--toast-dur, 5000ms) !important; }
-}
+/* La excepcion de reduced-motion para esta barra vive arriba, dentro de
+   @layer base (ver nota): en Tailwind v4 debe estar en la misma capa que la
+   regla universal para poder ganarle. */
 
 /* Scrollbar fina y pareja en todos los SO/navegadores: Windows dibuja la
    scrollbar clasica gruesa y gris (se ve fea); aca la hacemos delgada, con
