@@ -76,12 +76,12 @@ export function Toaster() {
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            {/* Barra de progreso (3px) del auto-cierre: 100% -> 0% en DURACION_MS,
+            {/* Barra de progreso (4px) del auto-cierre: 100% -> 0% en DURACION_MS,
                version mas oscura del fondo, recortada a las esquinas redondeadas. */}
             <div
               aria-hidden="true"
               style={barStyle}
-              className="toast-progress-bar absolute bottom-0 left-0 h-[3px] w-full origin-left bg-black/20"
+              className="toast-progress-bar absolute bottom-0 left-0 h-[4px] w-full origin-left bg-black/30"
             />
           </div>
         )
