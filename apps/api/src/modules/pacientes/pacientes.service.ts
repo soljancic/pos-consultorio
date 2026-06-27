@@ -249,21 +249,29 @@ export class PacientesService {
     const actual = await this.findOne(consultorioId, id)
 
     // Mismo bloqueo que al crear: nombre + apellido no se repiten, excluyendo
-    // al propio paciente que se esta editando.
+    // al propio paciente que se esta editando. Solo validamos si el nombre o
+    // apellido realmente cambian: un guardado que no toca el nombre no puede
+    // introducir una colision nueva, y bloquearlo dejaria sin poder editar a
+    // pacientes que ya comparten nombre con otro (duplicados historicos).
     const nombre = (dto.nombre ?? actual.nombre).trim()
     const apellido = (dto.apellido ?? actual.apellido).trim()
-    const duplicado = await this.prisma.paciente.findFirst({
-      where: {
-        consultorioId,
-        deletedAt: null,
-        id: { not: id },
-        nombre: { equals: nombre, mode: 'insensitive' },
-        apellido: { equals: apellido, mode: 'insensitive' },
-      },
-      select: { id: true },
-    })
-    if (duplicado) {
-      throw new ConflictException('Ya existe un paciente con ese nombre y apellido.')
+    const nombreCambia =
+      nombre.toLowerCase() !== actual.nombre.trim().toLowerCase() ||
+      apellido.toLowerCase() !== actual.apellido.trim().toLowerCase()
+    if (nombreCambia) {
+      const duplicado = await this.prisma.paciente.findFirst({
+        where: {
+          consultorioId,
+          deletedAt: null,
+          id: { not: id },
+          nombre: { equals: nombre, mode: 'insensitive' },
+          apellido: { equals: apellido, mode: 'insensitive' },
+        },
+        select: { id: true },
+      })
+      if (duplicado) {
+        throw new ConflictException('Ya existe un paciente con ese nombre y apellido.')
+      }
     }
 
     // Seguro: validar pertenencia al consultorio + aseguradora
