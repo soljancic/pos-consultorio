@@ -161,7 +161,7 @@ export function PacienteDetallePage() {
               }}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-accent text-accent-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-accent text-accent-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
               WhatsApp
@@ -228,7 +228,7 @@ export function PacienteDetallePage() {
                 role="tab"
                 aria-selected={tab === valor}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === valor ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
                 {label}
@@ -264,7 +264,7 @@ export function PacienteDetallePage() {
                           {cita.atencion && (
                             <button
                               onClick={() => setCitaExpandida(citaExpandida === cita.id ? null : cita.id)}
-                              className="inline-flex items-center justify-center h-7 w-7 rounded text-violet-500 hover:text-violet-700 hover:bg-violet-500/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded text-violet-500 hover:text-violet-700 hover:bg-violet-500/10 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                               title="Ver atención"
                               aria-label="Ver atención"
                               aria-expanded={citaExpandida === cita.id}
@@ -308,7 +308,7 @@ export function PacienteDetallePage() {
                         {cita.cobro && Number(cita.cobro.saldoPendiente) > 0 && (
                           <button
                             onClick={() => setCitaCobro(cita as unknown as Cita)}
-                            className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                            className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                           >
                             Cobrar
                           </button>
@@ -327,7 +327,7 @@ export function PacienteDetallePage() {
                               <span><span className="font-medium">Próximo control:</span> {formatDia(cita.atencion.proximoControl)}</span>
                               <button
                                 onClick={() => setFechaControl(cita.atencion!.proximoControl!.slice(0, 10))}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                               >
                                 <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
                                 Agendar control
@@ -378,7 +378,7 @@ export function PacienteDetallePage() {
       )}
 
       {confirmArchivar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
           <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
             <ModalHeader icon={Archive} title="Archivar paciente" onClose={() => setConfirmArchivar(false)} />
             <div className="p-6 space-y-4">

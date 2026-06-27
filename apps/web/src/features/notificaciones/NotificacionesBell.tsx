@@ -42,7 +42,7 @@ export function NotificacionesBell({
         onClick={() => setAbierto((v) => !v)}
         aria-label={count > 0 ? `Notificaciones (${count} sin leer)` : 'Notificaciones'}
         className={cn(
-          'relative inline-flex items-center justify-center cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+          'relative inline-flex items-center justify-center cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60',
           variant === 'fab' &&
             'fixed z-30 bottom-5 right-5 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90',
           className,

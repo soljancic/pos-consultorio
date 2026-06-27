@@ -60,7 +60,7 @@ export function SelectorPais({ value, onChange, disabled, buttonClassName }: Pro
         aria-label={`País: ${seleccionado.nombre} +${seleccionado.dial}`}
         title={`${seleccionado.nombre} +${seleccionado.dial}`}
         className={cn(
-          'inline-flex items-center gap-1 px-2.5 border border-input bg-card text-base cursor-pointer hover:bg-muted/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150',
+          'inline-flex items-center gap-1 px-2.5 border border-input bg-card text-base cursor-pointer hover:bg-muted/60 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150',
           buttonClassName ?? 'h-10 rounded-md',
         )}
       >
@@ -79,7 +79,7 @@ export function SelectorPais({ value, onChange, disabled, buttonClassName }: Pro
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar..."
                 aria-label="Buscar país"
-                className="w-full h-8 border border-input bg-card rounded-md pl-8 pr-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring"
+                className="w-full h-8 border border-input bg-card rounded-md pl-8 pr-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring"
               />
             </div>
           </div>

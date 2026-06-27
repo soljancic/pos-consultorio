@@ -68,7 +68,7 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
           {atenciones.map((a) => (
             <li key={a.id} className="relative pl-6">
               <span
-                className="absolute -left-[13px] top-4 inline-flex items-center justify-center h-6 w-6 rounded-full bg-violet-500/15 text-violet-600 ring-4 ring-background"
+                className="absolute left-[-13px] top-4 inline-flex items-center justify-center h-6 w-6 rounded-full bg-violet-500/15 text-violet-600 ring-4 ring-background"
                 aria-hidden="true"
               >
                 <Stethoscope className="h-3.5 w-3.5" />
@@ -95,7 +95,7 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                       </span>
                       <button
                         onClick={() => onAgendarControl(a.proximoControl!.slice(0, 10))}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                       >
                         <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
                         Agendar control
@@ -110,7 +110,7 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                         key={`${adj.archivo}-${i}`}
                         onClick={() => abrirAdjunto(a.cita.id, i)}
                         title={adj.nombre}
-                        className="inline-flex items-center gap-1 max-w-[200px] text-xs px-2 py-1 rounded-full border text-primary cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        className="inline-flex items-center gap-1 max-w-[200px] text-xs px-2 py-1 rounded-full border text-primary cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                       >
                         <Paperclip className="h-3 w-3 shrink-0" aria-hidden="true" />
                         <span className="truncate">{adj.nombre}</span>

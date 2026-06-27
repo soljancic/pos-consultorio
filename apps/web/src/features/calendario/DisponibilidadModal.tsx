@@ -137,7 +137,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
     alcance === 'uno' ? 'este bloque' : alcance === 'serie' ? 'TODA la serie' : 'la serie desde esta fecha en adelante'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
         <ModalHeader
           icon={CalendarClock}
@@ -155,7 +155,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                   type="button"
                   onClick={() => { setHoraInicio(p.inicio); setHoraFin(p.fin) }}
                   className={cn(
-                    'text-xs font-medium px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    'text-xs font-medium px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                     horaInicio === p.inicio && horaFin === p.fin
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-card text-foreground border-input hover:border-primary/60',
@@ -171,7 +171,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                   title={`${p.horaInicio} - ${p.horaFin}`}
                   onClick={() => { setHoraInicio(p.horaInicio); setHoraFin(p.horaFin) }}
                   className={cn(
-                    'text-xs font-medium px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    'text-xs font-medium px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                     horaInicio === p.horaInicio && horaFin === p.horaFin
                       ? 'bg-accent text-accent-foreground border-accent'
                       : 'bg-card text-accent border-accent/40 hover:border-accent',
@@ -221,14 +221,14 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                   type="button"
                   disabled={!nombrePlantilla.trim() || crearPlantilla.isPending}
                   onClick={() => crearPlantilla.mutate()}
-                  className="text-xs font-medium px-3 h-9 rounded-md bg-accent text-accent-foreground cursor-pointer hover:bg-accent/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                  className="text-xs font-medium px-3 h-9 rounded-md bg-accent text-accent-foreground cursor-pointer hover:bg-accent/90 disabled:opacity-60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                 >
                   {crearPlantilla.isPending ? 'Guardando...' : 'Guardar'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setGuardandoPlantilla(false); setNombrePlantilla('') }}
-                  className="text-xs font-medium px-2 h-9 rounded-md text-muted-foreground cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                  className="text-xs font-medium px-2 h-9 rounded-md text-muted-foreground cursor-pointer hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                 >
                   Cancelar
                 </button>
@@ -237,7 +237,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
               <button
                 type="button"
                 onClick={() => setGuardandoPlantilla(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-accent cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                className="inline-flex items-center gap-1 text-xs font-medium text-accent cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
               >
                 <BookmarkPlus className="h-3.5 w-3.5" aria-hidden="true" />
                 Guardar estas horas como plantilla
@@ -289,7 +289,7 @@ export function DisponibilidadModal({ doctorId, doctorNombre, fecha, bloque, onC
                           )
                         }
                         className={cn(
-                          'h-9 w-9 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                          'h-9 w-9 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                           diasSemana.includes(d.valor)
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground hover:bg-muted/70',

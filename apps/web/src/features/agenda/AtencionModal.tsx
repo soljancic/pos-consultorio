@@ -127,7 +127,7 @@ export function AtencionModal({ cita, onClose }: Props) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <ModalHeader
           icon={FileText}
@@ -213,7 +213,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                       type="button"
                       disabled={subirAdjunto.isPending}
                       onClick={() => fileRef.current?.click()}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded disabled:opacity-60 transition-colors duration-150"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded disabled:opacity-60 transition-colors duration-150"
                     >
                       <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
                       {subirAdjunto.isPending ? 'Subiendo...' : 'Adjuntar archivo'}
@@ -235,7 +235,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                       <button
                         type="button"
                         onClick={() => abrirAdjunto(cita.id, i)}
-                        className="flex-1 min-w-0 text-left truncate text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
+                        className="flex-1 min-w-0 text-left truncate text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
                         title={a.nombre}
                       >
                         {a.nombre}
@@ -246,7 +246,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                           type="button"
                           onClick={() => setAdjuntoABorrar(i)}
                           aria-label={`Eliminar adjunto ${a.nombre}`}
-                          className="inline-flex items-center justify-center h-7 w-7 rounded text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150 shrink-0"
+                          className="inline-flex items-center justify-center h-7 w-7 rounded text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150 shrink-0"
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
@@ -265,7 +265,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => setRecetaAbierta(true)}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                   >
                     <FileSignature className="h-3.5 w-3.5" aria-hidden="true" />
                     Nueva receta
@@ -289,7 +289,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                         type="button"
                         onClick={() => abrirRecetaPdf(r.id)}
                         aria-label={`Descargar receta ${r.id} en PDF`}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150 shrink-0"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150 shrink-0"
                       >
                         <Download className="h-3.5 w-3.5" aria-hidden="true" />
                         PDF
@@ -307,7 +307,7 @@ export function AtencionModal({ cita, onClose }: Props) {
               {puedeEditar && (
                 <button type="button" disabled={guardar.isPending}
                   onClick={() => guardar.mutate({ marcarAtendida: false })}
-                  className="inline-flex items-center justify-center flex-1 h-11 px-4 border border-primary text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
+                  className="inline-flex items-center justify-center flex-1 h-11 px-4 border border-primary text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150">
                   Guardar
                 </button>
               )}

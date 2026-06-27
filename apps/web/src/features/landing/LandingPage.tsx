@@ -73,13 +73,13 @@ export function LandingPage() {
           <nav className="flex items-center gap-1">
             <a
               href="#precios"
-              className="hidden sm:inline-flex items-center h-9 px-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+              className="hidden sm:inline-flex items-center h-9 px-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               Precios
             </a>
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/60"
             >
               Iniciar sesión
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -93,7 +93,7 @@ export function LandingPage() {
         {/* Grilla tecnica con mascara radial: precisa, no decorativa */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 opacity-60 [mask-image:radial-gradient(75%_55%_at_50%_0%,black,transparent)]"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-60 mask-[radial-gradient(75%_55%_at_50%_0%,black,transparent)]"
           style={{
             backgroundImage:
               'linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.04) 1px, transparent 1px)',
@@ -104,7 +104,7 @@ export function LandingPage() {
         <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-16 pb-20 sm:pt-24 grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-10 items-center">
           {/* Columna texto */}
           <div className="text-center lg:text-left">
-            <span className="ct-rise inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-medium text-slate-400">
+            <span className="ct-rise inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs font-medium text-slate-400">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
               Software de gestión para consultorios
             </span>
@@ -124,14 +124,14 @@ export function LandingPage() {
             <div className="ct-rise mt-8 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3" style={{ animationDelay: '180ms' }}>
               <Link
                 to="/login"
-                className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold w-full sm:w-auto hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
+                className="group inline-flex items-center justify-center gap-2 h-12 px-7 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold w-full sm:w-auto hover:bg-cyan-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
               >
                 Iniciar sesión
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
               <a
                 href="#funciones"
-                className="inline-flex items-center justify-center h-12 px-6 rounded-xl text-base font-medium text-slate-300 w-full sm:w-auto hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                className="inline-flex items-center justify-center h-12 px-6 rounded-xl text-base font-medium text-slate-300 w-full sm:w-auto hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400/50"
               >
                 Ver funciones
               </a>
@@ -172,7 +172,7 @@ export function LandingPage() {
                   { h: '10:00', n: 'Lucía Rojas', e: 'Pendiente', c: 'bg-amber-400', t: 'text-amber-300' },
                   { h: '10:30', n: 'Diego Salas', e: 'Confirmada', c: 'bg-blue-400', t: 'text-blue-300' },
                 ].map((r) => (
-                  <div key={r.h} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
+                  <div key={r.h} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/2 px-3 py-2.5">
                     <span className="text-xs font-semibold tabular-nums text-slate-400 w-11">{r.h}</span>
                     <span className="text-sm text-white truncate flex-1">{r.n}</span>
                     <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${r.t}`}>
@@ -231,7 +231,7 @@ export function LandingPage() {
       </section>
 
       {/* ── COMO FUNCIONA (secuencia real reserva → cobro) ──── */}
-      <section className="border-y border-white/5 bg-white/[0.015]">
+      <section className="border-y border-white/5 bg-white/1.5">
         <div className="max-w-5xl mx-auto px-5 sm:px-8 py-20 sm:py-24">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-12">De la reserva al cobro</h2>
           <ol className="grid sm:grid-cols-3 gap-x-6 gap-y-8">
@@ -259,7 +259,7 @@ export function LandingPage() {
           <p className="mt-3 text-slate-400">Sin módulos pagos aparte ni sorpresas. Todas las funciones, desde el primer día.</p>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_1.15fr] rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+        <div className="grid lg:grid-cols-[1fr_1.15fr] rounded-2xl border border-white/10 bg-white/2 overflow-hidden">
           {/* precio */}
           <div className="p-8 sm:p-10">
             <p className="text-sm font-medium text-cyan-400">Plan único</p>
@@ -272,7 +272,7 @@ export function LandingPage() {
             </p>
             <Link
               to="/login"
-              className="group mt-7 inline-flex w-full items-center justify-center gap-2 h-12 px-7 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
+              className="group mt-7 inline-flex w-full items-center justify-center gap-2 h-12 px-7 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold hover:bg-cyan-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
             >
               Empezar
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
@@ -280,7 +280,7 @@ export function LandingPage() {
             <p className="mt-3 text-center text-xs text-slate-500">Multi-tenant · datos aislados por consultorio</p>
           </div>
           {/* incluye */}
-          <div className="p-8 sm:p-10 border-t lg:border-t-0 lg:border-l border-white/10 bg-white/[0.015]">
+          <div className="p-8 sm:p-10 border-t lg:border-t-0 lg:border-l border-white/10 bg-white/1.5">
             <p className="text-sm font-medium text-white">Todo lo que incluye</p>
             <ul className="mt-5 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm text-slate-300">
               {INCLUYE.map((x) => (
@@ -305,7 +305,7 @@ export function LandingPage() {
         <div className="mt-8">
           <Link
             to="/login"
-            className="group inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold hover:bg-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
+            className="group inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-cyan-400 text-[#06121f] text-base font-semibold hover:bg-cyan-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070d18]"
           >
             Iniciar sesión
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

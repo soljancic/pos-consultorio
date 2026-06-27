@@ -122,10 +122,10 @@ interface RechazoPendiente {
 // ─── Botones de acción por fila ───────────────────────────────────────────────
 
 const BTN_SM_OUTLINE =
-  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-input bg-card text-xs font-medium text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
+  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-input bg-card text-xs font-medium text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
 
 const BTN_SM_DESTRUCTIVE =
-  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-destructive/40 bg-destructive/5 text-xs font-medium text-destructive cursor-pointer hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-destructive/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
+  'inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-destructive/40 bg-destructive/5 text-xs font-medium text-destructive cursor-pointer hover:bg-destructive/15 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-destructive/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150'
 
 interface AccionesCellProps {
   row: FilaLiquidacion

@@ -88,8 +88,8 @@ export function SplitButton({
                 'flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground',
                 'hover:bg-muted transition-colors duration-150',
                 // Tweak 2: visible keyboard focus ring inside the menu
-                'focus-visible:outline-none focus-visible:bg-muted',
-                'focus-visible:ring-[2px] focus-visible:ring-inset focus-visible:ring-ring/60',
+                'focus-visible:outline-hidden focus-visible:bg-muted',
+                'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
               )}
             >
               {it.icon && (

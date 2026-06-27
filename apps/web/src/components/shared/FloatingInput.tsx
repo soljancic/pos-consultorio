@@ -66,7 +66,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             'w-full h-14 rounded-xl border bg-card px-4',
             'text-base sm:text-sm text-foreground',
             hasLeft && 'pl-10',
-            'focus:outline-none transition-colors duration-150',
+            'focus:outline-hidden transition-colors duration-150',
             'disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted/30',
             type === 'number' && [
               '[appearance:textfield]',
@@ -76,7 +76,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
             focused
               ? 'border-primary ring-[3px] ring-primary/15'
               : error
-                ? 'border-destructive/70 ring-[2px] ring-destructive/10'
+                ? 'border-destructive/70 ring-2 ring-destructive/10'
                 : 'border-input hover:border-muted-foreground/35',
             className
           )}

@@ -88,7 +88,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader
           icon={UserRound}
@@ -107,7 +107,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
               aria-checked={form.activo}
               onClick={() => setForm((f) => ({ ...f, activo: !f.activo }))}
               className={cn(
-                'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                 form.activo ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
               )}
             >
@@ -134,7 +134,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
               >
                 <span
                   className={cn(
-                    'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                    'inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-200',
                     form.activo ? 'translate-x-[22px]' : 'translate-x-0.5',
                   )}
                 />
@@ -198,7 +198,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
                   aria-label={`Color ${c}`}
                   aria-pressed={form.colorAgenda === c}
                   className={cn(
-                    'h-9 w-9 rounded-full border-2 cursor-pointer transition-transform duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    'h-9 w-9 rounded-full border-2 cursor-pointer transition-transform duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                     form.colorAgenda === c ? 'border-foreground scale-110' : 'border-transparent',
                   )}
                   style={{ backgroundColor: c }} />
@@ -240,7 +240,7 @@ export function DoctorModal({ doctor, onClose }: Props) {
                         placeholder={`$ ${Number(s.precioBase)}`}
                         title="Precio de este doctor para el servicio (vacío = precio del servicio)"
                         aria-label={`Precio de ${s.nombre} para este doctor`}
-                        className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60"
+                        className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60"
                       />
                     )}
                   </div>

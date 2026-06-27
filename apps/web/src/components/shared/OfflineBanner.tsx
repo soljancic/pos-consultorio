@@ -24,7 +24,7 @@ export function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-0 z-[100] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2.5 text-sm font-medium text-amber-950 shadow-lg"
+      className="fixed inset-x-0 bottom-0 z-100 flex items-center justify-center gap-2 bg-amber-500 px-4 py-2.5 text-sm font-medium text-amber-950 shadow-lg"
       style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
     >
       <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />

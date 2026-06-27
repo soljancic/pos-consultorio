@@ -202,7 +202,7 @@ export function VentaDirectaModal({ onClose }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
         <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
           <ModalHeader
             icon={ShoppingCart}
@@ -285,7 +285,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                           type="button"
                           onClick={quitarPaciente}
                           aria-label="Quitar paciente"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                         >
                           <X className="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -297,7 +297,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                               key={p.id}
                               type="button"
                               onClick={() => seleccionarPaciente(p)}
-                              className="w-full text-left px-3 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                              className="w-full text-left px-3 py-2.5 text-sm cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:bg-primary/10 transition-colors duration-150"
                             >
                               {p.nombre} {p.apellido}
                             </button>
@@ -311,7 +311,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                       onClick={() => setModalNuevoPaciente(true)}
                       aria-label="Nuevo paciente"
                       title="Nuevo paciente"
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                     >
                       <UserPlus className="h-4 w-4" aria-hidden="true" />
                     </button>
@@ -395,7 +395,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                               type="button"
                               onClick={() => quitarFila(f.id)}
                               aria-label="Quitar esta forma de pago"
-                              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
@@ -422,7 +422,7 @@ export function VentaDirectaModal({ onClose }: Props) {
                     type="button"
                     onClick={agregarFila}
                     disabled={!cuentaDefault}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50 disabled:no-underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50 disabled:no-underline cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     Agregar forma de pago

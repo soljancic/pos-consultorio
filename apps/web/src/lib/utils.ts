@@ -122,7 +122,7 @@ export function abrirWhatsApp(telefono: string, mensaje: string, pais?: string |
 
   window.setTimeout(() => {
     document.removeEventListener('visibilitychange', marcar)
-    window.removeEventListener('blur', marcar)
+    window.removeEventListener('blur-sm', marcar)
     if (!abrioApp && !document.hidden) {
       window.open(webUrl, '_blank', 'noopener,noreferrer')
     }

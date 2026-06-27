@@ -146,7 +146,7 @@ export function PacientesPage() {
                         navigate(`/pacientes/${p.id}`)
                       }
                     }}
-                    className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                    className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
                       <span className={cn(p.activo === false && 'text-muted-foreground')}>

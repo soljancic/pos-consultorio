@@ -315,7 +315,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => navigate('/deudores')}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
               >
                 Ver deudores
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -358,7 +358,7 @@ export function DashboardPage() {
                             navigate('/agenda')
                           }
                         }}
-                        className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                        className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                       >
                         <td className="px-4 py-3 font-semibold text-primary tabular-nums w-20">{hora}</td>
                         <td className="px-4 py-3 font-medium text-foreground">

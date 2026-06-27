@@ -48,7 +48,7 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
   }
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
+    <div className="bg-card rounded-xl border shadow-xs overflow-x-auto">
       <div className="min-w-[640px]">
         {/* Header: doctores */}
         <div
@@ -108,7 +108,7 @@ export function AgendaDiaGrid({ citas, doctores, onCitaClick, onSlotClick }: Pro
                         e.stopPropagation()
                         onCitaClick(cita)
                       }}
-                      className="absolute left-1 right-1 rounded-md px-2 py-1 text-left text-xs overflow-hidden shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
+                      className="absolute left-1 right-1 rounded-md px-2 py-1 text-left text-xs overflow-hidden shadow-xs hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
                       style={{
                         top: offsetTop(inicio),
                         height: alto,

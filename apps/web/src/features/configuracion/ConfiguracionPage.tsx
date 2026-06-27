@@ -163,7 +163,7 @@ export function ConfiguracionPage() {
                 role="tab"
                 aria-selected={tab === t}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
                 {label}
@@ -358,7 +358,7 @@ export function ConfiguracionPage() {
                       setLinkCopiado(true)
                       setTimeout(() => setLinkCopiado(false), 2000)
                     }}
-                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                   >
                     {linkCopiado ? 'Copiado ✓' : 'Copiar enlace'}
                   </button>
@@ -442,7 +442,7 @@ export function ConfiguracionPage() {
                 aria-checked={consForm.trabajaConAseguradoras}
                 onClick={() => setConsForm((f) => ({ ...f, trabajaConAseguradoras: !f.trabajaConAseguradoras }))}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                   consForm.trabajaConAseguradoras ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
                 )}
               >
@@ -453,7 +453,7 @@ export function ConfiguracionPage() {
                   </span>
                 </span>
                 <span aria-hidden="true" className={cn('relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200', consForm.trabajaConAseguradoras ? 'bg-primary' : 'bg-muted-foreground/30')}>
-                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', consForm.trabajaConAseguradoras ? 'translate-x-[22px]' : 'translate-x-0.5')} />
+                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-200', consForm.trabajaConAseguradoras ? 'translate-x-[22px]' : 'translate-x-0.5')} />
                 </span>
               </button>
               <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>
@@ -467,7 +467,7 @@ export function ConfiguracionPage() {
                 aria-checked={consForm.vendeProductos}
                 onClick={() => setConsForm((f) => ({ ...f, vendeProductos: !f.vendeProductos }))}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                   consForm.vendeProductos ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
                 )}
               >
@@ -478,7 +478,7 @@ export function ConfiguracionPage() {
                   </span>
                 </span>
                 <span aria-hidden="true" className={cn('relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200', consForm.vendeProductos ? 'bg-primary' : 'bg-muted-foreground/30')}>
-                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', consForm.vendeProductos ? 'translate-x-[22px]' : 'translate-x-0.5')} />
+                  <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-200', consForm.vendeProductos ? 'translate-x-[22px]' : 'translate-x-0.5')} />
                 </span>
               </button>
               <p className="text-xs text-muted-foreground mt-1.5">Se aplica al guardar.</p>

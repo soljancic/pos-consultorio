@@ -5,6 +5,6 @@ import { NotificacionesBell } from './NotificacionesBell'
 // oculta (<lg).
 export function CampanaFlotante() {
   return (
-    <NotificacionesBell className="hidden lg:flex fixed top-3 right-4 z-30 h-10 w-10 rounded-lg border bg-card text-foreground hover:bg-muted shadow-sm" />
+    <NotificacionesBell className="hidden lg:flex fixed top-3 right-4 z-30 h-10 w-10 rounded-lg border bg-card text-foreground hover:bg-muted shadow-xs" />
   )
 }

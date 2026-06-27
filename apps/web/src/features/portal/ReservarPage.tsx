@@ -292,7 +292,7 @@ export function ReservarPage() {
               <button
                 type="button"
                 onClick={() => abrirWhatsApp(tel, `Hola${nombreC ? `, ${nombreC}` : ''}: necesito ayuda con mi cita.`)}
-                className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+                className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
                 Escribir por WhatsApp
@@ -368,7 +368,7 @@ export function ReservarPage() {
                   <button
                     type="button"
                     onClick={() => abrirWhatsApp(ctxCita.consultorio.telefono!, `Hola ${ctxCita.consultorio.nombre}: acabo de cancelar mi cita.`)}
-                    className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
+                    className="inline-flex w-full items-center justify-center gap-1.5 h-11 px-4 bg-accent text-accent-foreground rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent/90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 transition-colors duration-150"
                   >
                     <MessageCircle className="h-4 w-4" aria-hidden="true" />
                     Escribir por WhatsApp
@@ -589,7 +589,7 @@ export function ReservarPage() {
                             aria-pressed={seleccionado}
                             aria-label={formatDia(ds, "EEEE d 'de' MMMM")}
                             className={cn(
-                              'aspect-square w-full flex items-center justify-center rounded-full text-sm tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                              'aspect-square w-full flex items-center justify-center rounded-full text-sm tabular-nums transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                               seleccionado
                                 ? 'bg-primary text-primary-foreground font-semibold'
                                 : disponible
@@ -638,7 +638,7 @@ export function ReservarPage() {
                             onClick={() => setHora(s)}
                             aria-pressed={s === hora}
                             className={cn(
-                              'h-10 rounded-md text-sm font-medium tabular-nums border cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                              'h-10 rounded-md text-sm font-medium tabular-nums border cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                               s === hora
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'bg-card text-foreground border-input hover:border-primary/60',

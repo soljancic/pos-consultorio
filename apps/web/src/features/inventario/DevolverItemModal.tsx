@@ -56,9 +56,9 @@ export function DevolverItemModal({
   const subtotal = Number(venta.subtotal)
 
   return (
-    // Chrome idéntico a ProductoModal: bg-slate-950/55 + backdrop-blur-sm + modal-fade
+    // Chrome idéntico a ProductoModal: bg-slate-950/55 + backdrop-blur-xs + modal-fade
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="devolver-title"
@@ -147,7 +147,7 @@ export function DevolverItemModal({
               className={cn(
                 'inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg text-sm font-semibold cursor-pointer',
                 'bg-amber-600 text-white hover:bg-amber-700',
-                'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-amber-500/60 focus-visible:ring-offset-2',
+                'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-amber-500/60 focus-visible:ring-offset-2',
                 'disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150',
               )}
             >

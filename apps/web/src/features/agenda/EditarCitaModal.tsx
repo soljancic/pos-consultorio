@@ -174,7 +174,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
   const esAtendida = cita.estado === EstadoCita.ATENDIDA
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         <ModalHeader
           icon={Pencil}
@@ -246,7 +246,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
                     aria-checked={usaSeguro}
                     onClick={() => setUsaSeguro((v) => !v)}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                      'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                       usaSeguro
                         ? 'border-input bg-card hover:bg-muted/40'
                         : 'border-input bg-muted/40 hover:bg-muted/60',
@@ -278,7 +278,7 @@ export function EditarCitaModal({ cita, onClose }: Props) {
                     >
                       <span
                         className={cn(
-                          'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                          'inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-200',
                           usaSeguro ? 'translate-x-[22px]' : 'translate-x-0.5',
                         )}
                       />

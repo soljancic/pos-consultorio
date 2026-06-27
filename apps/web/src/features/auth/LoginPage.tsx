@@ -69,7 +69,7 @@ export function LoginPage() {
         <div className="mx-auto max-w-6xl px-5 sm:px-8 h-14 flex items-center justify-between">
           <Link
             to="/"
-            className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+            className="flex items-center gap-2.5 rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
           >
             <img src="/brand/isotipo.png" alt="" className="h-7 w-7" />
             <span className="text-base font-bold tracking-tight text-foreground">
@@ -78,7 +78,7 @@ export function LoginPage() {
           </Link>
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Volver al inicio
@@ -122,7 +122,7 @@ export function LoginPage() {
             <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-24 w-auto" />
           </div>
 
-          <div className="bg-card rounded-xl border shadow-sm p-8">
+          <div className="bg-card rounded-xl border shadow-xs p-8">
             <h2 className="text-xl font-bold text-foreground mb-1">Ingresar</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Accede con tu cuenta del consultorio
@@ -139,7 +139,7 @@ export function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
+                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
                   placeholder="admin@consultorio.com"
                   required
                 />
@@ -152,7 +152,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setRecuperando(true)}
-                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
+                    className="text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
@@ -163,7 +163,7 @@ export function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
+                  className="w-full h-11 border border-input bg-card rounded-md px-3 text-base sm:text-sm text-foreground focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:border-ring transition-colors duration-150"
                   required
                 />
               </div>
@@ -182,7 +182,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-primary text-primary-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+                className="w-full h-11 bg-primary text-primary-foreground rounded-md text-sm font-semibold cursor-pointer hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
               >
                 {loading ? 'Ingresando...' : 'Ingresar'}
               </button>

@@ -23,8 +23,8 @@ export function ModalHeader({ icon: Icon, title, subtitle, onClose, tone = 'prim
       className={cn(
         // sticky + opaco (via/to card) para los modales con scroll; tinte de color
         // en la esquina via el gradiente y el chip de icono
-        'sticky top-0 z-10 flex items-start gap-3 px-5 py-4 border-b rounded-t-2xl bg-gradient-to-br via-card to-card',
-        danger ? 'from-destructive/[0.12]' : 'from-primary/[0.12]',
+        'sticky top-0 z-10 flex items-start gap-3 px-5 py-4 border-b rounded-t-2xl bg-linear-to-br via-card to-card',
+        danger ? 'from-destructive/12' : 'from-primary/12',
       )}
     >
       <span

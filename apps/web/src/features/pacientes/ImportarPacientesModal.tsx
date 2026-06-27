@@ -59,7 +59,7 @@ export function ImportarPacientesModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-importar-titulo"
@@ -111,7 +111,7 @@ export function ImportarPacientesModal({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     onClick={handleSeleccionar}
-                    className="inline-flex items-center gap-2 rounded-lg border border-primary/40 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 min-h-[44px] w-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                    className="inline-flex items-center gap-2 rounded-lg border border-primary/40 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 min-h-[44px] w-full focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                   >
                     <Upload className="h-4 w-4 shrink-0" aria-hidden="true" />
                     <span className="truncate">
@@ -123,7 +123,7 @@ export function ImportarPacientesModal({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     onClick={handleDescarga}
-                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded"
                   >
                     <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
                     Descargar archivo de ejemplo

@@ -125,7 +125,7 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
           {/* Resultados: panel inline (no absolute) para no recortarse dentro
               del modal con overflow. Se ve cuando hay foco/busqueda activa. */}
           {abierto && (search.length > 0 || isFetching) && (
-            <div className="mt-1.5 rounded-lg border bg-card shadow-sm overflow-hidden">
+            <div className="mt-1.5 rounded-lg border bg-card shadow-xs overflow-hidden">
               {isFetching && resultados.length === 0 ? (
                 <p className="px-3 py-3 text-sm text-muted-foreground">Buscando...</p>
               ) : resultados.length === 0 ? (
@@ -141,7 +141,7 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
                         <button
                           type="button"
                           onClick={() => agregar(p)}
-                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                         >
                           <Plus className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                           <span className="flex-1 min-w-0">
@@ -215,12 +215,12 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
                         type="button"
                         onClick={() => setCantidad(l.productoId, l.cantidad - 1)}
                         aria-label={`Quitar una unidad de ${l.nombre}`}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-foreground hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                       >
                         <Minus className="h-4 w-4" aria-hidden="true" />
                       </button>
                       <span
-                        className="min-w-[2.5rem] text-center text-sm font-semibold text-foreground tabular-nums"
+                        className="min-w-10 text-center text-sm font-semibold text-foreground tabular-nums"
                         aria-live="polite"
                         aria-label={`Cantidad de ${l.nombre}`}
                       >
@@ -230,7 +230,7 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
                         type="button"
                         onClick={() => setCantidad(l.productoId, l.cantidad + 1)}
                         aria-label={`Agregar una unidad de ${l.nombre}`}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-foreground hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                       >
                         <Plus className="h-4 w-4" aria-hidden="true" />
                       </button>
@@ -242,7 +242,7 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
                       type="button"
                       onClick={() => quitar(l.productoId)}
                       aria-label={`Quitar ${l.nombre}`}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>

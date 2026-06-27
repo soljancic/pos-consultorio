@@ -28,7 +28,7 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
   const hoy = new Date()
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
+    <div className="bg-card rounded-xl border shadow-xs overflow-x-auto">
       <div className="min-w-[700px]">
         {/* Encabezado de dias */}
         <div className="grid grid-cols-7 border-b">
@@ -59,7 +59,7 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
                 <button
                   onClick={() => onDiaClick(dia)}
                   title="Abrir vista diaria"
-                  className="self-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full cursor-pointer"
+                  className="self-start focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded-full cursor-pointer"
                 >
                   <span
                     className={cn(
@@ -81,7 +81,7 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
                       <button
                         key={cita.id}
                         onClick={() => onCitaClick(cita)}
-                        className="w-full rounded px-1 py-0.5 text-left text-[11px] leading-tight flex items-center gap-1 overflow-hidden hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
+                        className="w-full rounded px-1 py-0.5 text-left text-[11px] leading-tight flex items-center gap-1 overflow-hidden hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
                         style={{ backgroundColor: color + '22', border: `1px solid ${color}55` }}
                         title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
                       >
@@ -95,7 +95,7 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
                   {extra > 0 && (
                     <button
                       onClick={() => onDiaClick(dia)}
-                      className="w-full text-left text-[11px] font-medium text-primary hover:underline px-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                      className="w-full text-left text-[11px] font-medium text-primary hover:underline px-1 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded"
                     >
                       +{extra} más
                     </button>

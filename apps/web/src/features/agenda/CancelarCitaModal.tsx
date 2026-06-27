@@ -73,7 +73,7 @@ export function CancelarCitaModal({ cita, modo = 'cancelar', onClose }: Props) {
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
         <ModalHeader icon={Icono} title={t.titulo} tone="destructive" onClose={onClose} />
 

@@ -225,7 +225,7 @@ export function AppShell() {
         onClick={() => setAbiertoMovil(false)}
         className={({ isActive }) =>
           cn(
-            'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+            'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40',
             // Items dentro de un grupo van indentados (alineados bajo el label del grupo)
             dentroGrupo ? 'px-3 py-2 pl-9' : 'px-3 py-2.5',
             centrarItem,
@@ -268,7 +268,7 @@ export function AppShell() {
           type="button"
           onClick={() => toggleGrupo(grupo.id)}
           aria-expanded={abierto}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40"
         >
           <GIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
           <span className="flex-1 text-left truncate">{grupo.label}</span>
@@ -289,7 +289,7 @@ export function AppShell() {
       {/* Backdrop del drawer (solo movil) */}
       {abiertoMovil && (
         <div
-          className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade z-30 lg:hidden"
+          className="fixed inset-0 bg-slate-950/55 backdrop-blur-xs modal-fade z-30 lg:hidden"
           onClick={() => setAbiertoMovil(false)}
           aria-hidden="true"
         />
@@ -317,7 +317,7 @@ export function AppShell() {
           <button
             onClick={() => setAbiertoMovil(false)}
             aria-label="Cerrar menu"
-            className="lg:hidden p-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
+            className="lg:hidden p-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -326,7 +326,7 @@ export function AppShell() {
             onClick={toggleColapsado}
             title={colapsado ? 'Expandir menu' : 'Colapsar menu'}
             aria-label={colapsado ? 'Expandir menu' : 'Colapsar menu'}
-            className="hidden lg:block p-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
+            className="hidden lg:block p-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
           >
             {colapsado ? (
               <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
@@ -370,7 +370,7 @@ export function AppShell() {
                 onClick={() => { setModalAbrirCaja(true); setAbiertoMovil(false) }}
                 title={colapsado ? 'Caja sin abrir: abrir turno' : undefined}
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-amber-400/15 text-amber-300 hover:bg-amber-400/25 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium bg-amber-400/15 text-amber-300 hover:bg-amber-400/25 cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40',
                   centrarItem,
                 )}
               >
@@ -383,7 +383,7 @@ export function AppShell() {
                 onClick={() => setAbiertoMovil(false)}
                 title={colapsado ? (turno.abierta ? 'Caja abierta' : 'Turno cerrado') : undefined}
                 className={cn(
-                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40',
                   turno.abierta
                     ? 'bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20'
                     : 'bg-white/5 text-teal-200/60 hover:bg-white/10',
@@ -426,7 +426,7 @@ export function AppShell() {
               title="Cerrar sesion"
               aria-label="Cerrar sesion"
               className={cn(
-                'p-1.5 rounded-md text-teal-300/70 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150',
+                'p-1.5 rounded-md text-teal-300/70 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150',
                 ocultarTexto,
               )}
             >
@@ -441,7 +441,7 @@ export function AppShell() {
             aria-checked={tema === 'dark'}
             title={tema === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             className={cn(
-              'w-full flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150',
+              'w-full flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150',
               centrarItem,
             )}
           >
@@ -472,7 +472,7 @@ export function AppShell() {
               onClick={handleLogout}
               title="Cerrar sesion"
               aria-label="Cerrar sesion"
-              className="hidden lg:flex w-full items-center justify-center py-2 rounded-lg text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
+              className="hidden lg:flex w-full items-center justify-center py-2 rounded-lg text-teal-200/80 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40 transition-colors duration-150"
             >
               <LogOut className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -488,7 +488,7 @@ export function AppShell() {
           <button
             onClick={() => setAbiertoMovil(true)}
             aria-label="Abrir menu"
-            className="p-2 -ml-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="p-2 -ml-2 rounded-md text-teal-200 hover:bg-white/10 hover:text-white cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>

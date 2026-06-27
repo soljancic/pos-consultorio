@@ -45,7 +45,7 @@ export function EstablecerPasswordPage() {
           <img src="/brand/imagotipo.png" alt="ConsulTech" className="h-14 w-auto" />
         </div>
 
-        <div className="bg-card rounded-xl border shadow-sm p-8">
+        <div className="bg-card rounded-xl border shadow-xs p-8">
           {listo ? (
             <div className="text-center space-y-4">
               <CheckCircle2 className="h-10 w-10 text-accent mx-auto" aria-hidden="true" />

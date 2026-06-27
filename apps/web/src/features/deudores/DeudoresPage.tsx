@@ -147,7 +147,7 @@ export function DeudoresPage() {
                                 title={abierto ? 'Ocultar detalle' : 'Ver detalle por cita'}
                                 aria-expanded={abierto}
                                 aria-label={abierto ? 'Ocultar detalle' : 'Ver detalle por cita'}
-                                className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                                className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                               >
                                 {abierto ? (
                                   <ChevronDown className="h-4 w-4" />
@@ -166,7 +166,7 @@ export function DeudoresPage() {
                           {variasCitas ? (
                             <button
                               onClick={() => setExpandido(abierto ? null : d.pacienteId)}
-                              className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                              className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                             >
                               {d.cobros.length} citas
                             </button>
@@ -191,7 +191,7 @@ export function DeudoresPage() {
                                 }}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                                className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                                 title="Enviar WhatsApp"
                                 aria-label="Enviar recordatorio por WhatsApp"
                               >
@@ -200,7 +200,7 @@ export function DeudoresPage() {
                             )}
                             <button
                               onClick={() => cobrarDeudor(d)}
-                              className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                              className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                               title={variasCitas ? 'Ver citas para cobrar' : 'Cobrar'}
                               aria-label={variasCitas ? 'Ver citas para cobrar' : 'Cobrar'}
                             >
@@ -229,7 +229,7 @@ export function DeudoresPage() {
                               <div className="flex justify-end">
                                 <button
                                   onClick={() => cobrarCobro(cobro, d)}
-                                  className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                                  className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                                 >
                                   {cobro.cita ? 'Cobrar esta cita' : 'Cobrar esta venta'}
                                 </button>
@@ -300,7 +300,7 @@ export function DeudoresPage() {
                       onClick={() => setExpandido(abierto ? null : d.pacienteId)}
                       aria-expanded={abierto}
                       aria-label={abierto ? 'Ocultar detalle por cita' : 'Ver detalle por cita'}
-                      className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                      className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-xs font-medium cursor-pointer hover:bg-amber-500/25 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                     >
                       {d.cobros.length} citas
                       {abierto ? (
@@ -333,7 +333,7 @@ export function DeudoresPage() {
                             </span>
                             <button
                               onClick={() => cobrarCobro(cobro, d)}
-                              className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                              className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
                             >
                               Cobrar
                             </button>
@@ -353,7 +353,7 @@ export function DeudoresPage() {
                         }}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-accent/10 text-accent text-sm font-medium cursor-pointer hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-accent/10 text-accent text-sm font-medium cursor-pointer hover:bg-accent/20 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                         aria-label="Enviar recordatorio por WhatsApp"
                       >
                         <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -362,7 +362,7 @@ export function DeudoresPage() {
                     )}
                     <button
                       onClick={() => cobrarDeudor(d)}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-primary/10 text-primary text-sm font-medium cursor-pointer hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-primary/10 text-primary text-sm font-medium cursor-pointer hover:bg-primary/20 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                     >
                       <DollarSign className="h-4 w-4" aria-hidden="true" />
                       {variasCitas ? 'Ver citas' : 'Cobrar'}

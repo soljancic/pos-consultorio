@@ -104,7 +104,7 @@ export function GastosPage() {
                 <div key={g.id} className={cn(cardUI, 'p-4')}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-foreground break-words">{g.descripcion}</p>
+                      <p className="font-medium text-foreground wrap-break-word">{g.descripcion}</p>
                       <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{formatDia(g.fecha)}</p>
                     </div>
                     <span className="font-semibold text-destructive tabular-nums shrink-0">

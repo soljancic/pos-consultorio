@@ -61,7 +61,7 @@ export function DataTable<T>(p: Props<T>) {
                       className={cn('px-4 py-3 font-medium text-muted-foreground', c.align === 'right' ? 'text-right' : 'text-left')}>
                       {c.sortable ? (
                         <button onClick={() => p.onSort(c.key)}
-                          className="inline-flex items-center gap-1 hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 rounded">
+                          className="inline-flex items-center gap-1 hover:text-foreground cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60 rounded">
                           {c.label}
                           {active ? (p.sortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />) : <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />}
                         </button>

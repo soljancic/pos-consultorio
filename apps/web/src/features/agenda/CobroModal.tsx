@@ -269,7 +269,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm modal-fade flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-xs modal-fade flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         <ModalHeader
           icon={Wallet}
@@ -378,7 +378,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
                         disabled={hayCambiosLineas}
                         title={hayCambiosLineas ? 'Guardá los productos antes de cambiar el precio' : 'Cambiar precio'}
                         aria-label="Cambiar precio del total"
-                        className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70 transition-colors duration-150"
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70 transition-colors duration-150"
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -500,7 +500,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
                             }
                             title="Anular pago"
                             aria-label={`Anular pago de ${formatMoneda(Number(p.monto))}`}
-                            className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                            className="inline-flex items-center justify-center h-7 w-7 rounded text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                           >
                             <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
@@ -534,7 +534,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
               <button
                 type="button"
                 onClick={() => setMonto(saldo.toString())}
-                className="text-xs font-medium text-primary hover:underline mt-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150 tabular-nums"
+                className="text-xs font-medium text-primary hover:underline mt-1.5 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150 tabular-nums"
               >
                 Pagar total ({formatMoneda(saldo)})
               </button>
@@ -596,7 +596,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
                     onClick={() => setTipoCuentaId(tc.id)}
                     aria-pressed={tipoCuentaId === tc.id}
                     className={cn(
-                      'h-11 px-3 rounded-lg text-sm font-medium border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                      'h-11 px-3 rounded-lg text-sm font-medium border cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                       tipoCuentaId === tc.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-card text-foreground border-input hover:border-primary/60',

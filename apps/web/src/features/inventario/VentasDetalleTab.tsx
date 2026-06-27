@@ -95,7 +95,7 @@ export function VentasDetalleTab() {
             max={hasta}
             onChange={(e) => setDesde(e.target.value)}
             aria-label="Desde"
-            className={cn(inputUI, 'w-auto min-w-[8.5rem]')}
+            className={cn(inputUI, 'w-auto min-w-34')}
           />
           <span className="text-muted-foreground/60 text-sm select-none" aria-hidden="true">
             –
@@ -106,7 +106,7 @@ export function VentasDetalleTab() {
             min={desde}
             onChange={(e) => setHasta(e.target.value)}
             aria-label="Hasta"
-            className={cn(inputUI, 'w-auto min-w-[8.5rem]')}
+            className={cn(inputUI, 'w-auto min-w-34')}
           />
         </fieldset>
       </div>
@@ -205,7 +205,7 @@ export function VentasDetalleTab() {
                             // h-11 = 44px, toque minimo accesible.
                             'inline-flex h-11 items-center gap-1.5 rounded-lg border border-input px-3',
                             'text-sm font-medium text-foreground cursor-pointer',
-                            'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                            'hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                             'transition-colors duration-150',
                           )}
                         >

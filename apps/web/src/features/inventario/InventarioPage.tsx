@@ -46,7 +46,7 @@ export function InventarioPage() {
                   role="tab"
                   aria-selected={tab === t.id}
                   className={cn(
-                    'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                    'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                     tab === t.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                   )}
                 >

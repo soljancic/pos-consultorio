@@ -69,7 +69,7 @@ export function ReportFilters({ tab, filtros, esAdmin, onPreset, onPatch }: Prop
       <div className="flex rounded-md border overflow-hidden">
         {PRESETS.map((p) => (
           <button key={p.id} onClick={() => onPreset(p.id)}
-            className="px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-150">
+            className="px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-150">
             {p.label}
           </button>
         ))}
@@ -136,7 +136,7 @@ export function ReportFilters({ tab, filtros, esAdmin, onPreset, onPatch }: Prop
                     role="option"
                     aria-selected={false}
                     onMouseDown={() => selectPaciente(p)}
-                    className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-muted focus-visible:outline-none focus-visible:bg-muted cursor-pointer"
+                    className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-muted focus-visible:outline-hidden focus-visible:bg-muted cursor-pointer"
                   >
                     {p.nombre} {p.apellido}
                   </button>

@@ -172,7 +172,7 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
                   onChange={(e) => setMonto(s.id, 'montoPaciente', e.target.value)}
                   placeholder="0.00"
                   aria-label={`Monto paciente para ${s.nombre}`}
-                  className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                  className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                 />
                 <input
                   type="number"
@@ -183,7 +183,7 @@ export function TarifarioPanel({ categoriaSeguroId, categoriaNombre }: Props) {
                   onChange={(e) => setMonto(s.id, 'montoAseguradora', e.target.value)}
                   placeholder="0.00"
                   aria-label={`Monto aseguradora para ${s.nombre}`}
-                  className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                  className="w-24 h-8 shrink-0 border border-input bg-card rounded-md px-2 text-sm text-foreground tabular-nums placeholder:text-muted-foreground/50 focus:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                 />
               </div>
             )

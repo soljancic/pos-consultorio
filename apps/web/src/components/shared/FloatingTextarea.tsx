@@ -45,12 +45,12 @@ export function FloatingTextarea({
           'w-full rounded-xl border bg-card px-4 pt-4 pb-2.5 resize-none',
           Icon && 'pl-10',
           'text-base sm:text-sm text-foreground',
-          'focus:outline-none transition-colors duration-150',
+          'focus:outline-hidden transition-colors duration-150',
           'disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-muted/30',
           focused
             ? 'border-primary ring-[3px] ring-primary/15'
             : error
-              ? 'border-destructive/70 ring-[2px] ring-destructive/10'
+              ? 'border-destructive/70 ring-2 ring-destructive/10'
               : 'border-input hover:border-muted-foreground/35',
           className
         )}

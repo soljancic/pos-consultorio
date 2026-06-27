@@ -246,7 +246,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
         {proximaTransicion && (
           <button
             onClick={() => onCambiarEstado(proximaTransicion)}
-            className="flex items-center gap-1 text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/70 px-2.5 py-2 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+            className="flex items-center gap-1 text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/70 px-2.5 py-2 rounded-md cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
           >
             {labelProximaTransicion}
             <ChevronRight className="h-3 w-3" aria-hidden="true" />
@@ -273,7 +273,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                   <button
                     role="menuitem"
                     onClick={() => { setMenuAbierto(false); onReprogramar() }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 transition-colors duration-150"
                   >
                     <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     Reprogramar
@@ -283,7 +283,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                   <button
                     role="menuitem"
                     onClick={() => { setMenuAbierto(false); onEditar() }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 transition-colors duration-150"
                   >
                     <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     Editar
@@ -293,7 +293,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                   <button
                     role="menuitem"
                     onClick={handleNoAsistio}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 transition-colors duration-150"
                   >
                     <UserX className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     No asistió
@@ -303,7 +303,7 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
                   <button
                     role="menuitem"
                     onClick={() => { setMenuAbierto(false); onCancelar() }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-none focus-visible:bg-destructive/10 transition-colors duration-150"
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-destructive cursor-pointer hover:bg-destructive/10 focus-visible:outline-hidden focus-visible:bg-destructive/10 transition-colors duration-150"
                   >
                     <Ban className="h-4 w-4" aria-hidden="true" />
                     Cancelar cita

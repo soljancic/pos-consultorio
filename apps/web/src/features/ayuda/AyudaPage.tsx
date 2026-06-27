@@ -75,7 +75,7 @@ export function AyudaPage() {
               role="tab"
               aria-selected={rolSel === rol}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                 rolSel === rol ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
               )}
             >
@@ -97,7 +97,7 @@ export function AyudaPage() {
                     onClick={() => irATema(t.id)}
                     aria-current={t.id === temaId ? 'true' : undefined}
                     className={cn(
-                      'w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                      'w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                       t.id === temaId
                         ? 'bg-primary/10 text-primary font-medium'
                         : 'text-foreground hover:bg-muted',

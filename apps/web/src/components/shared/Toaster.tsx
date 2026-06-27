@@ -45,7 +45,7 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2"
+      className="pointer-events-none fixed top-4 left-1/2 z-60 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col items-center gap-2"
     >
       {toasts.map((t) => {
         const { icon: Icon, titulo, box, closeHover } = ESTILO[t.tipo]
@@ -69,7 +69,7 @@ export function Toaster() {
                 aria-label="Cerrar aviso"
                 className={cn(
                   '-m-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md cursor-pointer transition-colors duration-150',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current',
+                  'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-current',
                   closeHover,
                 )}
               >

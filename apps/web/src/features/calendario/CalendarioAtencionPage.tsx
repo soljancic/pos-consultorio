@@ -102,7 +102,7 @@ export function CalendarioAtencionPage() {
             <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
           <button onClick={() => setFecha(new Date())}
-            className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150">
+            className="text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150">
             Hoy
           </button>
           <CampanaHeader />
@@ -186,7 +186,7 @@ export function CalendarioAtencionPage() {
                               className={cn(
                                 'flex items-center justify-between w-full text-left text-xs font-medium px-2.5 py-2 rounded-lg border tabular-nums transition-colors duration-150',
                                 ESTILO_TIPO[b.tipo],
-                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                               )}
                             >
                               <span>{b.horaInicio}–{b.horaFin}</span>
@@ -243,7 +243,7 @@ export function CalendarioAtencionPage() {
                               className={cn(
                                 'block w-full text-left text-xs font-medium px-1.5 py-1 rounded border tabular-nums transition-colors duration-150',
                                 ESTILO_TIPO[b.tipo],
-                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                puedeEditar(doc.id) && 'cursor-pointer hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                               )}
                             >
                               {b.horaInicio}–{b.horaFin}
@@ -256,7 +256,7 @@ export function CalendarioAtencionPage() {
                             <button
                               onClick={() => setModal({ doctorId: doc.id, doctorNombre: doc.nombre, fecha: fechaStr })}
                               aria-label={`Agregar horario a ${doc.nombre} el ${fechaStr}`}
-                              className="w-full flex items-center justify-center py-1 rounded text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-muted-foreground transition-colors duration-150"
+                              className="w-full flex items-center justify-center py-1 rounded text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-muted-foreground transition-colors duration-150"
                             >
                               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>

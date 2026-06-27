@@ -90,7 +90,7 @@ export function ProductosTab() {
           aria-checked={todos}
           onClick={() => setTodos((v) => !v)}
           className={cn(
-            'inline-flex h-11 items-center gap-2.5 rounded-lg border px-4 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+            'inline-flex h-11 items-center gap-2.5 rounded-lg border px-4 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
             todos ? 'border-input bg-muted/60 text-foreground' : 'border-input bg-card text-muted-foreground hover:bg-muted/40',
           )}
         >
@@ -103,7 +103,7 @@ export function ProductosTab() {
           >
             <span
               className={cn(
-                'inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+                'inline-block h-4 w-4 rounded-full bg-white shadow-xs transition-transform duration-200',
                 todos ? 'translate-x-[18px]' : 'translate-x-0.5',
               )}
             />
@@ -148,7 +148,7 @@ export function ProductosTab() {
                         setEditar(p)
                       }
                     }}
-                    className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
+                    className="border-b last:border-0 hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60 cursor-pointer transition-colors duration-150"
                   >
                     <td className="px-4 py-3">
                       <span className={cn('font-medium', !p.activo ? 'text-muted-foreground' : 'text-foreground')}>

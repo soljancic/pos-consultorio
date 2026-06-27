@@ -62,7 +62,7 @@ export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
     <>
       {/* Backdrop: en movil oscurece; en desktop solo captura el click-afuera */}
       <div
-        className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:bg-transparent lg:backdrop-blur-none"
+        className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-xs lg:bg-transparent lg:backdrop-blur-none"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -86,14 +86,14 @@ export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
               aria-pressed={sonido}
               aria-label={sonido ? 'Silenciar notificaciones' : 'Activar sonido de notificaciones'}
               title={sonido ? 'Silenciar' : 'Activar sonido'}
-              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
             >
               {sonido ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
             </button>
             <button
               onClick={() => marcarTodas.mutate()}
               disabled={!hayNoLeidas || marcarTodas.isPending}
-              className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
+              className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-md text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
             >
               <CheckCheck className="h-4 w-4" aria-hidden="true" />
               Marcar todas
@@ -101,7 +101,7 @@ export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/60 transition-colors duration-150"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -126,8 +126,8 @@ export function NotificacionesPanel({ onClose }: { onClose: () => void }) {
                     <button
                       onClick={() => abrir(n)}
                       className={cn(
-                        'w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset transition-colors duration-150',
-                        !n.leida && 'bg-primary/[0.04]',
+                        'w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/60 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset transition-colors duration-150',
+                        !n.leida && 'bg-primary/4',
                       )}
                     >
                       <span className={cn('shrink-0 rounded-lg p-2', meta.clase)}>

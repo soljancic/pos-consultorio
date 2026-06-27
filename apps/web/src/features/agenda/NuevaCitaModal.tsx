@@ -232,7 +232,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm modal-fade p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md max-h-[90vh] overflow-y-auto">
         <ModalHeader icon={CalendarPlus} title="Nueva cita" onClose={onClose} />
 
@@ -255,7 +255,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                 }}
                 onFocus={() => setShowPacienteList(true)}
                 placeholder=" "
-                className="peer w-full h-14 rounded-xl border border-input bg-card pl-10 pr-4 text-base sm:text-sm text-foreground hover:border-muted-foreground/35 focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/15 transition-colors duration-150"
+                className="peer w-full h-14 rounded-xl border border-input bg-card pl-10 pr-4 text-base sm:text-sm text-foreground hover:border-muted-foreground/35 focus:outline-hidden focus:border-primary focus:ring-[3px] focus:ring-primary/15 transition-colors duration-150"
                 required
               />
               <label
@@ -279,7 +279,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                           key={p.id}
                           type="button"
                           onClick={() => seleccionarPaciente(p)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:bg-primary/10 transition-colors duration-150"
                         >
                           <span
                             className="h-9 w-9 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center"
@@ -326,7 +326,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                   <button
                     type="button"
                     onClick={() => { setModalNuevoPaciente(true); setShowPacienteList(false) }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-t bg-muted/30 cursor-pointer hover:bg-primary/10 focus-visible:outline-none focus-visible:bg-primary/10 transition-colors duration-150"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-t bg-muted/30 cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:bg-primary/10 transition-colors duration-150"
                   >
                     <span
                       className="h-9 w-9 shrink-0 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground flex items-center justify-center"
@@ -394,7 +394,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                   aria-checked={usarSeguro}
                   onClick={() => setUsarSeguro((v) => !v)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                    'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
                     usarSeguro ? 'border-input bg-card hover:bg-muted/40' : 'border-input bg-muted/40 hover:bg-muted/60',
                   )}
                 >
@@ -421,7 +421,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                   >
                     <span
                       className={cn(
-                        'inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                        'inline-block h-5 w-5 rounded-full bg-white shadow-xs transition-transform duration-200',
                         usarSeguro ? 'translate-x-[22px]' : 'translate-x-0.5',
                       )}
                     />
@@ -556,7 +556,7 @@ export function NuevaCitaModal({ fechaInicial, doctorIdInicial, horaInicial, pac
                   tocoConfirmacion.current = true
                   setEnviarConfirmacion(e.target.checked)
                 }}
-                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/45 rounded"
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/45 rounded"
               />
               <span className="min-w-0">
                 <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">

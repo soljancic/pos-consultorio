@@ -18,7 +18,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
   const hoy = new Date()
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
+    <div className="bg-card rounded-xl border shadow-xs overflow-x-auto">
       <div className="min-w-[840px] grid grid-cols-7">
         {dias.map((dia) => {
           const citasDia = citas
@@ -31,7 +31,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
                 onClick={() => onDiaClick(dia)}
                 title="Abrir vista diaria"
                 className={cn(
-                  'px-2 py-2.5 border-b text-center cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150',
+                  'px-2 py-2.5 border-b text-center cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150',
                   esHoy && 'bg-primary/10',
                 )}
               >
@@ -54,7 +54,7 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
                     <button
                       key={cita.id}
                       onClick={() => onCitaClick(cita)}
-                      className="w-full rounded px-1.5 py-1 text-left text-xs overflow-hidden hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
+                      className="w-full rounded px-1.5 py-1 text-left text-xs overflow-hidden hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
                       style={{ backgroundColor: color + '26', border: `1px solid ${color}66` }}
                       title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
                     >

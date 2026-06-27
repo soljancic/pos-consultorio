@@ -383,7 +383,7 @@ export function AgendaPage() {
           </button>
           <button
             onClick={() => setFecha(new Date())}
-            className="ml-2 text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150"
+            className="ml-2 text-xs font-medium text-primary hover:underline cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded px-1 py-1 transition-colors duration-150"
           >
             Hoy
           </button>
@@ -401,7 +401,7 @@ export function AgendaPage() {
                 aria-expanded={vistaMenuAbierto}
                 aria-label={`Vista: ${vistaActualDef.label}`}
                 title={`Vista: ${vistaActualDef.label}`}
-                className="inline-flex items-center gap-1 h-10 px-2.5 shrink-0 rounded-md border bg-card text-foreground cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                className="inline-flex items-center gap-1 h-10 px-2.5 shrink-0 rounded-md border bg-card text-foreground cursor-pointer hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
               >
                 <VistaActualIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -417,7 +417,7 @@ export function AgendaPage() {
                       role="menuitemradio"
                       aria-checked={vista === id}
                       onClick={() => { cambiarVista(id); setVistaMenuAbierto(false) }}
-                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 transition-colors duration-150"
                     >
                       <span className="flex items-center gap-2">
                         <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -438,7 +438,7 @@ export function AgendaPage() {
                   title={label}
                   aria-pressed={vista === id}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                    'flex items-center gap-1.5 px-3 py-2 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                     vista === id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:bg-muted',
@@ -477,7 +477,7 @@ export function AgendaPage() {
                 aria-expanded={ordenMenuAbierto}
                 aria-label="Ordenar por"
                 title="Ordenar por"
-                className="inline-flex items-center justify-center h-10 w-10 rounded-md border bg-card text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-md border bg-card text-muted-foreground cursor-pointer hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
               >
                 <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -492,7 +492,7 @@ export function AgendaPage() {
                       role="menuitemradio"
                       aria-checked={orden === id}
                       onClick={() => { cambiarOrden(id); setOrdenMenuAbierto(false) }}
-                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:bg-muted/60 transition-colors duration-150"
+                      className="flex items-center justify-between w-full px-3 py-2 text-sm text-left text-foreground cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:bg-muted/60 transition-colors duration-150"
                     >
                       {label}
                       {orden === id && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
@@ -513,7 +513,7 @@ export function AgendaPage() {
               aria-label={mostrarTodas ? 'Mostrando todas las citas' : 'Mostrando solo las citas en curso'}
               title={mostrarTodas ? 'Mostrando todas — tocá para ver solo lo pendiente' : 'Solo lo pendiente — tocá para ver todas'}
               className={cn(
-                'inline-flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                'inline-flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                 mostrarTodas
                   ? 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                   : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15',
@@ -585,7 +585,7 @@ export function AgendaPage() {
                       onClick={() => cambiarOrden(id)}
                       aria-pressed={orden === id}
                       className={cn(
-                        'px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                        'px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                         orden === id
                           ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:bg-muted',

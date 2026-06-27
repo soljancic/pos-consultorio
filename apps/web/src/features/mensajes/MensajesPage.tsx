@@ -104,7 +104,7 @@ export function MensajesPage() {
                 role="tab"
                 aria-selected={tab === t}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
                 {t}
@@ -205,7 +205,7 @@ export function MensajesPage() {
                         rel="noreferrer"
                         title="Abrir WhatsApp"
                         aria-label={`Enviar WhatsApp a ${m.paciente.nombre}`}
-                        className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-accent/10 text-accent hover:bg-accent/20 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                       >
                         <MessageCircle className="h-4 w-4" aria-hidden="true" />
                       </a>
@@ -218,7 +218,7 @@ export function MensajesPage() {
                         disabled={resolver.isPending}
                         title="Marcar enviado"
                         aria-label="Marcar como enviado"
-                        className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
                       >
                         <Check className="h-4 w-4" aria-hidden="true" />
                       </button>
@@ -228,7 +228,7 @@ export function MensajesPage() {
                       disabled={resolver.isPending}
                       title="Omitir"
                       aria-label="Omitir mensaje"
-                      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 transition-colors duration-150"
                     >
                       <X className="h-4 w-4" aria-hidden="true" />
                     </button>
