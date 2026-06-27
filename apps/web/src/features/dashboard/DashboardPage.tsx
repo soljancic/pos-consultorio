@@ -106,7 +106,10 @@ export function DashboardPage() {
     queryKey: ['citas', hoy],
     queryFn: () => api.get(`/citas?fecha=${hoy}`).then((r) => r.data),
   })
-  const citas = citasQuery.data ?? []
+  // Array.isArray (no solo ?? []): si la respuesta llega malformada (ej. un proxy
+  // devuelve HTML con 200), data es un no-array y un .filter/.reduce tiraria el
+  // ErrorBoundary en la pagina de inicio. Asi degrada a vacio.
+  const citas = Array.isArray(citasQuery.data) ? citasQuery.data : []
 
   const cajaQuery = useQuery({
     queryKey: ['caja-hoy'],
@@ -126,7 +129,10 @@ export function DashboardPage() {
     queryKey: ['caja-historial', inicioMes, hoy],
     queryFn: () => api.get(`/caja/historial?desde=${inicioMes}&hasta=${hoy}`).then((r) => r.data),
   })
-  const ingresosMes = (historialQuery.data ?? []).reduce((acc, c) => acc + Number(c.totalGeneral), 0)
+  const ingresosMes = (Array.isArray(historialQuery.data) ? historialQuery.data : []).reduce(
+    (acc, c) => acc + Number(c.totalGeneral),
+    0,
+  )
 
   const gastosQuery = useQuery<{ total: number }>({
     queryKey: ['gastos-resumen', inicioMes, hoy],
@@ -162,7 +168,9 @@ export function DashboardPage() {
   // tras la migracion y daban NaN). El monto llega null cuando el arqueo ciego
   // lo oculta a quien no es ADMIN con el turno abierto.
   const filasCaja: Array<[string, number | null]> = (
-    (cajaData?.desglosePagos ?? []) as Array<{ nombre: string; total: number | null }>
+    Array.isArray(cajaData?.desglosePagos)
+      ? (cajaData.desglosePagos as Array<{ nombre: string; total: number | null }>)
+      : []
   ).map((c) => [c.nombre, c.total])
 
   return (
