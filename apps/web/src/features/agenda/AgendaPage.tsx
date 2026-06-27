@@ -264,16 +264,34 @@ export function AgendaPage() {
   const cambiarEstado = useMutation({
     mutationFn: ({ citaId, estado }: { citaId: number; estado: EstadoCita }) =>
       api.put(`/citas/${citaId}/estado`, { estado }),
-    onSuccess: () => {
-      // ATENDIDA genera deuda: refrescar tambien deudores, ficha y caja
-      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
-        queryClient.invalidateQueries({ queryKey: [key] })
-      }
+    // Optimistic update: el color/estado cambia al instante (sin esperar el viaje
+    // a la BD). Antes invalidabamos en onSuccess y la tarjeta seguia con el estado
+    // viejo ~1s hasta que volvia el refetch; si reabrias la cita rapido la veias
+    // desactualizada. Ahora pintamos el estado nuevo en la cache de TODAS las
+    // vistas (lista/dia/semana/mes) de inmediato y el servidor reconcilia despues.
+    onMutate: async ({ citaId, estado }) => {
+      // Frenar refetches en vuelo (refetchInterval 30s) para que no pisen el cambio
+      await queryClient.cancelQueries({ queryKey: ['citas'] })
+      // Snapshot de todas las queries de citas para poder revertir si el PUT falla
+      const prev = queryClient.getQueriesData<Cita[]>({ queryKey: ['citas'] })
+      queryClient.setQueriesData<Cita[]>({ queryKey: ['citas'] }, (old) =>
+        Array.isArray(old) ? old.map((c) => (c.id === citaId ? { ...c, estado } : c)) : old,
+      )
+      return { prev }
     },
     // Un cambio de estado caido (p.ej. sin conexion en la PWA) no puede pasar
     // en silencio: ATENDIDA genera deuda y el usuario debe saber si fallo.
-    onError: (err: any) => {
+    onError: (err: any, _vars, ctx) => {
+      // Revertir el optimistic update a lo que habia antes del click
+      ctx?.prev?.forEach(([key, data]) => queryClient.setQueryData(key, data))
       toast.fromError(err, 'No se pudo actualizar la cita. Revisá la conexión y reintentá.')
+    },
+    // Pase lo que pase, reconciliar con la BD: trae el estado autoritativo y los
+    // datos derivados. ATENDIDA genera deuda → refrescar deudores, ficha y caja.
+    onSettled: () => {
+      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
+        queryClient.invalidateQueries({ queryKey: [key] })
+      }
     },
   })
 
