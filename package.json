@@ -15,11 +15,11 @@
     "db:studio": "pnpm --filter api prisma studio"
   },
   "devDependencies": {
-    "turbo": "^2.5.0",
-    "prettier": "^3.5.0",
-    "eslint": "^9.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0"
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.5",
+    "turbo": "^2.10.0"
   },
   "engines": {
     "node": ">=22.0.0",
