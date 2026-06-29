@@ -108,19 +108,24 @@ export function LineasProductoEditor({ lineas, onChange, disabled = false }: Pro
     <div className="space-y-3">
       {/* Buscador de vendibles: solo en modo edicion */}
       {!disabled && (
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
-            aria-hidden="true"
-          />
-          <input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            onFocus={() => setAbierto(true)}
-            placeholder="Agregar producto..."
-            aria-label="Buscar producto para agregar"
-            className={cn(inputUI, 'pl-9')}
-          />
+        <div>
+          {/* El icono centra contra SU propio relative (solo el input). Si el
+              relative envolviera tambien la lista inline de abajo, top-1/2 caeria
+              al medio del contenedor entero y la lupa bajaba al abrir resultados. */}
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
+              aria-hidden="true"
+            />
+            <input
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => setAbierto(true)}
+              placeholder="Agregar producto..."
+              aria-label="Buscar producto para agregar"
+              className={cn(inputUI, 'pl-9')}
+            />
+          </div>
 
           {/* Resultados: panel inline (no absolute) para no recortarse dentro
               del modal con overflow. Se ve cuando hay foco/busqueda activa. */}

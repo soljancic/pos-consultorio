@@ -58,7 +58,9 @@ export function ExportButtons({ filename, loadAll }: Props) {
       <button onClick={exportarPdf} disabled={busyPdf} className={cn(btnOutlineUI, 'disabled:opacity-60')}>
         <FileText className="h-4 w-4" aria-hidden="true" /> {busyPdf ? 'Generando...' : 'PDF'}
       </button>
-      <button onClick={() => window.print()} className={btnOutlineUI}>
+      {/* Imprimir: oculto en celular (imprimir desde el telefono no es util y
+          libera espacio para que Excel/PDF entren en la 1ra fila del header). */}
+      <button onClick={() => window.print()} className={cn(btnOutlineUI, 'max-sm:hidden')}>
         <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir
       </button>
     </div>

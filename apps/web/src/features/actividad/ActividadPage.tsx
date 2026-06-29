@@ -86,20 +86,26 @@ export function ActividadPage() {
       </div>
 
       <div className="p-4 sm:p-6 flex-1 overflow-auto space-y-4 max-w-4xl mx-auto w-full">
-        <div className="flex flex-wrap items-center gap-2">
-          <label htmlFor="act-desde" className="sr-only">Desde</label>
-          <input id="act-desde" type="date" value={desde} onChange={filtrar(setDesde)} className={cn(inputUI, 'w-auto')} />
-          <span className="text-muted-foreground/70">a</span>
-          <label htmlFor="act-hasta" className="sr-only">Hasta</label>
-          <input id="act-hasta" type="date" value={hasta} onChange={filtrar(setHasta)} className={cn(inputUI, 'w-auto')} />
-          <select value={entidad} onChange={filtrar(setEntidad)} aria-label="Filtrar por entidad" className={cn(inputUI, 'w-auto')}>
-            <option value="">Todas las entidades</option>
-            {ENTIDADES.map((e) => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <select value={accion} onChange={filtrar(setAccion)} aria-label="Filtrar por acción" className={cn(inputUI, 'w-auto')}>
-            <option value="">Todas las acciones</option>
-            {ACCIONES.map((a) => <option key={a} value={a}>{LABEL_ACCION[a]}</option>)}
-          </select>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {/* Rango de fechas (en celular arriba; inline en desktop) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="act-desde" className="sr-only">Desde</label>
+            <input id="act-desde" type="date" value={desde} onChange={filtrar(setDesde)} className={cn(inputUI, 'w-auto')} />
+            <span className="text-muted-foreground/70">a</span>
+            <label htmlFor="act-hasta" className="sr-only">Hasta</label>
+            <input id="act-hasta" type="date" value={hasta} onChange={filtrar(setHasta)} className={cn(inputUI, 'w-auto')} />
+          </div>
+          {/* Entidad + accion: 2 por linea en celular (grid), inline en desktop */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+            <select value={entidad} onChange={filtrar(setEntidad)} aria-label="Filtrar por entidad" className={cn(inputUI, 'sm:w-auto')}>
+              <option value="">Entidades</option>
+              {ENTIDADES.map((e) => <option key={e} value={e}>{e}</option>)}
+            </select>
+            <select value={accion} onChange={filtrar(setAccion)} aria-label="Filtrar por acción" className={cn(inputUI, 'sm:w-auto')}>
+              <option value="">Acciones</option>
+              {ACCIONES.map((a) => <option key={a} value={a}>{LABEL_ACCION[a]}</option>)}
+            </select>
+          </div>
         </div>
 
         {isLoading ? (

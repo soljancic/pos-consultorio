@@ -60,7 +60,7 @@ export function CajaPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className={chipIconUI}>
               <Wallet className="h-4 w-4" aria-hidden="true" />
@@ -73,17 +73,29 @@ export function CajaPage() {
                 role="tab"
                 aria-selected={tab === t}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-2.5 sm:px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
                 {t}
               </button>
             ))}
           </div>
+          {/* Abrir caja: en celular dice solo "Abrir" y va al lado de los tabs
+              (1ra fila). En sm+ se oculta aca y aparece a la derecha como
+              "Abrir caja". */}
+          {tab === 'hoy' && data && !caja && (
+            <button
+              onClick={() => setModalAbrir(true)}
+              className={cn(btnPrimaryUI, 'sm:hidden shrink-0')}
+            >
+              <Unlock className="h-4 w-4" aria-hidden="true" />
+              Abrir
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
         {tab === 'hoy' && data && !caja && (
-          <button onClick={() => setModalAbrir(true)} className={btnPrimaryUI}>
+          <button onClick={() => setModalAbrir(true)} className={cn(btnPrimaryUI, 'max-sm:hidden')}>
             <Unlock className="h-4 w-4" aria-hidden="true" />
             Abrir caja
           </button>

@@ -169,6 +169,18 @@ export function ConfiguracionPage() {
                 {label}
               </button>
             ))}
+            {/* En celular el "+" de Nuevo usuario va al final de los tabs (al
+                lado de "Config"). En sm+ el boton vive en la fila de abajo. */}
+            {tab === 'usuarios' && (
+              <button
+                onClick={() => { setUsuarioEdit(null); setUsuarioModal(true) }}
+                aria-label="Nuevo usuario"
+                title="Nuevo usuario"
+                className="sm:hidden inline-flex items-center justify-center h-8 w-8 shrink-0 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
         <CampanaHeader />
@@ -177,13 +189,13 @@ export function ConfiguracionPage() {
       <div className="flex-1 overflow-auto p-4 sm:p-6 max-w-3xl mx-auto w-full">
         {tab === 'usuarios' && (
           <div>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4 max-sm:hidden">
               <button onClick={() => { setUsuarioEdit(null); setUsuarioModal(true) }}
                 className={cn(btnPrimaryUI, 'h-9 px-3')}>
                 <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Nuevo usuario
               </button>
             </div>
-            <div className={cn(cardUI, 'overflow-x-auto')}>
+            <div className={cn(cardUI, 'overflow-x-auto hidden sm:block')}>
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b">
                   <tr>
@@ -220,6 +232,30 @@ export function ConfiguracionPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            {/* En celular: lista de cards en vez de tabla */}
+            <div className="sm:hidden space-y-2">
+              {usuarios.map((u) => (
+                <div key={u.id} className={cn(cardUI, 'p-3 flex items-start justify-between gap-3')}>
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground truncate">{u.nombre}</p>
+                    <p className="text-sm text-muted-foreground truncate">{u.email}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs bg-muted text-foreground px-2 py-0.5 rounded-full font-medium">
+                        {ROL_LABEL[u.rol] ?? u.rol}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.activo ? 'bg-accent/10 text-accent' : 'bg-muted text-muted-foreground'}`}>
+                        {u.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => { setUsuarioEdit(u); setUsuarioModal(true) }}
+                    aria-label={`Editar usuario ${u.nombre}`}
+                    className={cn(btnIconUI, 'shrink-0 text-muted-foreground/70 hover:text-foreground hover:bg-muted')}>
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}

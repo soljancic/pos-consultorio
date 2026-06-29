@@ -9,11 +9,14 @@ import { formatHora, cn } from '../../lib/utils'
 interface Props {
   inicioSemana: Date // lunes
   citas: Cita[]
+  // Mostrar el doctor junto al paciente. Solo tiene sentido cuando se ven todos
+  // los doctores; si la agenda esta filtrada a uno, es redundante.
+  mostrarDoctor: boolean
   onCitaClick: (cita: Cita) => void
   onDiaClick: (dia: Date) => void
 }
 
-export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick }: Props) {
+export function AgendaSemanaGrid({ inicioSemana, citas, mostrarDoctor, onCitaClick, onDiaClick }: Props) {
   const dias = Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i))
   const hoy = new Date()
 
@@ -56,13 +59,20 @@ export function AgendaSemanaGrid({ inicioSemana, citas, onCitaClick, onDiaClick 
                       onClick={() => onCitaClick(cita)}
                       className="w-full rounded px-1.5 py-1 text-left text-xs overflow-hidden hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
                       style={{ backgroundColor: color + '26', border: `1px solid ${color}66` }}
-                      title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
+                      title={
+                        mostrarDoctor && cita.doctor?.nombre
+                          ? `${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido} · ${cita.doctor.nombre}`
+                          : `${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`
+                      }
                     >
                       <span className="font-semibold tabular-nums text-foreground">
                         {formatHora(cita.fechaHora)}
                       </span>{' '}
                       <span className="text-foreground truncate">
                         {cita.paciente?.nombre} {cita.paciente?.apellido}
+                        {mostrarDoctor && cita.doctor?.nombre && (
+                          <span className="text-muted-foreground"> · {cita.doctor.nombre}</span>
+                        )}
                       </span>
                     </button>
                   )

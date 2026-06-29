@@ -389,11 +389,14 @@ export function AgendaPage() {
           </button>
         </div>
 
-        <div className="flex flex-nowrap items-center gap-2">
+        {/* Toolbar: SIEMPRE una sola fila (sin wrap). En celular ocupa todo el
+            ancho (w-full) y el select de doctor es el que flexiona/encoge (fill);
+            los botones quedan a tamano fijo (shrink-0) y mas apretados (gap-1.5). */}
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
           {/* Vista: en celular un solo dropdown (Lista/Dia/Semana); en sm+ el
               toggle segmentado con las 4 vistas (incluye Mes). */}
           {esCelular ? (
-            <div ref={vistaMenuRef} className="relative">
+            <div ref={vistaMenuRef} className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setVistaMenuAbierto((v) => !v)}
@@ -456,7 +459,7 @@ export function AgendaPage() {
               value={doctorId}
               onChange={(e) => setDoctorId(e.target.value)}
               aria-label="Filtrar por doctor"
-              className={cn(inputUI, 'w-auto max-w-[180px]')}
+              className={cn(inputUI, 'min-w-0 flex-1 sm:flex-none sm:w-auto max-w-[180px]')}
             >
               <option value="">Todos</option>
               {doctores.map((d) => (
@@ -467,7 +470,7 @@ export function AgendaPage() {
           {/* Orden de la lista en celular: dropdown estilizado en el header (en sm+
               vive como toggle arriba de la lista). Solo aplica a la vista Lista. */}
           {vista === 'lista' && (
-            <div ref={ordenMenuRef} className="relative sm:hidden">
+            <div ref={ordenMenuRef} className="relative sm:hidden shrink-0">
               {/* Solo el icono para ahorrar espacio; el aria-label y el titulo dan
                   el contexto, y el menu muestra cual orden esta activo. */}
               <button
@@ -513,7 +516,7 @@ export function AgendaPage() {
               aria-label={mostrarTodas ? 'Mostrando todas las citas' : 'Mostrando solo las citas en curso'}
               title={mostrarTodas ? 'Mostrando todas — tocá para ver solo lo pendiente' : 'Solo lo pendiente — tocá para ver todas'}
               className={cn(
-                'inline-flex items-center justify-center h-10 w-10 rounded-md border cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                'inline-flex items-center justify-center h-10 w-10 shrink-0 rounded-md border cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                 mostrarTodas
                   ? 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                   : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15',
@@ -530,7 +533,7 @@ export function AgendaPage() {
           {vendeProductos && (
             <button
               onClick={() => setModalVentaDirecta(true)}
-              className={btnOutlineUI}
+              className={cn(btnOutlineUI, 'shrink-0')}
               aria-label="Venta directa"
             >
               <ShoppingCart className="h-4 w-4" aria-hidden="true" />
@@ -541,7 +544,7 @@ export function AgendaPage() {
               aria-label mantiene el boton accesible cuando se ve solo el icono. */}
           <button
             onClick={() => setModalNuevaCita(true)}
-            className={btnPrimaryUI}
+            className={cn(btnPrimaryUI, 'shrink-0')}
             aria-label="Nueva cita"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -642,6 +645,7 @@ export function AgendaPage() {
             <AgendaSemanaGrid
               inicioSemana={inicioSemana}
               citas={citasSemana}
+              mostrarDoctor={!doctorId}
               onCitaClick={setCitaDetalle}
               onDiaClick={(dia) => {
                 setFecha(dia)
@@ -659,6 +663,7 @@ export function AgendaPage() {
             <AgendaMesGrid
               mes={fecha}
               citas={citasMes}
+              mostrarDoctor={!doctorId}
               onCitaClick={setCitaDetalle}
               onDiaClick={(dia) => {
                 setFecha(dia)

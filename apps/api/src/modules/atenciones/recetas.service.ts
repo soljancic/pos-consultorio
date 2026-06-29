@@ -103,51 +103,118 @@ export class RecetasService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      // Membrete
-      doc.font('Helvetica-Bold').fontSize(15).fillColor('#0e7490').text(consultorio?.nombre ?? 'Consultorio')
-      doc.font('Helvetica').fontSize(8).fillColor('#555555')
-      const lineas = [consultorio?.direccion, consultorio?.telefono ? `Tel: ${consultorio.telefono}` : null].filter(Boolean)
-      if (lineas.length) doc.text(lineas.join('  ·  '))
-      doc.moveDown(0.4)
-      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y)
-        .lineWidth(1).strokeColor('#0e7490').stroke()
-      doc.moveDown(0.8)
+      // Paleta (alineada al color primary teal del sistema)
+      const BRAND = '#0e7490'
+      const INK = '#1f2937'
+      const MUTED = '#6b7280'
+      const FAINT = '#9ca3af'
+      const PANEL = '#f8fafc'
+      const PANEL_BORDER = '#e5e7eb'
 
-      // Titulo + fecha
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#111111').text('RECETA MÉDICA', { continued: true })
-      doc.font('Helvetica').fontSize(9).fillColor('#555555').text(`   ${fecha}`, { baseline: 'bottom' })
-      doc.moveDown(0.6)
+      const left = doc.page.margins.left
+      const right = doc.page.width - doc.page.margins.right
+      const contentW = right - left
+      let y = doc.page.margins.top
 
-      // Paciente
-      doc.font('Helvetica').fontSize(10).fillColor('#111111')
-      doc.text(`Paciente: ${paciente.apellido}, ${paciente.nombre}${paciente.dni ? `   ·   CI: ${paciente.dni}` : ''}`)
-      doc.fontSize(9).fillColor('#555555')
-        .text(`Atendido el ${fechaHora.toLocaleDateString('es-BO')} `)
-      doc.moveDown(0.8)
+      // Edad del paciente (si hay fecha de nacimiento)
+      let edad: number | null = null
+      if (paciente.fechaNacimiento) {
+        const fn = new Date(paciente.fechaNacimiento)
+        const hoy = new Date()
+        let e = hoy.getFullYear() - fn.getFullYear()
+        const mm = hoy.getMonth() - fn.getMonth()
+        if (mm < 0 || (mm === 0 && hoy.getDate() < fn.getDate())) e--
+        if (e >= 0 && e < 130) edad = e
+      }
 
-      // Prescripcion
-      doc.font('Helvetica-Bold').fontSize(20).fillColor('#111111').text('Rp/')
-      doc.moveDown(0.3)
-      doc.font('Helvetica').fontSize(11)
+      // ── Membrete ───────────────────────────────────────────────
+      doc.font('Helvetica-Bold').fontSize(16).fillColor(BRAND)
+        .text(consultorio?.nombre ?? 'Consultorio', left, y)
+      y = doc.y
+      const sub = [consultorio?.direccion, consultorio?.telefono ? `Tel: ${consultorio.telefono}` : null]
+        .filter(Boolean).join('   ·   ')
+      if (sub) {
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED).text(sub, left, y + 2)
+        y = doc.y
+      }
+      y += 7
+      doc.moveTo(left, y).lineTo(right, y).lineWidth(1.5).strokeColor(BRAND).stroke()
+      y += 18
+
+      // ── Titulo + fecha de emision ──────────────────────────────
+      doc.font('Helvetica-Bold').fontSize(13).fillColor(INK)
+        .text('RECETA MÉDICA', left, y, { characterSpacing: 0.3 })
+      doc.font('Helvetica').fontSize(9.5).fillColor(MUTED)
+        .text(fecha, left, y + 3, { width: contentW, align: 'right' })
+      y += 26
+
+      // ── Panel del paciente ─────────────────────────────────────
+      const padX = 12
+      const innerW = contentW - padX * 2
+      const nombrePaciente = `${paciente.nombre} ${paciente.apellido}`
+      const metaParts: string[] = []
+      if (paciente.dni) metaParts.push(`CI: ${paciente.dni}`)
+      if (edad != null) metaParts.push(`${edad} ${edad === 1 ? 'año' : 'años'}`)
+      metaParts.push(`Atendido: ${fechaHora.toLocaleDateString('es-BO')}`)
+      const metaLine = metaParts.join('   ·   ')
+
+      doc.font('Helvetica-Bold').fontSize(12)
+      const nameH = doc.heightOfString(nombrePaciente, { width: innerW })
+      doc.font('Helvetica').fontSize(9)
+      const metaH = doc.heightOfString(metaLine, { width: innerW })
+      const panelH = 10 + 9 + 2 + nameH + 3 + metaH + 10
+
+      doc.lineWidth(1)
+      doc.roundedRect(left, y, contentW, panelH, 6).fillAndStroke(PANEL, PANEL_BORDER)
+
+      let py = y + 10
+      doc.font('Helvetica-Bold').fontSize(7.5).fillColor(BRAND)
+        .text('PACIENTE', left + padX, py, { characterSpacing: 0.8 })
+      py = doc.y + 1
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(INK)
+        .text(nombrePaciente, left + padX, py, { width: innerW })
+      py = doc.y + 3
+      doc.font('Helvetica').fontSize(9).fillColor(MUTED)
+        .text(metaLine, left + padX, py, { width: innerW })
+
+      y += panelH + 20
+
+      // ── Prescripcion ───────────────────────────────────────────
+      doc.font('Helvetica-BoldOblique').fontSize(22).fillColor(BRAND).text('Rp/', left, y)
+      y = doc.y + 8
+
       contenido.medicamentos.forEach((m, i) => {
-        doc.text(`${i + 1}.  ${m}`, { paragraphGap: 4 })
+        const rowY = y
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(BRAND)
+          .text(`${i + 1}.`, left + 4, rowY, { width: 20 })
+        doc.font('Helvetica').fontSize(11).fillColor(INK)
+          .text(m, left + 28, rowY, { width: contentW - 28, lineGap: 1 })
+        y = doc.y + 7
       })
+
+      // ── Indicaciones ───────────────────────────────────────────
       if (contenido.indicaciones) {
-        doc.moveDown(0.6)
-        doc.font('Helvetica-Bold').fontSize(10).text('Indicaciones:')
-        doc.font('Helvetica').fontSize(10).text(contenido.indicaciones)
+        y += 6
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(BRAND)
+          .text('INDICACIONES', left, y, { characterSpacing: 0.8 })
+        y = doc.y + 3
+        doc.font('Helvetica').fontSize(10).fillColor(INK)
+          .text(contenido.indicaciones, left, y, { width: contentW, lineGap: 2.5 })
       }
 
-      // Firma al pie
-      const yFirma = doc.page.height - doc.page.margins.bottom - 64
-      doc.moveTo(doc.page.width / 2 - 10, yFirma).lineTo(doc.page.width - doc.page.margins.right, yFirma)
-        .lineWidth(0.8).strokeColor('#999999').stroke()
-      doc.font('Helvetica').fontSize(9).fillColor('#111111')
-        .text(doctor.nombre, doc.page.width / 2 - 10, yFirma + 6, { width: doc.page.width / 2 - doc.page.margins.right + 10, align: 'center' })
+      // ── Firma al pie ───────────────────────────────────────────
+      const sigW = 190
+      const sigX = right - sigW
+      const sigY = doc.page.height - doc.page.margins.bottom - 58
+      doc.moveTo(sigX, sigY).lineTo(right, sigY).lineWidth(0.8).strokeColor(FAINT).stroke()
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(INK)
+        .text(doctor.nombre, sigX, sigY + 7, { width: sigW, align: 'center' })
       if (doctor.especialidad) {
-        doc.fontSize(8).fillColor('#555555')
-          .text(doctor.especialidad, { width: doc.page.width / 2 - doc.page.margins.right + 10, align: 'center' })
+        doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
+          .text(doctor.especialidad, sigX, doc.y + 1, { width: sigW, align: 'center' })
       }
+      doc.font('Helvetica').fontSize(7.5).fillColor(FAINT)
+        .text('Firma y sello', sigX, doc.y + 3, { width: sigW, align: 'center' })
 
       doc.end()
     })

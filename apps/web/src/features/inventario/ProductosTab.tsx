@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Plus, Package, AlertTriangle, EyeOff } from 'lucide-react'
+import { Search, Plus, Package, AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { formatMoneda, cn } from '../../lib/utils'
 import { inputUI, btnPrimaryUI, cardUI } from '../../lib/ui'
@@ -70,8 +70,8 @@ export function ProductosTab() {
   return (
     <div className="space-y-4">
       {/* Barra de herramientas: buscar + archivados + nuevo */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 sm:max-w-md">
+      <div className="flex flex-row items-center gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0 sm:max-w-md">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70"
             aria-hidden="true"
@@ -84,13 +84,29 @@ export function ProductosTab() {
             className={cn(inputUI, 'pl-9')}
           />
         </div>
+        {/* Mostrar archivados (toggle). En celular: solo el ojito (Eye cuando
+            estan visibles, EyeOff cuando no). En sm+: el switch con texto. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={todos}
+          onClick={() => setTodos((v) => !v)}
+          aria-label="Mostrar archivados"
+          title={todos ? 'Ocultar archivados' : 'Mostrar archivados'}
+          className={cn(
+            'sm:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+            todos ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15' : 'border-input bg-card text-muted-foreground hover:bg-muted/40',
+          )}
+        >
+          {todos ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}
+        </button>
         <button
           type="button"
           role="switch"
           aria-checked={todos}
           onClick={() => setTodos((v) => !v)}
           className={cn(
-            'inline-flex h-11 items-center gap-2.5 rounded-lg border px-4 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+            'max-sm:hidden inline-flex h-11 items-center gap-2.5 rounded-lg border px-4 text-sm font-medium cursor-pointer transition-colors duration-150 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
             todos ? 'border-input bg-muted/60 text-foreground' : 'border-input bg-card text-muted-foreground hover:bg-muted/40',
           )}
         >
@@ -110,8 +126,9 @@ export function ProductosTab() {
           </span>
           Mostrar archivados
         </button>
-        <button onClick={() => setModalNuevo(true)} className={cn(btnPrimaryUI, 'shrink-0')}>
-          <Plus className="h-4 w-4" aria-hidden="true" /> Nuevo producto
+        <button onClick={() => setModalNuevo(true)} className={cn(btnPrimaryUI, 'shrink-0')} aria-label="Nuevo producto">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Nuevo producto</span>
         </button>
       </div>
 

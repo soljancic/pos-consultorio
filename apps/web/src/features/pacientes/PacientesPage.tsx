@@ -86,33 +86,40 @@ export function PacientesPage() {
             <span className="text-sm font-normal text-muted-foreground tabular-nums">{total}</span>
           )}
         </h1>
-        <div className="relative flex-1 sm:max-w-md sm:mx-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
-          <input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Buscar por nombre, CI, teléfono..."
-            aria-label="Buscar pacientes"
-            className={cn(inputUI, 'pl-9')}
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {esAdmin ? (
-            <SplitButton
-              label="Nuevo paciente"
-              icon={Plus}
-              onPrimary={() => setModalNuevo(true)}
-              items={[
-                { label: 'Importar XLSX', icon: Upload, onClick: () => setModalImport(true) },
-                { label: 'Exportar', icon: Download, onClick: () => descargarBlob('/pacientes/export', 'pacientes.xlsx') },
-              ]}
+        {/* En celular: buscador y "+" en la misma fila. En sm+ el wrapper es
+            `contents` y desaparece, dejando titulo | buscador | acciones como
+            antes (buscador centrado con mx-auto, acciones a la derecha). */}
+        <div className="flex items-center gap-2 sm:contents">
+          <div className="relative flex-1 sm:max-w-md sm:mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Buscar por nombre, CI, teléfono..."
+              aria-label="Buscar pacientes"
+              className={cn(inputUI, 'pl-9')}
             />
-          ) : (
-            <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> Nuevo paciente
-            </button>
-          )}
-          <CampanaHeader />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {esAdmin ? (
+              <SplitButton
+                label="Nuevo paciente"
+                labelClassName="hidden sm:inline"
+                icon={Plus}
+                onPrimary={() => setModalNuevo(true)}
+                items={[
+                  { label: 'Importar XLSX', icon: Upload, onClick: () => setModalImport(true) },
+                  { label: 'Exportar', icon: Download, onClick: () => descargarBlob('/pacientes/export', 'pacientes.xlsx') },
+                ]}
+              />
+            ) : (
+              <button onClick={() => setModalNuevo(true)} className={btnPrimaryUI} aria-label="Nuevo paciente">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Nuevo paciente</span>
+              </button>
+            )}
+            <CampanaHeader />
+          </div>
         </div>
       </div>
 

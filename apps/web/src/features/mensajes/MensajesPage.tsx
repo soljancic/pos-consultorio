@@ -91,7 +91,7 @@ export function MensajesPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className={chipIconUI}>
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -104,19 +104,30 @@ export function MensajesPage() {
                 role="tab"
                 aria-selected={tab === t}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'px-2.5 sm:px-4 py-1.5 rounded-md text-sm font-medium capitalize cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}>
                 {t}
               </button>
             ))}
           </div>
+          {/* Generar cola: en celular solo el icono, al lado de los tabs (1ra
+              fila). En sm+ se oculta aca y aparece a la derecha con texto. */}
+          <button
+            onClick={() => generar.mutate()}
+            disabled={generar.isPending}
+            aria-label={generar.isPending ? 'Generando cola...' : 'Generar cola'}
+            title="Generar cola"
+            className="sm:hidden inline-flex items-center justify-center h-9 w-9 shrink-0 rounded-lg border border-input bg-card text-foreground hover:bg-muted/60 cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
+          >
+            <RefreshCw className={cn('h-4 w-4', generar.isPending && 'animate-spin')} aria-hidden="true" />
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => generar.mutate()}
             disabled={generar.isPending}
-            className={btnOutlineUI}
+            className={cn(btnOutlineUI, 'max-sm:hidden')}
           >
             <RefreshCw className={cn('h-4 w-4', generar.isPending && 'animate-spin')} aria-hidden="true" />
             {generar.isPending ? 'Generando...' : 'Generar cola'}

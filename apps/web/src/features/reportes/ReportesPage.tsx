@@ -53,12 +53,18 @@ export function ReportesPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card print:hidden">
-        <div className="flex flex-wrap items-center gap-4">
+        {/* En celular el grupo es `contents`: titulo y carrusel de tabs pasan a
+            ser hijos directos del header, asi el tablist ocupa el ancho completo
+            (w-full) y scrollea en 1 sola linea. En sm+ reagrupa titulo + tabs. */}
+        <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-4">
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <span className={chipIconUI}><BarChart3 className="h-4 w-4" aria-hidden="true" /></span>
             Reportes
           </h1>
-          <div className="flex flex-wrap gap-1" role="tablist">
+          <div
+            role="tablist"
+            className="order-last w-full flex gap-1 overflow-x-auto sm:order-none sm:w-auto sm:flex-wrap sm:overflow-visible"
+          >
             {tabs.map((t) => (
               <button
                 key={t}
@@ -66,7 +72,7 @@ export function ReportesPage() {
                 aria-selected={tab === t}
                 onClick={() => cambiarTab(t)}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
+                  'shrink-0 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-medium cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150',
                   tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}
               >

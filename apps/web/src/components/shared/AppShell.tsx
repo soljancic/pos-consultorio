@@ -502,7 +502,10 @@ export function AppShell() {
           <NotificacionesBell className="h-10 w-10 rounded-md text-teal-200 hover:bg-white/10 hover:text-white shrink-0" />
         </header>
 
-        <main className="flex-1 overflow-auto scrollbar-thin">
+        {/* overflow-x-hidden (no overflow-auto): la pagina NUNCA scrollea en
+            horizontal. El contenido ancho a proposito (grillas dia/semana/mes,
+            tablas) debe llevar su propia caja con overflow-x-auto. */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
           <Outlet />
         </main>
       </div>

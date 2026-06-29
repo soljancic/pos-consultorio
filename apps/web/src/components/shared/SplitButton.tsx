@@ -10,11 +10,14 @@ export function SplitButton({
   icon: Icon,
   onPrimary,
   items,
+  labelClassName,
 }: {
   label: string
   icon?: LucideIcon
   onPrimary: () => void
   items: SplitMenuItem[]
+  // Clases para el texto del label (ej: "hidden sm:inline" para icono solo en celular)
+  labelClassName?: string
 }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -47,10 +50,11 @@ export function SplitButton({
       <button
         type="button"
         onClick={onPrimary}
+        aria-label={label}
         className={cn(btnPrimaryUI, 'rounded-r-none')}
       >
         {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
-        {label}
+        <span className={labelClassName}>{label}</span>
       </button>
 
       {/* Caret / menu toggle — Tweak 1: guaranteed 44×44px touch target */}

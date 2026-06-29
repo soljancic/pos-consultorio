@@ -112,7 +112,16 @@ export function CatalogoPage() {
                   tab === t.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                 )}
               >
-                {t.label}
+                {/* En celular la tab de finanzas se acorta a "Gastos y Cuentas"
+                    (en sm+ el nombre completo "Tipos de gasto y cuenta"). */}
+                {t.id === 'finanzas' ? (
+                  <>
+                    <span className="sm:hidden">Gastos y Cuentas</span>
+                    <span className="hidden sm:inline">{t.label}</span>
+                  </>
+                ) : (
+                  t.label
+                )}
               </button>
             ))}
           </div>

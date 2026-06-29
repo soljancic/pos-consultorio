@@ -2,16 +2,19 @@ import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
   isSameDay, isSameMonth, format,
 } from 'date-fns'
-import type { Cita } from '@pos/types'
+import { COLORES_ESTADO, type Cita } from '@pos/types'
 import { formatHora, cn } from '../../lib/utils'
 
 // Vista mensual: grilla 7 columnas (lunes primero) x 4-6 filas. Cada celda
-// muestra hasta 3 citas (hora + apellido, color del doctor) y "+N mas" si
-// desborda. Click en una celda -> vista diaria de ese dia.
+// muestra hasta 3 citas (hora + paciente, color del ESTADO igual que dia/semana)
+// y "+N mas" si desborda. Click en una celda -> vista diaria de ese dia.
 
 interface Props {
   mes: Date // cualquier dia del mes a mostrar
   citas: Cita[]
+  // Mostrar el doctor junto al paciente. Solo tiene sentido cuando se ven todos
+  // los doctores; si la agenda esta filtrada a uno, es redundante.
+  mostrarDoctor: boolean
   onCitaClick: (cita: Cita) => void
   onDiaClick: (dia: Date) => void
 }
@@ -19,7 +22,7 @@ interface Props {
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MAX_CHIPS = 3
 
-export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
+export function AgendaMesGrid({ mes, citas, mostrarDoctor, onCitaClick, onDiaClick }: Props) {
   const primero = startOfMonth(mes)
   const dias = eachDayOfInterval({
     start: startOfWeek(primero, { weekStartsOn: 1 }),
@@ -76,19 +79,30 @@ export function AgendaMesGrid({ mes, citas, onCitaClick, onDiaClick }: Props) {
                 </button>
                 <div className="flex-1 space-y-0.5">
                   {visibles.map((cita) => {
-                    const color = cita.doctor?.colorAgenda ?? '#94a3b8'
+                    // Color por ESTADO (igual que dia y semana): el color comunica
+                    // el estado de la cita en toda la agenda, no el doctor.
+                    const color = COLORES_ESTADO[cita.estado]
                     return (
                       <button
                         key={cita.id}
                         onClick={() => onCitaClick(cita)}
                         className="w-full rounded px-1 py-0.5 text-left text-[11px] leading-tight flex items-center gap-1 overflow-hidden hover:brightness-95 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring cursor-pointer transition-[filter] duration-150"
-                        style={{ backgroundColor: color + '22', border: `1px solid ${color}55` }}
-                        title={`${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`}
+                        style={{ backgroundColor: color + '26', border: `1px solid ${color}66` }}
+                        title={
+                          mostrarDoctor && cita.doctor?.nombre
+                            ? `${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido} · ${cita.doctor.nombre}`
+                            : `${formatHora(cita.fechaHora)} — ${cita.paciente?.nombre} ${cita.paciente?.apellido}`
+                        }
                       >
                         <span className="font-semibold tabular-nums text-foreground shrink-0">
                           {formatHora(cita.fechaHora)}
                         </span>
-                        <span className="text-foreground truncate">{cita.paciente?.nombre} {cita.paciente?.apellido}</span>
+                        <span className="text-foreground truncate">
+                          {cita.paciente?.nombre} {cita.paciente?.apellido}
+                          {mostrarDoctor && cita.doctor?.nombre && (
+                            <span className="text-muted-foreground"> · {cita.doctor.nombre}</span>
+                          )}
+                        </span>
                       </button>
                     )
                   })}

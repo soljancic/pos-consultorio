@@ -297,7 +297,7 @@ export function LiquidacionesPage() {
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-5 max-w-7xl mx-auto w-full">
 
         {/* Filtros */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 print:hidden">
           <FloatingSelect
             label="Aseguradora"
             value={aseguradoraId}
