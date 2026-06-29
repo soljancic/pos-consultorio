@@ -111,6 +111,37 @@ export class MensajesService {
     })
   }
 
+  // Al mandar el recordatorio desde la agenda (boton de WhatsApp): marca como
+  // ENVIADO el recordatorio encolado de esa cita, asi sale de la cola de
+  // pendientes sin tener que resolverlo a mano en la pagina Mensajes.
+  // SOLO si la cita es de HOY (mismo criterio local-day que generar()): un
+  // recordatorio de manana queda en la cola para enviarse manana. No-op si la
+  // cita no tiene recordatorio pendiente (todavia no se encolo, ya se resolvio, etc.).
+  async resolverPorCita(consultorioId: number, citaId: number, usuarioId: number) {
+    const mensaje = await this.prisma.mensajePendiente.findFirst({
+      where: {
+        consultorioId,
+        citaId,
+        tipo: TipoMensaje.RECORDATORIO,
+        estado: EstadoMensaje.PENDIENTE,
+      },
+      include: { cita: { select: { fechaHora: true } } },
+    })
+    if (!mensaje?.cita) return { resuelto: false }
+
+    const ahora = new Date()
+    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+    const inicioManana = new Date(inicioHoy.getTime() + 24 * 60 * 60 * 1000)
+    const esHoy = mensaje.cita.fechaHora >= inicioHoy && mensaje.cita.fechaHora < inicioManana
+    if (!esHoy) return { resuelto: false }
+
+    await this.prisma.mensajePendiente.update({
+      where: { id: mensaje.id },
+      data: { estado: EstadoMensaje.ENVIADO, resueltoAt: new Date(), resueltoPorId: usuarioId },
+    })
+    return { resuelto: true }
+  }
+
   pendientesCount(consultorioId: number) {
     return this.prisma.mensajePendiente.count({
       where: { consultorioId, estado: EstadoMensaje.PENDIENTE },

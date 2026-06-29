@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { isSameDay } from 'date-fns'
 import { MessageCircle, DollarSign, ChevronRight, Stethoscope, MoreVertical, CalendarClock, Ban, UserX, Globe, Pencil } from 'lucide-react'
 import { EstadoCita, OrigenCita, COLORES_ESTADO, TRANSICIONES_VALIDAS, transicionValida, type Cita } from '@pos/types'
 import { formatHora, formatMoneda, abrirWhatsApp, fechaRelativa, cn } from '../../lib/utils'
 import { usePlantillasWhatsApp, renderRecordatorio } from '../../lib/whatsapp'
+import { api } from '../../lib/api-client'
+import { toast } from '../../stores/toast.store'
 import { btnIconUI, cardUI } from '../../lib/ui'
 import { useAuthStore } from '../../stores/auth.store'
 
@@ -129,6 +133,21 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
   const telefonoWhatsApp = cita.paciente?.telefono
 
   const { plantillas, consultorioNombre, direccion, ubicacionUrl } = usePlantillasWhatsApp()
+  const qc = useQueryClient()
+
+  // Mandar el recordatorio desde la agenda saca de la cola al recordatorio
+  // encolado de esa cita (solo si es de hoy; el backend lo valida). No-op si no
+  // habia ninguno pendiente. Falla en silencio: el WhatsApp ya se mando igual.
+  const marcarRecordatorioEnviado = useMutation({
+    mutationFn: () =>
+      api.put(`/mensajes/cita/${cita.id}/enviado`).then((r) => r.data as { resuelto: boolean }),
+    onSuccess: (data) => {
+      if (!data.resuelto) return
+      qc.invalidateQueries({ queryKey: ['mensajes-pendientes-count'] }) // badge del nav
+      qc.invalidateQueries({ queryKey: ['mensajes'] })
+      toast.success('Recordatorio marcado como enviado')
+    },
+  })
 
   function handleWhatsApp() {
     if (!telefonoWhatsApp) return
@@ -139,6 +158,10 @@ export function CitaCard({ cita, onCambiarEstado, onCobrar, onAtencion, onReprog
       consultorio: consultorioNombre,
     }, { direccion, linkGoogleMaps: ubicacionUrl })
     abrirWhatsApp(telefonoWhatsApp, msg, cita.paciente?.pais)
+    // Solo citas de hoy salen de la cola de pendientes (pedido del owner).
+    if (isSameDay(new Date(cita.fechaHora), new Date())) {
+      marcarRecordatorioEnviado.mutate()
+    }
   }
 
   return (

@@ -33,6 +33,17 @@ export class MensajesController {
     return this.service.generar(user.consultorioId)
   }
 
+  // Ruta literal antes que la parametrizada (:id). Lo usa el boton de WhatsApp
+  // de la agenda: al mandar el recordatorio de una cita de hoy, lo saca de la cola.
+  @Put('cita/:citaId/enviado')
+  @ApiOperation({ summary: 'Marca como ENVIADO el recordatorio de una cita de hoy (al enviarlo desde la agenda)' })
+  resolverPorCita(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+  ) {
+    return this.service.resolverPorCita(user.consultorioId, citaId, user.sub)
+  }
+
   @Put(':id/resolver')
   @ApiOperation({ summary: 'Marcar un mensaje como ENVIADO u OMITIDO' })
   resolver(
