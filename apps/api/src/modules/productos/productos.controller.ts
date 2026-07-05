@@ -50,7 +50,7 @@ export class ProductosController {
   @Put(':id')
   @Roles(Rol.ADMIN)
   update(@CurrentUser() user: JwtPayload, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductoDto) {
-    return this.service.update(user.consultorioId, id, dto)
+    return this.service.update(user.consultorioId, id, dto, user.sub)
   }
 
   @Delete(':id')

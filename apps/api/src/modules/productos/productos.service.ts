@@ -126,13 +126,42 @@ export class ProductosService {
     })
   }
 
-  async update(consultorioId: number, id: number, dto: UpdateProductoDto) {
+  async update(consultorioId: number, id: number, dto: UpdateProductoDto, usuarioId: number) {
     const p = await this.prisma.producto.findFirst({ where: { id, consultorioId, deletedAt: null } })
     if (!p) throw new NotFoundException('Producto no encontrado')
     if (dto.codigoBarras !== undefined && dto.codigoBarras !== p.codigoBarras) {
       await this.validarCodigoUnico(consultorioId, dto.codigoBarras, id)
     }
-    return this.prisma.producto.update({ where: { id }, data: dto })
+
+    const ajustaStock = dto.stockActual !== undefined && dto.stockActual !== p.stockActual
+    if (!ajustaStock) {
+      return this.prisma.producto.update({ where: { id }, data: dto })
+    }
+
+    // Ajuste manual de stock: condicionado al valor leido (si una venta o
+    // devolucion concurrente lo movio, abortar en vez de pisar su decrement)
+    // y auditado en logs como todo movimiento de inventario.
+    return this.prisma.$transaction(async (tx) => {
+      const ok = await tx.producto.updateMany({
+        where: { id, consultorioId, stockActual: p.stockActual },
+        data: dto,
+      })
+      if (ok.count === 0) {
+        throw new ConflictException('El stock cambio mientras editabas (venta o devolucion): recarga e intenta de nuevo')
+      }
+      await tx.log.create({
+        data: {
+          consultorioId,
+          usuarioId,
+          entidad: 'Producto',
+          entidadId: id,
+          accion: 'UPDATE',
+          payloadAntes: { stockActual: p.stockActual },
+          payloadDespues: { stockActual: dto.stockActual, motivo: 'ajuste manual de stock' },
+        },
+      })
+      return tx.producto.findFirstOrThrow({ where: { id, consultorioId } })
+    })
   }
 
   // Si el producto fue usado en algun cobro, no se borra: se archiva

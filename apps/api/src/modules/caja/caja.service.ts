@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
-import { IsNumber, Min, IsString, IsOptional } from 'class-validator'
+import { IsNumber, Min, IsString, IsOptional, IsDateString } from 'class-validator'
 import { Decimal } from '../../common/decimal'
 import { PrismaService } from '../../prisma/prisma.service'
 import { MailService } from '../mail/mail.service'
 
 export class AbrirCajaDto {
   // Caja chica con la que arranca la jornada
-  @IsNumber() @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
   montoInicial: number
 
   @IsString() @IsOptional()
@@ -15,7 +15,7 @@ export class AbrirCajaDto {
 
 export class CerrarCajaDto {
   // Arqueo ciego: el efectivo contado se declara SIN ver el esperado
-  @IsNumber() @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
   montoDeclarado: number
 
   @IsString() @IsOptional()
@@ -25,6 +25,16 @@ export class CerrarCajaDto {
 export class RevisarCajaDto {
   @IsString() @IsOptional()
   nota?: string
+}
+
+export class HistorialCajaDto {
+  // Sin validar, un desde/hasta ausente o basura llegaba a new Date() y
+  // Prisma tiraba un 500 con Invalid Date
+  @IsDateString()
+  desde: string
+
+  @IsDateString()
+  hasta: string
 }
 
 // El dia de caja es el dia LOCAL del negocio (server en el timezone del
@@ -153,7 +163,12 @@ export class CajaService {
     // el resto (banco/otro) se informa pero no toca el efectivo fisico
     const { egresosEfectivo, egresosTotales } = await this.egresosDelDia(consultorioId)
 
-    return { caja, pagos, desglosePagos, pagosDeudaAnterior, nuevasDeudas, egresosEfectivo, egresosTotales }
+    // El API expone numbers (contrato con el front); el Decimal es para el arqueo
+    return {
+      caja, pagos, desglosePagos, pagosDeudaAnterior, nuevasDeudas,
+      egresosEfectivo: Number(egresosEfectivo),
+      egresosTotales: Number(egresosTotales),
+    }
   }
 
   private async egresosDelDia(consultorioId: number) {
@@ -162,10 +177,15 @@ export class CajaService {
       where: { consultorioId, fecha: hoy, deletedAt: null },
       select: { monto: true, tipoCuenta: { select: { esEfectivo: true } } },
     })
-    const egresosTotales = gastos.reduce((acc, g) => acc + Number(g.monto), 0)
-    const egresosEfectivo = gastos
-      .filter((g) => g.tipoCuenta.esEfectivo)
-      .reduce((acc, g) => acc + Number(g.monto), 0)
+    // Decimal de punta a punta: sumar floats (10.10 + 20.20 = 30.2999...)
+    // generaba una `diferencia` fantasma de ~1e-15 en el arqueo y el cierre
+    // quedaba pendiente de revision sin motivo.
+    let egresosTotales = new Decimal(0)
+    let egresosEfectivo = new Decimal(0)
+    for (const g of gastos) {
+      egresosTotales = egresosTotales.plus(g.monto)
+      if (g.tipoCuenta.esEfectivo) egresosEfectivo = egresosEfectivo.plus(g.monto)
+    }
     return { egresosEfectivo, egresosTotales }
   }
 
@@ -183,8 +203,8 @@ export class CajaService {
       )
     }
 
-    const [caja] = await this.prisma.$transaction([
-      this.prisma.cajaDiaria.create({
+    const caja = await this.prisma.$transaction(async (tx) => {
+      const creada = await tx.cajaDiaria.create({
         data: {
           consultorioId,
           fecha: hoy,
@@ -193,18 +213,19 @@ export class CajaService {
           montoInicial: new Decimal(dto.montoInicial),
           notasApertura: dto.notasApertura,
         },
-      }),
-      this.prisma.log.create({
+      })
+      await tx.log.create({
         data: {
           consultorioId,
           usuarioId,
           entidad: 'CajaDiaria',
-          entidadId: 0,
+          entidadId: creada.id,
           accion: 'CREATE',
           payloadDespues: { montoInicial: dto.montoInicial, notas: dto.notasApertura ?? null },
         },
-      }),
-    ])
+      })
+      return creada
+    })
     return caja
   }
 
@@ -284,7 +305,7 @@ export class CajaService {
     esperado: Decimal,
     declarado: Decimal,
     diferencia: Decimal,
-    egresosEfectivo: number,
+    egresosEfectivo: Decimal,
     usuarioCierreId: number,
   ) {
     const consultorio = await this.prisma.consultorio.findUnique({
@@ -420,11 +441,11 @@ export class CajaService {
     return actualizada
   }
 
-  async getHistorial(consultorioId: number, desde: string, hasta: string) {
+  async getHistorial(consultorioId: number, dto: HistorialCajaDto) {
     return this.prisma.cajaDiaria.findMany({
       where: {
         consultorioId,
-        fecha: { gte: new Date(desde), lte: new Date(hasta) },
+        fecha: { gte: new Date(dto.desde), lte: new Date(dto.hasta) },
       },
       orderBy: { fecha: 'desc' },
     })

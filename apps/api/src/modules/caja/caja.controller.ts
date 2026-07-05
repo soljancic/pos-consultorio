@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { CajaService, AbrirCajaDto, CerrarCajaDto, RevisarCajaDto } from './caja.service'
+import { CajaService, AbrirCajaDto, CerrarCajaDto, RevisarCajaDto, HistorialCajaDto } from './caja.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { Rol } from '@pos/types'
@@ -49,11 +49,7 @@ export class CajaController {
   }
 
   @Get('historial')
-  getHistorial(
-    @CurrentUser() user: JwtPayload,
-    @Query('desde') desde: string,
-    @Query('hasta') hasta: string,
-  ) {
-    return this.service.getHistorial(user.consultorioId, desde, hasta)
+  getHistorial(@CurrentUser() user: JwtPayload, @Query() query: HistorialCajaDto) {
+    return this.service.getHistorial(user.consultorioId, query)
   }
 }

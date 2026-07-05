@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
-import { PortalService, ReservaPortalDto, DiasDisponiblesQueryDto, ReprogramarPublicoDto } from './portal.service'
+import { PortalService, ReservaPortalDto, DiasDisponiblesQueryDto, SlotsQueryDto, ReprogramarPublicoDto } from './portal.service'
 import { Public } from '../../common/decorators/public.decorator'
 
 // Superficie PUBLICA (sin auth): rate limit estricto y cero enumeracion.
@@ -62,13 +62,8 @@ export class PortalController {
   @Throttle({ default: { ttl: 60_000, limit: 60 } })
   @Get(':slug/slots')
   @ApiOperation({ summary: 'Horas libres del doctor para un servicio y fecha' })
-  slots(
-    @Param('slug') slug: string,
-    @Query('doctorId', ParseIntPipe) doctorId: number,
-    @Query('servicioId', ParseIntPipe) servicioId: number,
-    @Query('fecha') fecha: string,
-  ) {
-    return this.service.slots(slug, doctorId, servicioId, fecha)
+  slots(@Param('slug') slug: string, @Query() q: SlotsQueryDto) {
+    return this.service.slots(slug, q.doctorId, q.servicioId, q.fecha)
   }
 
   @Public()

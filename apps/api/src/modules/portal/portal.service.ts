@@ -63,6 +63,19 @@ export class DiasDisponiblesQueryDto {
   mes: string
 }
 
+// Query de horarios libres de un dia: sin validar, una fecha ausente o basura
+// llegaba a new Date() y terminaba en un 500
+export class SlotsQueryDto {
+  @IsInt()
+  doctorId: number
+
+  @IsInt()
+  servicioId: number
+
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { message: 'fecha debe ser YYYY-MM-DD' })
+  fecha: string
+}
+
 // Reprogramacion publica: el paciente solo elige doctor + nueva fecha/hora
 export class ReprogramarPublicoDto {
   @IsInt()

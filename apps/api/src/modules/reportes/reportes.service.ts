@@ -210,20 +210,27 @@ export class ReportesService {
       cuentas.set(p.tipoCuenta.nombre, (cuentas.get(p.tipoCuenta.nombre) ?? 0) + m)
     }
 
-    // Deuda pendiente del periodo: citas en rango + ventas directas (sin cita)
-    // creadas en rango. Al filtrar por doctor la venta directa queda fuera (no
-    // tiene doctor), igual que en la lista de pagos.
+    // Deuda pendiente del periodo: misma definicion de deuda REAL que Deudores
+    // (cobros con saldo de citas ATENDIDA/CON_DEUDA + ventas directas con
+    // paciente). Sin estos filtros, cada cita cancelada (cobro ANULADO con su
+    // saldo intacto) y cada cita futura inflaban el KPI. Al filtrar por doctor
+    // la venta directa queda fuera (no tiene doctor), igual que en los pagos.
     const deudaAgg = await this.prisma.cobro.aggregate({
       _sum: { saldoPendiente: true },
       where: {
         consultorioId,
+        saldoPendiente: { gt: 0 },
+        estado: { not: 'ANULADO' },
         OR: [
           { cita: {
             fechaHora: { gte: ini, lt: fin },
+            estado: { in: ['ATENDIDA', 'CON_DEUDA'] },
+            deletedAt: null,
             ...(doctorId !== undefined && { doctorId }),
           } },
           ...(doctorId !== undefined ? [] : [{
             citaId: null,
+            pacienteId: { not: null },
             createdAt: { gte: ini, lt: fin },
           }]),
         ],
@@ -272,7 +279,10 @@ export class ReportesService {
         cobro: {
           estado: { not: 'ANULADO' },
           OR: [
-            { cita: { fechaHora: { gte: ini, lt: fin } } },
+            // Solo ventas confirmadas (cita ya salio de ATENDIDA): el carrito
+            // sin confirmar no desconto stock ni es venta todavia. Mismo
+            // criterio que listarDetalleVentas en cobros.
+            { cita: { fechaHora: { gte: ini, lt: fin }, estado: { in: ['COBRADO', 'CON_DEUDA'] } } },
             { citaId: null, createdAt: { gte: ini, lt: fin } },
           ],
         },

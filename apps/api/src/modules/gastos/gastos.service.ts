@@ -149,6 +149,21 @@ export class GastosService {
     })
     if (!gasto) throw new NotFoundException('Gasto no encontrado')
 
+    // Igual que en create: el tipo y la cuenta deben ser del mismo consultorio
+    // (sin esto se podia colgar el gasto de un tipoCuentaId ajeno)
+    if (dto.tipoGastoId !== undefined) {
+      const tg = await this.prisma.tipoGasto.findFirst({
+        where: { id: dto.tipoGastoId, consultorioId },
+      })
+      if (!tg) throw new NotFoundException('Tipo de gasto no encontrado')
+    }
+    if (dto.tipoCuentaId !== undefined) {
+      const tc = await this.prisma.tipoCuenta.findFirst({
+        where: { id: dto.tipoCuentaId, consultorioId },
+      })
+      if (!tc) throw new NotFoundException('Tipo de cuenta no encontrado')
+    }
+
     const actualizado = await this.prisma.gasto.update({
       where: { id },
       data: {

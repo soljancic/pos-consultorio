@@ -135,7 +135,9 @@ export class AuthService {
     })
 
     if (!usuario) {
-      throw new UnauthorizedException(`No existe una cuenta activa para ${email}. Solicita al administrador que cree tu usuario.`)
+      // Mensaje generico (igual que el login con password): no confirmar si
+      // una cuenta existe o no a partir del email
+      throw new UnauthorizedException('No se pudo iniciar sesión con esa cuenta. Si no tenés usuario, pedile al administrador que lo cree.')
     }
 
     const tokens = await this.buildTokens(
