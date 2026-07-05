@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto'
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common'
 import { IsString, IsNotEmpty, IsOptional, IsEmail, IsISO8601, IsIn, IsBoolean, IsInt, Matches, ValidateIf, validateSync } from 'class-validator'
 import { plainToInstance } from 'class-transformer'
-import { PartialType } from '@nestjs/swagger'
+import { OmitType, PartialType } from '@nestjs/swagger'
 import { EstadoCita } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { parseWorkbook, buildWorkbook, buildSample, type FilaPaciente } from './pacientes.xlsx'
@@ -56,11 +56,38 @@ export class CreatePacienteDto {
   codigoSeguro?: string
 }
 
-export class UpdatePacienteDto extends PartialType(CreatePacienteDto) {
+// Editar permite LIMPIAR los opcionales: el front manda null explicito
+// (undefined significa "no tocar" y Prisma lo saltea, asi que borrar un
+// telefono y guardar no hacia nada). Esos campos se sacan de la herencia
+// (OmitType) y se redeclaran aceptando null; @IsOptional saltea la
+// validacion en null. pais NO va aca: la columna no es nullable (default "BO").
+const CAMPOS_LIMPIABLES = ['dni', 'telefono', 'email', 'fechaNacimiento', 'sexo', 'direccion', 'notas'] as const
+
+export class UpdatePacienteDto extends PartialType(OmitType(CreatePacienteDto, CAMPOS_LIMPIABLES)) {
   // E3 item 11: el staff puede marcar/desmarcar el prepago manualmente
   // (ademas del auto-flag al tercer no-show)
   @IsBoolean() @IsOptional()
   requierePrepago?: boolean
+  @IsString() @IsOptional()
+  dni?: string | null
+
+  @IsString() @IsOptional()
+  telefono?: string | null
+
+  @IsEmail() @IsOptional()
+  email?: string | null
+
+  @IsISO8601() @IsOptional()
+  fechaNacimiento?: string | null
+
+  @IsIn(['M', 'F', 'X']) @IsOptional()
+  sexo?: string | null
+
+  @IsString() @IsOptional()
+  direccion?: string | null
+
+  @IsString() @IsOptional()
+  notas?: string | null
 }
 
 export class SetActivoDto {
@@ -307,7 +334,12 @@ export class PacientesService {
         ...rest,
         ...(dto.nombre !== undefined && { nombre }),
         ...(dto.apellido !== undefined && { apellido }),
-        fechaNacimiento: dto.fechaNacimiento ? new Date(dto.fechaNacimiento) : undefined,
+        // null = limpiar la fecha; undefined = no tocarla
+        fechaNacimiento: dto.fechaNacimiento === null
+          ? null
+          : dto.fechaNacimiento
+            ? new Date(dto.fechaNacimiento)
+            : undefined,
         ...seguroData,
       },
     })

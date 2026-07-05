@@ -53,10 +53,18 @@ export function PacienteModal({ paciente, onClose, onCreated }: Props) {
     // Opcionales vacios viajan como undefined: @IsEmail/@IsISO8601/@IsIn
     // del backend rechazan el string vacio.
     mutationFn: (data: typeof form) => {
-      // Paso 1: mapeo generico '' → undefined para los campos de texto
+      // Paso 1: mapeo generico de los campos de texto vacios. Al CREAR viajan
+      // como undefined (los validadores rechazan ''); al EDITAR los opcionales
+      // limpiables viajan como null EXPLICITO para que el backend borre el
+      // valor (undefined = "no tocar" en Prisma: borrar un telefono y guardar
+      // no hacia nada). pais queda fuera: la columna no es nullable.
+      const LIMPIABLES = new Set(['dni', 'telefono', 'email', 'fechaNacimiento', 'sexo', 'direccion', 'notas'])
       const { tieneSeguro, aseguradoraId, categoriaSeguroId, codigoSeguro, ...rest } = data
       const payload: Record<string, unknown> = Object.fromEntries(
-        Object.entries(rest).map(([k, v]) => [k, v === '' ? undefined : v])
+        Object.entries(rest).map(([k, v]) => [
+          k,
+          v === '' ? (editando && LIMPIABLES.has(k) ? null : undefined) : v,
+        ])
       )
       // El DTO de alta no acepta requierePrepago (solo se edita)
       if (!editando) delete payload.requierePrepago
