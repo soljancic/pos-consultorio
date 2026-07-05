@@ -3,6 +3,7 @@ import './instrument'
 
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
@@ -24,7 +25,12 @@ function validarSecretsProduccion() {
 async function bootstrap() {
   validarSecretsProduccion()
 
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+
+  // Detras del proxy de Railway: sin esto req.ip es la IP del proxy y el
+  // rate limiting (login, registro, reservas del portal) colapsa en un solo
+  // bucket compartido por todos los visitantes. 1 = confiar en el primer hop.
+  app.set('trust proxy', 1)
 
   // Permite que Sentry vacie eventos pendientes al apagar el proceso
   app.enableShutdownHooks()

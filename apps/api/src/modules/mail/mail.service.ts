@@ -61,6 +61,26 @@ export class MailService {
     }
   }
 
+  // Escape para texto interpolado en el HTML de los emails: datos cargados
+  // por usuarios/pacientes (el nombre del portal publico es la via critica,
+  // llega de un endpoint sin auth) no pueden inyectar markup en un correo
+  // que sale firmado por el dominio del consultorio.
+  private esc(s: string | null | undefined): string {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
+  // Solo http(s) para links que vienen de configuracion (ubicacionUrl):
+  // cualquier otro scheme no entra a un href del email.
+  private urlSegura(u?: string | null): string | null {
+    const t = (u ?? '').trim()
+    return /^https?:\/\//i.test(t) ? t : null
+  }
+
   private webBase() {
     return (process.env.WEB_URL ?? 'http://localhost:5173').replace(/\/$/, '')
   }
@@ -109,9 +129,11 @@ export class MailService {
   }
 
   htmlInvitacion(nombre: string, consultorio: string, link: string) {
+    const n = this.esc(nombre)
+    const c = this.esc(consultorio)
     return this.layout(
-      `Bienvenido/a a ${consultorio}`,
-      `Hola ${nombre}: te crearon una cuenta en el sistema de ${consultorio}. Para empezar a usarla definí tu contraseña con el siguiente botón.`,
+      `Bienvenido/a a ${c}`,
+      `Hola ${n}: te crearon una cuenta en el sistema de ${c}. Para empezar a usarla definí tu contraseña con el siguiente botón.`,
       link,
       'Definir mi contraseña',
     )
@@ -138,19 +160,34 @@ export class MailService {
     // 'reprogramada' cambia titulo/intro; el resto del layout es identico
     modo?: 'confirmada' | 'reprogramada'
   }) {
-    const esReprog = datos.modo === 'reprogramada'
-    const titulo = esReprog ? 'Tu cita fue reprogramada' : 'Tu reserva fue confirmada'
-    const intro = esReprog
-      ? `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, actualizamos tu cita. Esta es tu nueva fecha y hora.`
-      : `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, nos alegra confirmar tu cita. Te esperamos.`
     const linkReprogramar =
       datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'reprogramar') : null
     const linkCancelar =
       datos.slug && datos.token ? this.linkPortalCita(datos.slug, datos.token, 'cancelar') : null
     const linkWa = this.linkWhatsApp(datos.telefono, datos.pais)
-    // El link de ubicacion: el de Google Maps cargado a mano, o uno armado de
-    // la direccion en texto como fallback.
-    const linkUbicacion = datos.ubicacionUrl?.trim() || this.linkMapa(datos.direccion)
+    // El link de ubicacion: el de Google Maps cargado a mano (solo http/https),
+    // o uno armado de la direccion en texto como fallback. Se calcula ANTES
+    // del escape para no encodear entidades en la query de Maps.
+    const linkUbicacion = this.urlSegura(datos.ubicacionUrl) || this.linkMapa(datos.direccion)
+
+    // Todo texto de usuario/paciente escapado antes de interpolarse en el HTML
+    datos = {
+      ...datos,
+      nombre: this.esc(datos.nombre),
+      consultorio: this.esc(datos.consultorio),
+      direccion: datos.direccion ? this.esc(datos.direccion) : datos.direccion,
+      telefono: datos.telefono ? this.esc(datos.telefono) : datos.telefono,
+      fecha: this.esc(datos.fecha),
+      hora: this.esc(datos.hora),
+      servicio: this.esc(datos.servicio),
+      doctor: this.esc(datos.doctor),
+    }
+
+    const esReprog = datos.modo === 'reprogramada'
+    const titulo = esReprog ? 'Tu cita fue reprogramada' : 'Tu reserva fue confirmada'
+    const intro = esReprog
+      ? `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, actualizamos tu cita. Esta es tu nueva fecha y hora.`
+      : `Hola <strong style="color:#0f172a">${datos.nombre}</strong>, nos alegra confirmar tu cita. Te esperamos.`
 
     // Boton de accion: fondo y borde van en el <td> (Outlook no dibuja bien
     // border/border-radius sobre <a>), y el <a display:block> da el area clickeable.
@@ -345,8 +382,21 @@ export class MailService {
     slug?: string | null
   }) {
     const linkWa = this.linkWhatsApp(datos.telefono, datos.pais)
-    const linkUbicacion = datos.ubicacionUrl?.trim() || this.linkMapa(datos.direccion)
+    const linkUbicacion = this.urlSegura(datos.ubicacionUrl) || this.linkMapa(datos.direccion)
     const linkReservar = datos.slug ? `${this.webBase()}/reservar/${datos.slug}` : null
+
+    // Todo texto de usuario/paciente escapado antes de interpolarse en el HTML
+    datos = {
+      ...datos,
+      nombre: this.esc(datos.nombre),
+      consultorio: this.esc(datos.consultorio),
+      direccion: datos.direccion ? this.esc(datos.direccion) : datos.direccion,
+      telefono: datos.telefono ? this.esc(datos.telefono) : datos.telefono,
+      fecha: this.esc(datos.fecha),
+      hora: this.esc(datos.hora),
+      servicio: this.esc(datos.servicio),
+      doctor: this.esc(datos.doctor),
+    }
 
     const linkInline = (href: string, texto: string, color: string) =>
       `<a href="${href}" style="color:${color};font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">${texto} &rsaquo;</a>`
@@ -449,6 +499,14 @@ export class MailService {
     hayDiferencia: boolean
     cantidadCobros: number
   }) {
+    // Nombres de usuario/cuenta escapados: tambien son texto cargado en la app
+    d = {
+      ...d,
+      consultorio: this.esc(d.consultorio),
+      abrioPor: this.esc(d.abrioPor),
+      cerroPor: this.esc(d.cerroPor),
+      cuentas: d.cuentas.map((c) => ({ nombre: this.esc(c.nombre), total: c.total })),
+    }
     const fila = (label: string, valor: string, fuerte = false) =>
       `<tr><td style="color:#64748b;padding:4px 12px 4px 0">${label}</td><td style="text-align:right${fuerte ? ';font-weight:bold' : ''}">${valor}</td></tr>`
     // Simbolo de la moneda en vez del codigo ISO (Bs, $, etc.); fallback al codigo.
@@ -493,7 +551,7 @@ export class MailService {
   htmlReset(nombre: string, link: string) {
     return this.layout(
       'Restablecer contraseña',
-      `Hola ${nombre}: recibimos un pedido para restablecer tu contraseña. Si no fuiste vos, ignorá este correo.`,
+      `Hola ${this.esc(nombre)}: recibimos un pedido para restablecer tu contraseña. Si no fuiste vos, ignorá este correo.`,
       link,
       'Elegir nueva contraseña',
     )
