@@ -656,6 +656,13 @@ export class CitasService {
         deletedAt: null,
         estado: { in: [EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA] },
         fechaHora: { lt: limite },
+        // Citas con prepagos vivos NO se barren: anularles el cobro retendria
+        // la plata en silencio. El destino del prepago (retener/devolver) lo
+        // decide una persona desde la agenda (cancelar / no-show manual).
+        OR: [
+          { cobro: { is: null } },
+          { cobro: { pagos: { none: { anuladoAt: null, monto: { gt: 0 } } } } },
+        ],
       },
       select: { id: true, consultorioId: true, createdById: true },
       take: 200,
@@ -759,6 +766,71 @@ export class CitasService {
         },
       })
 
+      // Modelo A: cambiar el servicio actualiza la LINEA de servicio y el
+      // total se recomputa como SUM(detalles vivos) - descuento (mismo patron
+      // que editarCita). Pisar solo cobro.total dejaria la linea con el precio
+      // viejo y el proximo recomputo (setProductos/editarCita) lo reviviria.
+      const recalcularCobroServicio = async (
+        tx2: Prisma.TransactionClient,
+        montoServicio: Decimal,
+      ) => {
+        // Releer DENTRO de la tx: no perder un pago concurrente
+        const cobroActual = await tx2.cobro.findUniqueOrThrow({
+          where: { id: cita.cobro!.id },
+          select: { total: true, saldoPendiente: true, descuento: true },
+        })
+        const pagado = cobroActual.total.minus(cobroActual.saldoPendiente)
+        const linea = await tx2.detalleCobro.findFirst({
+          where: { cobroId: cita.cobro!.id, consultorioId, servicioId: { not: null } },
+          select: { id: true },
+        })
+        if (linea) {
+          await tx2.detalleCobro.update({
+            where: { id: linea.id },
+            data: {
+              servicioId: servicioNuevo!.id,
+              descripcion: servicioNuevo!.nombre,
+              precioVenta: montoServicio,
+              subtotal: montoServicio,
+            },
+          })
+        } else {
+          // Auto-heal de cobros legacy sin linea de servicio
+          await tx2.detalleCobro.create({
+            data: {
+              consultorioId,
+              cobroId: cita.cobro!.id,
+              servicioId: servicioNuevo!.id,
+              descripcion: servicioNuevo!.nombre,
+              cantidad: 1,
+              precioVenta: montoServicio,
+              precioCosto: 0,
+              subtotal: montoServicio,
+            },
+          })
+        }
+        const agg = await tx2.detalleCobro.aggregate({
+          where: { cobroId: cita.cobro!.id, consultorioId, devueltoAt: null },
+          _sum: { subtotal: true },
+        })
+        const bruto = agg._sum.subtotal ?? new Decimal(0)
+        const descuento = cobroActual.descuento.gt(bruto) ? bruto : cobroActual.descuento
+        const nuevoTotal = bruto.minus(descuento)
+        const nuevoSaldo = nuevoTotal.minus(pagado)
+        if (nuevoSaldo.lt(0)) {
+          throw new BadRequestException(
+            'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
+          )
+        }
+        const nuevoEstadoCobro = nuevoSaldo.lte(0)
+          ? EstadoCobro.COMPLETO
+          : pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
+        await tx2.cobro.update({
+          where: { citaId },
+          data: { total: nuevoTotal, descuento, saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+        })
+      }
+
       if (servicioNuevo && cita.cobro && cita.cobro.estado !== EstadoCobro.ANULADO) {
         if (cita.usaSeguro && cita.categoriaSeguroId) {
           // Cita con seguro: buscar tarifa para la nueva combinacion categoria + servicio
@@ -774,17 +846,7 @@ export class CitasService {
 
           if (tarifa) {
             // Tarifa encontrada: recalcular con montos de cobertura
-            const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
-            const nuevoSaldo = tarifa.montoPaciente.minus(pagado)
-            if (nuevoSaldo.lt(0)) {
-              throw new BadRequestException(
-                'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
-              )
-            }
-            await tx.cobro.update({
-              where: { citaId },
-              data: { total: tarifa.montoPaciente, saldoPendiente: nuevoSaldo },
-            })
+            await recalcularCobroServicio(tx, tarifa.montoPaciente)
             // Actualizar snapshot de cobertura en la cita
             await tx.cita.update({
               where: { id: citaId },
@@ -826,17 +888,7 @@ export class CitasService {
             }
           } else {
             // Sin tarifa para el nuevo servicio: revertir a particular
-            const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
-            const nuevoSaldo = precioServicioNuevo!.minus(pagado)
-            if (nuevoSaldo.lt(0)) {
-              throw new BadRequestException(
-                'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
-              )
-            }
-            await tx.cobro.update({
-              where: { citaId },
-              data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
-            })
+            await recalcularCobroServicio(tx, precioServicioNuevo!)
             // Limpiar snapshot de seguro en la cita
             await tx.cita.update({
               where: { id: citaId },
@@ -854,18 +906,8 @@ export class CitasService {
             }
           }
         } else {
-          // Cita particular: logica original inalterada
-          const pagado = cita.cobro.total.minus(cita.cobro.saldoPendiente)
-          const nuevoSaldo = precioServicioNuevo!.minus(pagado)
-          if (nuevoSaldo.lt(0)) {
-            throw new BadRequestException(
-              'Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo',
-            )
-          }
-          await tx.cobro.update({
-            where: { citaId },
-            data: { total: precioServicioNuevo!, saldoPendiente: nuevoSaldo },
-          })
+          // Cita particular
+          await recalcularCobroServicio(tx, precioServicioNuevo!)
         }
       }
 
@@ -1271,9 +1313,12 @@ export class CitasService {
       throw new ConflictException('Esta cita ya no se puede cancelar')
     }
 
-    // Con pagos registrados el dinero ya entro a la caja: el paciente no puede
+    // Con pagos VIVOS el dinero ya entro a la caja: el paciente no puede
     // cancelar solo, debe coordinar con el consultorio (anular pagos primero).
-    const pagos = await this.prisma.pago.count({ where: { cobro: { citaId: cita.id } } })
+    // Pagos ya anulados/devueltos no cuentan: la plata ya se devolvio.
+    const pagos = await this.prisma.pago.count({
+      where: { cobro: { citaId: cita.id }, anuladoAt: null, monto: { gt: 0 } },
+    })
     if (pagos > 0) {
       throw new ConflictException(
         'La cita tiene un pago registrado: comunicate con el consultorio para cancelarla',

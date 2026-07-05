@@ -10,7 +10,9 @@ import { descontarStockDeCobro } from './stock.helper'
 import { calcularRepartoDevolucion, planificarReembolso } from './devolucion.helper'
 
 export class RegistrarPagoDto {
-  @IsNumber() @Min(0.01)
+  // maxDecimalPlaces: 2 — un pago de 9.999 contra saldo 10.00 dejaria un
+  // saldo JS de 0.001 que la BD redondea a 0.00: cobro incobrable
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01)
   monto: number
 
   // Forma de pago = cuenta del catalogo (tipos de cuenta)
@@ -22,7 +24,7 @@ export class RegistrarPagoDto {
 }
 
 export class AjustarTotalDto {
-  @IsNumber() @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0)
   nuevoTotal: number
 
   @IsString() @IsOptional()
@@ -56,7 +58,7 @@ export class PagoVentaDto {
   @IsInt()
   tipoCuentaId: number
 
-  @IsNumber() @Min(0.01)
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01)
   monto: number
 
   @IsString() @IsOptional()
@@ -225,10 +227,15 @@ export class CobrosService {
         ? EstadoCobro.COMPLETO
         : pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
 
-      await tx.cobro.update({
-        where: { id: cobroId },
+      // Condicionado a total/saldo leidos: si un pago entro entre el findFirst
+      // inicial y esta tx, pagado/delta serian viejos; abortar y reintentar.
+      const cobroOk = await tx.cobro.updateMany({
+        where: { id: cobroId, total: cobro.total, saldoPendiente: cobro.saldoPendiente },
         data: { total: nuevoTotal, descuento, saldoPendiente: nuevoSaldo, estado: nuevoEstado },
       })
+      if (cobroOk.count === 0) {
+        throw new ConflictException('El cobro cambio mientras se editaban los productos: reintenta')
+      }
 
       // La cita en ATENDIDA ya sumo su saldo a deudaTotal; ajustar por el delta
       // de saldo que aportan los productos.
@@ -476,6 +483,17 @@ export class CobrosService {
     const nuevoEstadoCobro = cobrado ? EstadoCobro.COMPLETO : EstadoCobro.PARCIAL
 
     await this.prisma.$transaction(async (tx) => {
+      // Guard optimista contra doble click / dos terminales: el update solo
+      // matchea si el saldo sigue siendo el validado arriba; si otro pago
+      // entro en el medio, se aborta sin duplicar pago ni caja.
+      const bloqueado = await tx.cobro.updateMany({
+        where: { id: cobroId, saldoPendiente: cobro.saldoPendiente, estado: cobro.estado },
+        data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
+      })
+      if (bloqueado.count === 0) {
+        throw new ConflictException('El cobro cambio mientras se registraba el pago: actualiza y reintenta')
+      }
+
       // Registrar pago
       await tx.pago.create({
         data: {
@@ -485,12 +503,6 @@ export class CobrosService {
           referencia: dto.referencia,
           createdById: usuarioId,
         },
-      })
-
-      // Actualizar saldo del cobro
-      await tx.cobro.update({
-        where: { id: cobroId },
-        data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
       })
 
       // Prepago (pre-atencion): no se toca el ciclo de vida de la cita ni la
@@ -586,16 +598,53 @@ export class CobrosService {
 
     const cobro = pago.cobro
     const nuevoSaldo = cobro.saldoPendiente.plus(pago.monto)
+    // Devoluciones parciales previas (devolverDetalle) achican total y pagado
+    // sin anular el pago original: si el saldo restaurado supera el total,
+    // anular este pago devolveria mas de lo efectivamente pagado.
+    if (nuevoSaldo.gt(cobro.total)) {
+      throw new BadRequestException(
+        'El cobro ya tiene devoluciones por este dinero: anular este pago devolveria de mas',
+      )
+    }
     const pagado = cobro.total.minus(nuevoSaldo)
-    const nuevoEstadoCobro = pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
+    // Un cobro ANULADO (cita cancelada/no asistida) no revive por anular un
+    // pago retenido: la reversa solo devuelve la plata, el estado no cambia.
+    const esAnulado = cobro.estado === EstadoCobro.ANULADO
+    const nuevoEstadoCobro = esAnulado
+      ? EstadoCobro.ANULADO
+      : pagado.gt(0) ? EstadoCobro.PARCIAL : EstadoCobro.PENDIENTE
     // Una cita cobrada vuelve a tener deuda; los demas estados no cambian
-    const revierteCita = !!cobro.cita && cobro.cita.estado === EstadoCita.COBRADO
+    const estadoCita = cobro.cita?.estado as EstadoCita | undefined
+    const revierteCita = !!cobro.cita && estadoCita === EstadoCita.COBRADO
+    // Espejo de registrarPago: el pago solo bajo deudaTotal si la cita ya se
+    // atendio (ATENDIDA/CON_DEUDA/COBRADO) o si es venta directa. Un prepago
+    // (cita aun no atendida) nunca toco la deuda: anularlo tampoco la toca.
+    const ESTADOS_CON_DEUDA: EstadoCita[] = [
+      EstadoCita.ATENDIDA, EstadoCita.CON_DEUDA, EstadoCita.COBRADO,
+    ]
+    const bajoDeuda = cobro.citaId
+      ? !!estadoCita && ESTADOS_CON_DEUDA.includes(estadoCita)
+      : !!cobro.pacienteId
     // Paciente cuya deuda se incrementa: el de la cita, o el directo del cobro
-    const pacienteDeuda = cobro.cita?.pacienteId ?? cobro.pacienteId
+    const pacienteDeuda = bajoDeuda ? (cobro.cita?.pacienteId ?? cobro.pacienteId) : null
 
     const { clave: hoy } = diaCajaLocal()
 
     await this.prisma.$transaction(async (tx) => {
+      // Cerrojo contra doble anulacion concurrente: solo un proceso marca el
+      // original; el segundo no matchea y aborta sin duplicar la reversa.
+      const marcado = await tx.pago.updateMany({
+        where: { id: pago.id, anuladoAt: null },
+        data: {
+          anuladoAt: new Date(),
+          anuladoPorId: usuarioId,
+          motivoAnulacion: dto.motivo,
+        },
+      })
+      if (marcado.count === 0) {
+        throw new ConflictException('El pago ya fue anulado')
+      }
+
       const reversa = await tx.pago.create({
         data: {
           cobroId: cobro.id,
@@ -607,19 +656,15 @@ export class CobrosService {
         },
       })
 
-      await tx.pago.update({
-        where: { id: pago.id },
-        data: {
-          anuladoAt: new Date(),
-          anuladoPorId: usuarioId,
-          motivoAnulacion: dto.motivo,
-        },
-      })
-
-      await tx.cobro.update({
-        where: { id: cobro.id },
+      // Update condicionado al saldo leido: si otro pago/devolucion entro en
+      // el medio, abortar en vez de pisar el saldo con un valor viejo.
+      const cobroOk = await tx.cobro.updateMany({
+        where: { id: cobro.id, saldoPendiente: cobro.saldoPendiente },
         data: { saldoPendiente: nuevoSaldo, estado: nuevoEstadoCobro },
       })
+      if (cobroOk.count === 0) {
+        throw new ConflictException('El cobro cambio mientras se anulaba el pago: reintenta')
+      }
 
       if (revierteCita && cobro.cita) {
         await tx.cita.update({
@@ -707,6 +752,24 @@ export class CobrosService {
     usuarioId: number,
     motivo?: string,
   ): Promise<void> {
+    // Solo citas aun no atendidas: devolverle todo a una cita atendida/cobrada
+    // dejaria deuda invisible (ni deudaTotal ni whereDeudaReal la ven). Para
+    // corregir pagos post-atencion estan las anulaciones individuales.
+    const cita = await this.prisma.cita.findFirst({
+      where: { id: citaId, consultorioId, deletedAt: null },
+      select: { estado: true },
+    })
+    if (!cita) throw new NotFoundException('Cita no encontrada')
+    const PRE_ATENCION: EstadoCita[] = [
+      EstadoCita.SOLICITADA, EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA,
+      EstadoCita.LLEGO, EstadoCita.EN_ATENCION,
+    ]
+    if (!PRE_ATENCION.includes(cita.estado as EstadoCita)) {
+      throw new BadRequestException(
+        'Solo se devuelven prepagos de citas no atendidas: para corregir pagos de una cita atendida, anula los pagos individualmente',
+      )
+    }
+
     const pagos = await this.prisma.pago.findMany({
       where: { cobro: { citaId, consultorioId }, anuladoAt: null, monto: { gt: 0 } },
       select: {
@@ -721,6 +784,14 @@ export class CobrosService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const p of pagos) {
+        // Cerrojo: marcar primero (solo si sigue vivo) y recien ahi crear la
+        // reversa; un proceso concurrente que ya lo anulo hace que este no
+        // matchee y se saltee el pago sin duplicar la devolucion.
+        const marcado = await tx.pago.updateMany({
+          where: { id: p.id, anuladoAt: null },
+          data: { anuladoAt: new Date(), anuladoPorId: usuarioId, motivoAnulacion: motivo },
+        })
+        if (marcado.count === 0) continue
         await tx.pago.create({
           data: {
             cobroId: p.cobro.id,
@@ -730,10 +801,6 @@ export class CobrosService {
             createdById: usuarioId,
             reversaDeId: p.id,
           },
-        })
-        await tx.pago.update({
-          where: { id: p.id },
-          data: { anuladoAt: new Date(), anuladoPorId: usuarioId, motivoAnulacion: motivo },
         })
         await tx.cajaDiaria.upsert({
           where: { consultorioId_fecha: { consultorioId, fecha: hoy } },
@@ -776,8 +843,11 @@ export class CobrosService {
         cobro: {
           include: {
             cita: { select: { id: true, pacienteId: true, estado: true } },
+            // Todos los pagos no anulados (positivos y negativos): los
+            // negativos de devoluciones previas descuentan la capacidad de
+            // reembolso de su forma de pago (ver abajo).
             pagos: {
-              where: { anuladoAt: null, monto: { gt: 0 } },
+              where: { anuladoAt: null },
               orderBy: { createdAt: 'desc' },
               include: { tipoCuenta: { select: { esEfectivo: true } } },
             },
@@ -811,15 +881,35 @@ export class CobrosService {
       await this.exigirCajaAbierta(consultorioId)
     }
 
-    const movimientos = planificarReembolso(
-      cobro.pagos.map((p) => ({
-        id: p.id,
-        monto: p.monto,
-        tipoCuentaId: p.tipoCuentaId,
-        esEfectivo: p.tipoCuenta.esEfectivo,
-      })),
-      reparto.reembolso,
-    )
+    // Capacidad real de reembolso por pago: a cada forma de pago se le resta
+    // lo ya devuelto en devoluciones previas (pagos negativos sin reversaDeId;
+    // las reversas de anulacion ya sacan de juego a su pago original via
+    // anuladoAt). Sin esto, dos devoluciones sucesivas podian salir dos veces
+    // de la misma cuenta (arqueo de efectivo torcido).
+    const devueltoPorCuenta = new Map<number, Decimal>()
+    for (const p of cobro.pagos) {
+      if (p.monto.isNegative() && !p.reversaDeId) {
+        const acc = devueltoPorCuenta.get(p.tipoCuentaId) ?? new Decimal(0)
+        devueltoPorCuenta.set(p.tipoCuentaId, acc.plus(p.monto.abs()))
+      }
+    }
+    const pagosVivos: { id: number; monto: Decimal; tipoCuentaId: number; esEfectivo: boolean }[] = []
+    for (const p of cobro.pagos) {
+      if (!p.monto.gt(0)) continue
+      const usado = devueltoPorCuenta.get(p.tipoCuentaId) ?? new Decimal(0)
+      const consumo = usado.gt(p.monto) ? p.monto : usado
+      const disponible = p.monto.minus(consumo)
+      devueltoPorCuenta.set(p.tipoCuentaId, usado.minus(consumo))
+      if (disponible.gt(0)) {
+        pagosVivos.push({
+          id: p.id,
+          monto: disponible,
+          tipoCuentaId: p.tipoCuentaId,
+          esEfectivo: p.tipoCuenta.esEfectivo,
+        })
+      }
+    }
+    const movimientos = planificarReembolso(pagosVivos, reparto.reembolso)
 
     const pagadoNuevo = reparto.totalNuevo.minus(reparto.nuevoSaldo)
     const nuevoEstadoCobro = reparto.nuevoSaldo.lte(0)
@@ -832,11 +922,16 @@ export class CobrosService {
     const pacienteDeuda = cobro.cita?.pacienteId ?? cobro.pacienteId
 
     await this.prisma.$transaction(async (tx) => {
-      // 1. Marcar la linea como devuelta (no se borra)
-      await tx.detalleCobro.update({
-        where: { id: detalleId },
+      // 1. Marcar la linea como devuelta (no se borra). Condicionado a que
+      // siga viva: dos devoluciones concurrentes de la misma linea no pueden
+      // duplicar reembolso ni stock (la segunda aborta aca).
+      const marcada = await tx.detalleCobro.updateMany({
+        where: { id: detalleId, devueltoAt: null },
         data: { devueltoAt: new Date(), devueltoPorId: usuarioId },
       })
+      if (marcada.count === 0) {
+        throw new ConflictException('Esta linea ya fue devuelta')
+      }
 
       // 2. Restituir stock si el producto controla inventario
       if (detalle.producto?.controlaStock) {
@@ -846,9 +941,11 @@ export class CobrosService {
         })
       }
 
-      // 3-4. Recomputar el cobro (total/descuento/saldo/estado)
-      await tx.cobro.update({
-        where: { id: cobro.id },
+      // 3-4. Recomputar el cobro (total/descuento/saldo/estado), condicionado
+      // a total/saldo leidos: si un pago entro en el medio, el reparto quedo
+      // viejo y hay que abortar en vez de pisar.
+      const cobroOk = await tx.cobro.updateMany({
+        where: { id: cobro.id, total: cobro.total, saldoPendiente: cobro.saldoPendiente },
         data: {
           total: reparto.totalNuevo,
           descuento: reparto.descuentoNuevo,
@@ -856,6 +953,9 @@ export class CobrosService {
           estado: nuevoEstadoCobro,
         },
       })
+      if (cobroOk.count === 0) {
+        throw new ConflictException('El cobro cambio durante la devolucion: reintenta')
+      }
 
       // 5. Bajar la deuda del paciente por la parte que aun se debia. Como
       // deudaReduccion <= saldoPendiente, solo baja lo que realmente estaba
@@ -954,6 +1054,11 @@ export class CobrosService {
       include: { cita: { select: { id: true, pacienteId: true, estado: true } } },
     })
     if (!cobro) throw new NotFoundException('Cobro no encontrado')
+    // Un cobro anulado (cita cancelada/no asistida) no revive por un ajuste
+    // de precio: recomputarle el estado lo sacaria de ANULADO.
+    if (cobro.estado === EstadoCobro.ANULADO) {
+      throw new BadRequestException('El cobro esta anulado: no se puede ajustar el precio')
+    }
     // Un cobro saldado no se reabre por precio: dejaria deuda con la cita
     // en COBRADO. La correccion de pagos llega con las reversas (Etapa 2).
     if (cobro.estado === EstadoCobro.COMPLETO) {
