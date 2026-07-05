@@ -5,7 +5,7 @@ import { format, startOfWeek, endOfWeek, endOfMonth, eachDayOfInterval, isSameMo
 import { Stethoscope, CalendarCheck, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ArrowRight, UserRound, User, Mail, FileText, Phone, MessageCircle, CalendarX2 } from 'lucide-react'
 import { api } from '../../lib/api-client'
 import { decodeId } from '../../lib/portal-codec'
-import { formatDia, formatHora, abrirWhatsApp, cn } from '../../lib/utils'
+import { formatDia, formatFecha, formatHora, abrirWhatsApp, cn } from '../../lib/utils'
 import { btnPrimaryUI, btnOutlineUI, btnDestructiveUI, cardUI, errorUI } from '../../lib/ui'
 import { PAIS_DEFAULT, PAISES } from '../../lib/paises'
 import { SelectorPais } from '../../components/shared/SelectorPais'
@@ -382,7 +382,7 @@ export function ReservarPage() {
               <h2 className="text-xl font-bold text-foreground">Tu cita sigue en pie</h2>
               {ctxCita && (
                 <p className="text-sm text-foreground">
-                  {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} a las{' '}
+                  {formatFecha(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} a las{' '}
                   <span className="font-semibold tabular-nums">{formatHora(ctxCita.cita.fechaHoraActual)}</span>
                   <br />
                   {ctxCita.servicio.nombre} con {ctxCita.cita.doctorActual.nombre}
@@ -404,7 +404,7 @@ export function ReservarPage() {
               {ctxCita && (
                 <div className="rounded-lg border bg-muted/30 px-4 py-3 text-center">
                   <p className="text-sm font-semibold text-foreground tabular-nums">
-                    {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} · {formatHora(ctxCita.cita.fechaHoraActual)}
+                    {formatFecha(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} · {formatHora(ctxCita.cita.fechaHoraActual)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {ctxCita.servicio.nombre} con {ctxCita.cita.doctorActual.nombre}
@@ -462,7 +462,7 @@ export function ReservarPage() {
                   Reprogramando tu cita de {ctxCita.servicio.nombre}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Actual: {formatDia(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} con{' '}
+                  Actual: {formatFecha(ctxCita.cita.fechaHoraActual, "EEEE d 'de' MMMM")} con{' '}
                   {ctxCita.cita.doctorActual.nombre}. Elegi tu nuevo dia y horario.
                 </p>
               </div>

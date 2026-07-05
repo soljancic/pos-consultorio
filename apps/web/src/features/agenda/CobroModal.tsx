@@ -95,7 +95,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
   // Formas de pago = cuentas del catalogo (tipos de cuenta activos)
   const { data: tiposCuenta = [] } = useQuery<TipoCuenta[]>({
     queryKey: ['tipos-cuenta', 'activos'],
-    queryFn: () => api.get('/tipos-cuenta').then((r) => r.data),
+    queryFn: () => api.get('/tipos-cuenta/activos').then((r) => r.data),
   })
   // Default: la cuenta de efectivo, si no la primera
   useEffect(() => {
@@ -525,7 +525,7 @@ export function CobroModal({ cita, cobroSinCita, onClose }: CobroModalProps) {
                 }
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
-                min="1"
+                min="0.01"
                 max={saldo}
                 step="0.01"
                 required

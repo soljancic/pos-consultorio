@@ -31,9 +31,11 @@ export function AnularPagoModal({ pago, onClose }: Props) {
     mutationFn: () =>
       api.post(`/cobros/pagos/${pago.id}/anular`, { motivo: motivo || undefined }),
     onSuccess: (res) => {
+      // 'cobro' cubre los cobros de venta directa (CobroModal los cachea con
+      // esa key); sin ella el modal abierto seguia mostrando el pago vivo
       for (const key of [
         'citas', 'deudores', 'deudores-resumen', 'caja-hoy', 'caja-historial',
-        'pacientes', 'paciente', 'cobro-cita',
+        'pacientes', 'paciente', 'cobro-cita', 'cobro', 'ventas-detalle',
       ]) {
         qc.invalidateQueries({ queryKey: [key] })
       }

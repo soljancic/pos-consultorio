@@ -77,7 +77,11 @@ export function AtencionModal({ cita, onClose }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['atencion', cita.id] })
-      qc.invalidateQueries({ queryKey: ['citas'] })
+      // "Marcar Atendida" tambien mueve deuda/caja: mismas keys que la
+      // transicion de estado desde AgendaPage
+      for (const key of ['citas', 'deudores', 'deudores-resumen', 'pacientes', 'paciente', 'caja-hoy']) {
+        qc.invalidateQueries({ queryKey: [key] })
+      }
       onClose()
     },
     onError: (err: any) => {

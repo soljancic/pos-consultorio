@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable'
 import { Download, Printer, FileText } from 'lucide-react'
 import { btnOutlineUI } from '../../../lib/ui'
 import { cn } from '../../../lib/utils'
+import { toast } from '../../../stores/toast.store'
 
 interface Props {
   filename: string
@@ -24,6 +25,8 @@ export function ExportButtons({ filename, loadAll }: Props) {
       const libro = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(libro, hoja, 'Reporte')
       XLSX.writeFile(libro, `${filename}.xlsx`)
+    } catch (err) {
+      toast.fromError(err, 'No se pudo generar el Excel. Probá de nuevo.')
     } finally {
       setBusyExcel(false)
     }
@@ -45,6 +48,8 @@ export function ExportButtons({ filename, loadAll }: Props) {
         headStyles: { fillColor: [55, 65, 81] },
       })
       doc.save(`${filename}.pdf`)
+    } catch (err) {
+      toast.fromError(err, 'No se pudo generar el PDF. Probá de nuevo.')
     } finally {
       setBusyPdf(false)
     }

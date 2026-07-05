@@ -73,7 +73,7 @@ export function VentaDirectaModal({ onClose }: Props) {
   // --- Formas de pago: cuentas activas del catalogo (mismo queryKey que CobroModal) ---
   const { data: tiposCuenta = [] } = useQuery<TipoCuenta[]>({
     queryKey: ['tipos-cuenta', 'activos'],
-    queryFn: () => api.get('/tipos-cuenta').then((r) => r.data),
+    queryFn: () => api.get('/tipos-cuenta/activos').then((r) => r.data),
   })
 
   // La cuenta por defecto: la de efectivo, si no la primera del catalogo.
@@ -160,7 +160,10 @@ export function VentaDirectaModal({ onClose }: Props) {
         .then((r) => r.data),
     onSuccess: (data: any) => {
       // El stock cambio y nacio un cobro: refrescar todo lo financiero + catalogo.
-      for (const key of ['citas', 'deudores', 'deudores-resumen', 'caja-hoy', 'pacientes', 'productos']) {
+      for (const key of [
+        'citas', 'deudores', 'deudores-resumen', 'caja-hoy', 'caja-historial',
+        'pacientes', 'productos', 'ventas-detalle',
+      ]) {
         qc.invalidateQueries({ queryKey: [key] })
       }
       setAdvertencias(Array.isArray(data?.advertencias) ? data.advertencias : [])

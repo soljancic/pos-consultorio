@@ -34,10 +34,14 @@ export function DevolverItemModal({
     mutationFn: () =>
       api.post(`/cobros/detalle/${venta.detalleId}/devolver`).then((r) => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ventas-detalle'] })
-      qc.invalidateQueries({ queryKey: ['productos'] })
-      qc.invalidateQueries({ queryKey: ['deudores'] })
-      qc.invalidateQueries({ queryKey: ['caja'] })
+      // 'caja-hoy'/'caja-historial' son las keys reales de CajaPage (['caja']
+      // no matcheaba nada y la caja quedaba vieja tras la devolucion)
+      for (const key of [
+        'ventas-detalle', 'productos', 'deudores', 'deudores-resumen',
+        'caja-hoy', 'caja-historial', 'cobro', 'cobro-cita', 'pacientes', 'paciente',
+      ]) {
+        qc.invalidateQueries({ queryKey: [key] })
+      }
       onClose()
     },
     onError: (err) =>

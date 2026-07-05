@@ -354,7 +354,7 @@ export function CajaPage() {
               </tbody>
               <tfoot className="bg-muted/50 border-t">
                 <tr>
-                  <td colSpan={2} className="px-4 py-3 text-sm text-muted-foreground">Total del periodo</td>
+                  <td colSpan={2} className="px-4 py-3 text-sm text-muted-foreground">Total del período</td>
                   <td className="px-4 py-3 text-right font-bold tabular-nums">
                     {formatMoneda(historial.reduce((acc, c) => acc + Number(c.totalGeneral), 0))}
                   </td>
