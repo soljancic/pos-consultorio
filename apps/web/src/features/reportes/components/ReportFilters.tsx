@@ -4,24 +4,20 @@ import { X } from 'lucide-react'
 import { api } from '../../../lib/api-client'
 import { inputUI, btnIconUI } from '../../../lib/ui'
 import { cn } from '../../../lib/utils'
-import type { Filtros, Preset } from '../hooks/useReportFilters'
+import type { Filtros } from '../hooks/useReportFilters'
 import type { ReportTab } from '@pos/types'
+import { RangoFechasPicker } from './RangoFechasPicker'
 
-const PRESETS: Array<{ id: Preset; label: string }> = [
-  { id: 'hoy', label: 'Hoy' }, { id: 'semana', label: 'Semana' },
-  { id: 'mes', label: 'Mes' }, { id: 'mesPasado', label: 'Mes pasado' },
-]
 const ESTADOS = ['SOLICITADA','PENDIENTE','CONFIRMADA','LLEGO','EN_ATENCION','ATENDIDA','COBRADO','CON_DEUDA','CANCELADA','NO_ASISTIO']
 
 interface PacienteMatch { id: number; nombre: string; apellido: string }
 
 interface Props {
   tab: ReportTab; filtros: Filtros; esAdmin: boolean
-  onPreset: (p: Preset) => void
   onPatch: (p: Partial<Filtros>) => void
 }
 
-export function ReportFilters({ tab, filtros, esAdmin, onPreset, onPatch }: Props) {
+export function ReportFilters({ tab, filtros, esAdmin, onPatch }: Props) {
   const { data: doctores = [] } = useQuery<any[]>({ queryKey: ['doctores'], queryFn: () => api.get('/doctores').then((r) => r.data) })
   const { data: servicios = [] } = useQuery<any[]>({ queryKey: ['servicios','todos'], queryFn: () => api.get('/servicios?todos=true').then((r) => r.data) })
   const { data: cuentas = [] } = useQuery<any[]>({ queryKey: ['tipos-cuenta','todos'], queryFn: () => api.get('/tipos-cuenta').then((r) => r.data), enabled: tab === 'cobranzas' || tab === 'gastos' })
@@ -66,20 +62,13 @@ export function ReportFilters({ tab, filtros, esAdmin, onPreset, onPatch }: Prop
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Presets + rango de fechas (en celular arriba; en desktop inline) */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-md border overflow-hidden">
-          {PRESETS.map((p) => (
-            <button key={p.id} onClick={() => onPreset(p.id)}
-              className="px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset transition-colors duration-150">
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <input type="date" value={filtros.desde} onChange={(e) => onPatch({ desde: e.target.value })} aria-label="Desde" className={cn(inputUI, 'w-auto')} />
-        <span className="text-muted-foreground/70">a</span>
-        <input type="date" value={filtros.hasta} onChange={(e) => onPatch({ hasta: e.target.value })} aria-label="Hasta" className={cn(inputUI, 'w-auto')} />
-      </div>
+      {/* Rango de fechas: boton unico con popover (presets + calendario +
+          inputs nativos Desde/Hasta como via exacta) */}
+      <RangoFechasPicker
+        desde={filtros.desde}
+        hasta={filtros.hasta}
+        onChange={(desde, hasta) => onPatch({ desde, hasta })}
+      />
 
       {/* Filtros de seleccion: 2 por linea en celular (grid), inline en desktop.
           Labels cortos para que entren en la celda angosta. */}

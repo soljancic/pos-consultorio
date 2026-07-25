@@ -26,7 +26,7 @@ export function ReportesPage() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<string | undefined>()
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const { filtros, setPreset, patch } = useReportFilters()
+  const { filtros, patch } = useReportFilters()
   const cfg = REPORTS[tab]
 
   const query = { ...filtros, page, pageSize: 25, sortBy, sortDir }
@@ -95,7 +95,6 @@ export function ReportesPage() {
             tab={tab}
             filtros={filtros}
             esAdmin={esAdmin}
-            onPreset={(p) => { setPreset(p); setPage(1) }}
             onPatch={(p) => { patch(p); setPage(1) }}
           />
         </div>
