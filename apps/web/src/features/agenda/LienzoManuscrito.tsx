@@ -1,17 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Eraser, Pen, PenLine, Redo2, Undo2, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Eraser,
+  Pen,
+  PenLine,
+  Plus,
+  Redo2,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react'
 import {
   COLORES_LAPIZ,
   GROSORES_LAPIZ,
   HOJA_H,
   HOJA_W,
+  MAX_HOJAS_POR_ATENCION,
   hojaVacia,
+  type HojaManuscritaApi,
   type Trazo,
   type TrazosHoja,
 } from '@pos/types'
 import { altoHoja, cuantizar, escalaHoja, pathDeTrazo, pintarHoja } from '../../components/manuscrito/dibujar'
+import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
-import { btnIconUI } from '../../lib/ui'
+import { btnIconUI, btnOutlineUI, btnPrimaryUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
+import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 
 interface Props {
   citaId: number
@@ -45,19 +63,28 @@ const NOMBRE_COLOR: Record<string, string> = { '#111827': 'Negro', '#1d4ed8': 'A
 const NOMBRE_GROSOR: Record<number, string> = { 2: 'Fino', 4: 'Medio', 7: 'Grueso' }
 
 /**
- * Editor de una hoja manuscrita: captura el trazo del lapiz/dedo y lo pinta.
- * Una sola hoja en memoria, sin persistir (eso llega en Tareas 10 y 11).
+ * Editor de notas manuscritas de una atencion: captura el trazo del
+ * lapiz/dedo, lo pinta, y persiste multiples hojas contra el servidor
+ * (`['hojas', citaId]`).
  *
- * Estado pensado como seam para lo que sigue:
- * - `trazosRef` guarda TODOS los trazos cerrados de la hoja actual; Task 10
- *   lo convierte en un array de hojas + un indice de hoja activa.
- * - `sucio` marca cambios sin guardar; Task 11 lo consume para el autoguardado
- *   y lo vuelve a poner en false tras guardar.
+ * Forma del estado: `trazosRef` sigue siendo UNA sola lista de trazos (la de
+ * la hoja activa, identificada por `hojaActivaId`, el id real del servidor).
+ * No hay un array de hojas en memoria con sus trazos completos aparte del
+ * que ya devuelve `useQuery` -- cambiar de hoja relee `hoja.trazos` de esa
+ * misma lista cacheada (`hojas.find(...)`) en vez de duplicarlo en otro
+ * estado. `cargarHoja()` es el unico camino que cambia CUAL hoja esta activa
+ * (trazosRef + historial + hojaActivaId, todos juntos, nunca por separado).
+ *
+ * `sucio` marca cambios sin guardar de la hoja activa; Task 11 lo va a
+ * consumir para el autoguardado con temporizador (fuera de alcance aca:
+ * esta tarea solo guarda al cambiar de hoja, no en el fondo).
  *
  * Deshacer/rehacer: pila simple sobre la lista de trazos (el estado de una
  * hoja ES su lista de trazos, no hace falta nada mas sofisticado). Cada
  * mutacion (trazo nuevo, borrado) llama `registrarCambio()` ANTES de mutar,
  * lo que empuja el estado previo a `pilaDeshacer` y vacia `pilaRehacer`.
+ * `cargarHoja()` vacia ambas pilas: el historial de una hoja no aplica a
+ * otra.
  */
 export function LienzoManuscrito({ citaId, onClose }: Props) {
   const areaRef = useRef<HTMLDivElement>(null)
@@ -93,6 +120,89 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
 
   const [sucio, setSucio] = useState(false)
 
+  // Hoja activa por id real del servidor -- nunca por indice ni por `orden`
+  // (el backend asigna `orden` de por vida y una hoja borrada se lo queda
+  // para siempre, asi que `orden` es un identificador, no una posicion). Es
+  // `null` mientras la lista todavia no cargo o si la atencion no tiene
+  // ninguna hoja. `hojaABorrar` guarda el id que el ConfirmarModal va a
+  // confirmar -- siempre la hoja activa, ver boton "Eliminar hoja actual".
+  const [hojaActivaId, setHojaActivaId] = useState<number | null>(null)
+  const [hojaABorrar, setHojaABorrar] = useState<number | null>(null)
+  // Se pone en true la PRIMERA vez que la lista carga con al menos una hoja
+  // (ver el efecto de seleccion inicial, mas abajo) y nunca vuelve a false.
+  // Sin este candado, borrar la ULTIMA hoja deja `hojaActivaId` en null justo
+  // cuando `hojas` (cache de la query) todavia no se refresco -- el
+  // invalidate del borrado es asincronico -- y el efecto de seleccion
+  // inicial, viendo `hojaActivaId === null` con `hojas` todavia no vacio,
+  // volveria a seleccionar la hoja recien borrada. El candado hace que esa
+  // seleccion automatica ocurra una sola vez por sesion del editor; despues,
+  // todo cambio de `hojaActivaId` es deliberado (crear/cambiar/borrar).
+  const autoSeleccionoRef = useRef(false)
+
+  const qc = useQueryClient()
+  const { data: hojas = [], isLoading } = useQuery<HojaManuscritaApi[]>({
+    queryKey: ['hojas', citaId],
+    queryFn: () => api.get<HojaManuscritaApi[]>(`/atenciones/cita/${citaId}/hojas`).then((r) => r.data),
+  })
+
+  const crearHoja = useMutation({
+    mutationFn: () =>
+      api
+        .post<HojaManuscritaApi>(`/atenciones/cita/${citaId}/hojas`, { trazos: hojaVacia() })
+        .then((r) => r.data),
+    onSuccess: (nueva) => {
+      // Actualizacion optimista de la cache ADEMAS del invalidate (no en vez
+      // de: el invalidate reconcilia con el servidor por si otra pestaña
+      // toco la misma atencion mientras tanto). Sin esto, `hojas` seguiria
+      // stale por el round-trip del refetch mientras `hojaActivaId` ya
+      // apunta a la hoja nueva -- `indiceDe()` no la encontraria en la lista
+      // vieja y el contador mostraria "Hoja 0 / N" un instante.
+      qc.setQueryData<HojaManuscritaApi[]>(['hojas', citaId], (prev) => [...(prev ?? hojas), nueva])
+      qc.invalidateQueries({ queryKey: ['hojas', citaId] })
+      // cargarHoja() (mas abajo) tambien resetea el historial de deshacer:
+      // sin eso, saltar a la hoja nueva dejaria la pila de la hoja anterior
+      // aplicable sobre una hoja que nunca la tuvo.
+      cargarHoja(nueva)
+    },
+    onError: (err: any) => toast.fromError(err, 'No se pudo crear la hoja'),
+  })
+
+  const guardarHoja = useMutation({
+    mutationFn: ({ id, trazos }: { id: number; trazos: TrazosHoja }) =>
+      api.put(`/atenciones/cita/${citaId}/hojas/${id}`, { trazos }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['hojas', citaId] }),
+    onError: (err: any) => toast.fromError(err, 'No se pudo guardar la hoja'),
+  })
+
+  const borrarHoja = useMutation({
+    mutationFn: (id: number) => api.delete(`/atenciones/cita/${citaId}/hojas/${id}`),
+    onSuccess: (_data, id) => {
+      setHojaABorrar(null)
+      // Preferencia de a donde saltar: la hoja que ocupaba el siguiente
+      // lugar (ahora corrida a este indice tras filtrar); si no hay
+      // siguiente, la anterior; si no queda ninguna, null (estado vacio).
+      const idx = hojas.findIndex((h) => h.id === id)
+      const restantes = hojas.filter((h) => h.id !== id)
+      // Actualizacion optimista de la cache ADEMAS del invalidate: sin ella,
+      // `hojas` seguiria mostrando la hoja recien borrada hasta que el
+      // refetch en segundo plano del invalidate resuelva. En ese hueco el
+      // contador "Hoja N / M" parpadea contra un M viejo y, peor, si el
+      // doctor toca "anterior/siguiente" durante esa ventana el boton puede
+      // calcular el id de la hoja YA borrada (todavia presente en el array
+      // stale) y mandar un guardado/cambio contra una hoja que el servidor
+      // ya dio de baja (404). Filtrar la cache ya mismo cierra la ventana.
+      qc.setQueryData<HojaManuscritaApi[]>(['hojas', citaId], restantes)
+      qc.invalidateQueries({ queryKey: ['hojas', citaId] })
+      if (id !== hojaActivaId) return
+      // Se borro la hoja que se estaba viendo: saltar a la vecina calculada arriba.
+      cargarHoja(restantes[idx] ?? restantes[idx - 1] ?? null)
+    },
+    onError: (err: any) => {
+      setHojaABorrar(null)
+      toast.fromError(err, 'No se pudo eliminar la hoja')
+    },
+  })
+
   // Ancho de render en pixeles CSS: se mide el area disponible (ya sin el
   // padding del contenedor) y se elige el mayor ancho que entra tanto a lo
   // ancho como a lo alto sin recortar la hoja ni forzar scroll.
@@ -127,6 +237,18 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Selecciona la primera hoja la UNICA vez que la lista carga con al menos
+  // una hoja (candado `autoSeleccionoRef`, ver su declaracion). Nunca vuelve
+  // a auto-seleccionar despues: un refetch en segundo plano (tras guardar,
+  // crear o borrar) no debe pisar `trazosRef` con lo que devuelva el
+  // servidor mientras el doctor sigue escribiendo, ni resucitar una hoja
+  // recien borrada mientras la cache de la query todavia esta stale.
+  useEffect(() => {
+    if (autoSeleccionoRef.current || isLoading || hojas.length === 0) return
+    autoSeleccionoRef.current = true
+    if (hojaActivaId === null) cargarHoja(hojas[0])
+  }, [isLoading, hojas, hojaActivaId])
 
   function contexto(canvas: HTMLCanvasElement | null): CanvasRenderingContext2D | null {
     if (!canvas || anchoCss <= 0) return null
@@ -172,10 +294,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // El canvas de fondo se reasigna width/height dentro de contexto() al
   // cambiar el tamano, lo que el navegador limpia implicitamente: sin este
   // efecto, redimensionar la ventana borraria visualmente los trazos ya
-  // cerrados hasta el proximo trazo nuevo.
+  // cerrados hasta el proximo trazo nuevo. `hojaActivaId` en las deps: es lo
+  // que repinta al cambiar de hoja -- cargarHoja() solo escribe trazosRef y
+  // llama setHojaActivaId, nunca pintarFondo() directo, porque al pasar de
+  // "ninguna hoja activa" a la primera el canvas todavia no esta montado en
+  // ese mismo tick (se monta recien en el commit que sigue a este render).
   useEffect(() => {
     pintarFondo()
-  }, [anchoCss, altoCss])
+  }, [anchoCss, altoCss, hojaActivaId])
 
   /** Reemplaza la lista de trazos y repinta. Unico camino que escribe en trazosRef. */
   function aplicar(strokes: Trazo[]) {
@@ -313,6 +439,76 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     limpiarVivo()
   }
 
+  /**
+   * Unico camino que cambia CUAL hoja esta activa: escribe trazosRef desde
+   * la hoja recibida (o la vacia si `hoja` es null, estado sin ninguna
+   * hoja), resetea el historial de deshacer/rehacer (una pila de sheet 1 no
+   * puede aplicarse a sheet 2) y limpia cualquier trazo en curso. No marca
+   * `sucio` -- cargar una hoja no es editarla -- ni llama pintarFondo(): el
+   * efecto sobre [anchoCss, altoCss, hojaActivaId] repinta una vez el canvas
+   * de la hoja destino este montado.
+   */
+  function cargarHoja(hoja: HojaManuscritaApi | null) {
+    trazoActivo.current = null
+    punteroActivo.current = null
+    pilaDeshacer.current = []
+    pilaRehacer.current = []
+    setPuedeDeshacer(false)
+    setPuedeRehacer(false)
+    setSucio(false)
+    trazosRef.current = hoja ? ((hoja.trazos as TrazosHoja) ?? hojaVacia()) : hojaVacia()
+    setHojaActivaId(hoja?.id ?? null)
+  }
+
+  /** Indice (0-based) de una hoja en la lista ordenada -- NUNCA su `orden` (ver comentario de `hojaActivaId`). */
+  function indiceDe(id: number) {
+    return hojas.findIndex((h) => h.id === id)
+  }
+
+  /**
+   * Cambia a otra hoja. Primero guarda la actual si tiene cambios sin
+   * guardar -- si el guardado falla, no cambia de hoja: el toast de
+   * guardarHoja.onError ya avisa, y los trazos siguen intactos en
+   * trazosRef. Perder trazos al cambiar de hoja es el peor bug posible de
+   * esta pantalla.
+   */
+  async function irAHoja(id: number) {
+    if (id === hojaActivaId || guardarHoja.isPending) return
+    if (sucio && hojaActivaId !== null) {
+      try {
+        await guardarHoja.mutateAsync({ id: hojaActivaId, trazos: trazosRef.current })
+      } catch {
+        return
+      }
+    }
+    const destino = hojas.find((h) => h.id === id)
+    if (!destino) return // la lista cambio bajo los pies (poco probable, defensivo)
+    cargarHoja(destino)
+  }
+
+  /**
+   * Crea una hoja nueva y salta a ella. Saltar a la hoja nueva es, para
+   * quien escribe, lo mismo que cambiar de hoja: si la actual tiene cambios
+   * sin guardar se guarda primero, con el mismo criterio de "si falla, no
+   * avanza" que `irAHoja`.
+   */
+  async function nuevaHoja() {
+    if (crearHoja.isPending || guardarHoja.isPending || hojas.length >= MAX_HOJAS_POR_ATENCION) return
+    if (sucio && hojaActivaId !== null) {
+      try {
+        await guardarHoja.mutateAsync({ id: hojaActivaId, trazos: trazosRef.current })
+      } catch {
+        return
+      }
+    }
+    crearHoja.mutate()
+  }
+
+  const estaEnLimite = hojas.length >= MAX_HOJAS_POR_ATENCION
+  const indiceActivo = hojaActivaId !== null ? indiceDe(hojaActivaId) : -1
+  const hayAnterior = indiceActivo > 0
+  const haySiguiente = indiceActivo >= 0 && indiceActivo < hojas.length - 1
+
   return (
     <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col">
       <header className="shrink-0 flex items-center gap-3 h-14 px-4 sm:px-6 border-b bg-card/90 backdrop-blur-xs">
@@ -350,9 +546,86 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </button>
       </header>
 
+      <div className="shrink-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 py-2 sm:justify-between sm:px-6 border-b bg-card/60">
+        {isLoading && <p className="text-sm text-muted-foreground">Cargando hojas…</p>}
+
+        {!isLoading && hojas.length === 0 && (
+          <button type="button" onClick={nuevaHoja} disabled={crearHoja.isPending} className={cn(btnPrimaryUI, 'h-11')}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Primera hoja
+          </button>
+        )}
+
+        {!isLoading && hojas.length > 0 && (
+          <>
+            <div className="inline-flex items-center gap-1" role="group" aria-label="Navegar hojas">
+              <button
+                type="button"
+                onClick={() => hayAnterior && irAHoja(hojas[indiceActivo - 1].id)}
+                disabled={!hayAnterior || guardarHoja.isPending}
+                aria-label="Hoja anterior"
+                title="Hoja anterior"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <span
+                className="min-w-[6rem] text-center text-sm font-medium tabular-nums text-foreground"
+                aria-live="polite"
+              >
+                Hoja {indiceActivo + 1} / {hojas.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => haySiguiente && irAHoja(hojas[indiceActivo + 1].id)}
+                disabled={!haySiguiente || guardarHoja.isPending}
+                aria-label="Hoja siguiente"
+                title="Hoja siguiente"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="inline-flex items-center gap-2">
+              {estaEnLimite && <p className="text-xs text-muted-foreground">Máximo 20 hojas por atención</p>}
+              <button
+                type="button"
+                onClick={nuevaHoja}
+                disabled={crearHoja.isPending || guardarHoja.isPending || estaEnLimite}
+                title={estaEnLimite ? 'Máximo 20 hojas por atención' : 'Agregar hoja'}
+                className={cn(btnOutlineUI, 'h-11')}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Hoja
+              </button>
+              <button
+                type="button"
+                onClick={() => hojaActivaId !== null && setHojaABorrar(hojaActivaId)}
+                disabled={hojaActivaId === null || borrarHoja.isPending}
+                aria-label="Eliminar hoja actual"
+                title="Eliminar hoja actual"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="flex-1 min-h-0 overflow-hidden p-4 sm:p-6">
         <div ref={areaRef} className="flex h-full w-full items-center justify-center">
-          {anchoCss > 0 && (
+          {anchoCss > 0 && hojaActivaId !== null && (
             <div className="relative touch-none select-none" style={{ width: anchoCss, height: altoCss }}>
               <canvas ref={canvasFondo} aria-hidden="true" className="absolute inset-0 rounded-md bg-white shadow-sm" />
               <canvas
@@ -365,6 +638,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
                 onPointerUp={alSubir}
                 onPointerCancel={alSubir}
               />
+            </div>
+          )}
+          {anchoCss > 0 && hojaActivaId === null && !isLoading && hojas.length === 0 && (
+            <div className="flex max-w-xs flex-col items-center gap-2 text-center">
+              <PenLine className="h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">
+                Todavía no hay hojas en esta atención. Agregá la primera para empezar a escribir.
+              </p>
             </div>
           )}
         </div>
@@ -487,6 +768,17 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           </button>
         </div>
       </footer>
+
+      {hojaABorrar !== null && (
+        <ConfirmarModal
+          titulo="Eliminar hoja"
+          mensaje={`Se eliminará la hoja ${indiceDe(hojaABorrar) + 1} de la historia clínica. Esta acción no se puede deshacer.`}
+          confirmLabel="Eliminar"
+          pendiente={borrarHoja.isPending}
+          onConfirm={() => borrarHoja.mutate(hojaABorrar)}
+          onClose={() => setHojaABorrar(null)}
+        />
+      )}
     </div>
   )
 }
