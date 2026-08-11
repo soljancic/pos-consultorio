@@ -3,10 +3,17 @@ import { useQuery } from '@tanstack/react-query'
 import { Search, Stethoscope, CalendarPlus, Paperclip } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import type { HojaManuscritaApi } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatDia, cn } from '../../lib/utils'
+import { formatDia, formatFecha, cn } from '../../lib/utils'
 import { abrirAdjunto, type AdjuntoMeta } from '../../lib/adjuntos'
 import { inputUI, cardUI } from '../../lib/ui'
+import { HojaRenderer } from '../../components/manuscrito/HojaRenderer'
+import { VisorHojaManuscrita } from '../../components/manuscrito/VisorHojaManuscrita'
+
+// Subconjunto de HojaManuscritaApi que trae findByPaciente (sin
+// transcripcion/updatedAt: ver el select acotado en atenciones.service.ts).
+type HojaTimeline = Pick<HojaManuscritaApi, 'id' | 'orden' | 'trazos' | 'createdAt'>
 
 type AtencionTimeline = {
   id: number
@@ -16,6 +23,7 @@ type AtencionTimeline = {
   evolucion: string | null
   proximoControl: string | null
   adjuntos: AdjuntoMeta[] | null
+  hojas: HojaTimeline[]
   cita: {
     id: number
     fechaHora: string
@@ -43,6 +51,13 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
         .get(`/atenciones/paciente/${pacienteId}`, { params: q ? { q } : undefined })
         .then((r) => r.data),
   })
+
+  // Visor de hojas manuscritas de UNA atencion (Task 14): guarda la lista de
+  // esa atencion puntual, no todas las hojas de la historia -- "siguiente"
+  // dentro del visor navega las hojas de la MISMA sesion, no salta a la
+  // sesion de otro dia. Solo lectura, disponible en cualquier dispositivo
+  // (a diferencia del editor, que es tablet/celular).
+  const [visor, setVisor] = useState<{ hojas: HojaTimeline[]; indice: number } | null>(null)
 
   return (
     <div className="space-y-4">
@@ -103,6 +118,32 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                     </p>
                   )}
                 </div>
+                {a.hojas.length > 0 && (
+                  <div className="pt-1">
+                    <span className="block text-xs font-medium text-foreground mb-1">Notas manuscritas</span>
+                    {/* Tira propia con su propio scroll horizontal: la pagina
+                        nunca scrollea en X (regla del proyecto), asi que el
+                        desborde de las miniaturas queda contenido aca adentro. */}
+                    <div className="flex gap-2 overflow-x-auto -mx-1 px-1 py-1">
+                      {a.hojas.map((hoja, i) => (
+                        <button
+                          key={hoja.id}
+                          type="button"
+                          onClick={() => setVisor({ hojas: a.hojas, indice: i })}
+                          aria-label={`Ver hoja ${i + 1} manuscrita del ${formatFecha(hoja.createdAt)}`}
+                          className="shrink-0 rounded-lg p-1 cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                        >
+                          {/* aria-hidden: el boton ya lleva su propio
+                              aria-label completo -- sin esto el canvas
+                              role="img" de HojaRenderer se anuncia aparte. */}
+                          <span aria-hidden="true">
+                            <HojaRenderer trazos={hoja.trazos} ancho={56} />
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {(a.adjuntos?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {a.adjuntos!.map((adj, i) => (
@@ -122,6 +163,14 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
             </li>
           ))}
         </ol>
+      )}
+
+      {visor && (
+        <VisorHojaManuscrita
+          hojas={visor.hojas}
+          indiceInicial={visor.indice}
+          onClose={() => setVisor(null)}
+        />
       )}
     </div>
   )

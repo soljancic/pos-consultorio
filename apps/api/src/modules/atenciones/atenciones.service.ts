@@ -118,6 +118,19 @@ export class AtencionesService {
             servicio: { select: { nombre: true } },
           },
         },
+        // Task 14: miniaturas de hojas manuscritas en la linea de tiempo, sin
+        // una request extra por atencion. Select acotado (sin transcripcion
+        // ni updatedAt): igual `trazos` es el campo pesado (hasta 2 MB por
+        // hoja, tope de MAX_TRAZOS_BYTES) y no hay forma de evitarlo sin
+        // dejar de poder dibujar la miniatura -- HojaRenderer pinta vectores,
+        // no hay un raster mas liviano guardado aparte. Con historias largas
+        // (muchas atenciones, varias hojas cada una) esto puede volver
+        // pesada la respuesta; ver nota de payload en el reporte de Task 14.
+        hojas: {
+          where: { deletedAt: null },
+          orderBy: { orden: 'asc' },
+          select: { id: true, orden: true, trazos: true, createdAt: true },
+        },
       },
       orderBy: { cita: { fechaHora: 'desc' } },
     })
