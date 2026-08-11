@@ -13,9 +13,23 @@ const OPCIONES_BASE = {
 /**
  * Redondea el punto antes de guardarlo: 1 decimal en coordenadas y 2 en la
  * presion recorta el JSON casi a la mitad sin que se note en el trazo.
+ *
+ * Tambien clampea x/y al rango de la hoja (0..HOJA_W, 0..HOJA_H). Con
+ * setPointerCapture activo (Task 8) el lapiz sigue reportando coordenadas
+ * aunque la mano se vaya del canvas; sin este clamp esos puntos viajarian
+ * cientos de unidades fuera de la hoja y el server los rechaza con 400 (el
+ * validador tolera solo MARGEN=20 mas alla del borde). Se clampea aca, en el
+ * unico punto por el que pasa TODO punto antes de entrar a un Trazo (el
+ * pointerdown inicial y cada evento del bucle de pointermove), en vez de en
+ * cada call site que construye un trazo, para que la garantia "todo punto
+ * vive dentro de la hoja" no dependa de que cada futura herramienta (Task 9+)
+ * se acuerde de clampear. Ademas es el comportamiento correcto de una hoja de
+ * papel real: el trazo se corta visualmente en el borde, no se escapa de el.
  */
 export function cuantizar(x: number, y: number, presion: number): PuntoTrazo {
-  return [Math.round(x * 10) / 10, Math.round(y * 10) / 10, Math.round(presion * 100) / 100]
+  const xc = Math.min(HOJA_W, Math.max(0, x))
+  const yc = Math.min(HOJA_H, Math.max(0, y))
+  return [Math.round(xc * 10) / 10, Math.round(yc * 10) / 10, Math.round(presion * 100) / 100]
 }
 
 /**
