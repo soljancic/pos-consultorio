@@ -878,15 +878,23 @@ En `atenciones.controller.ts`, **antes** de las rutas de recetas (para agrupar p
 
 El tope de trazos es 2 MB por hoja, y el limite por defecto de `body-parser` en Express es **100 KB**: sin esto, guardar una hoja con escritura densa falla con 413 antes de llegar al service.
 
-En `apps/api/src/main.ts`, junto al resto de la configuracion de la app, agregar:
+**No usar `app.use(express.json(...))`.** Verificado durante la implementacion (2026-08-10) que esa forma no funciona en este proyecto, por dos motivos independientes:
+
+1. `NestFactory.create()` registra su propio parser de JSON de 100 KB salvo que se le pase `bodyParser: false` (`@nestjs/core/nest-application.js`). Un `express.json()` agregado despues **nunca llega a correr** con un payload grande: el parser de Nest responde 413 primero.
+2. `express` no es dependencia directa de `apps/api` y con pnpm estricto no se resuelve — el import revienta en runtime.
+
+La forma correcta es la API propia de Nest. Apagar el parser por defecto al crear la app y volver a registrar **los dos** parsers (apagarlo baja json *y* urlencoded):
 
 ```typescript
-  // Las hojas manuscritas mandan hasta 2 MB de trazos en JSON (el default de
-  // body-parser es 100 KB). El tope real por hoja lo valida validarTrazos().
-  app.use(express.json({ limit: '3mb' }))
+const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false })
+
+// Las hojas manuscritas mandan hasta 2 MB de trazos en JSON; el default de Nest
+// es 100 KB. El tope real por hoja lo valida validarTrazos().
+app.useBodyParser('json', { limit: '3mb' })
+app.useBodyParser('urlencoded', { extended: true })
 ```
 
-Si `express` no esta importado en `main.ts`, agregarlo: `import express from 'express'`. Verificar que la linea quede **antes** de `app.useGlobalPipes(...)`.
+Va **antes** de `app.useGlobalPipes(...)`. `useBodyParser` es el ejemplo documentado en el propio `.d.ts` de `@nestjs/platform-express`. La subida de adjuntos no se ve afectada: multer maneja multipart aparte y `registerParserMiddleware` solo toca json y urlencoded.
 
 - [ ] **Step 5: Typecheck**
 
@@ -1893,6 +1901,8 @@ Eliminar abre un `ConfirmarModal` (**nunca `window.confirm`**):
 ```
 
 Con "+ Hoja" deshabilitado al llegar a `MAX_HOJAS_POR_ATENCION`, con la leyenda "Máximo 20 hojas por atención".
+
+**Y deshabilitado tambien mientras la mutation esta en vuelo** (`disabled={crearHoja.isPending || hojas.length >= MAX_HOJAS_POR_ATENCION}`). Sin eso, un doble toque en una tablet manda dos POST concurrentes que calculan el mismo `orden` y el segundo choca contra el `@@unique`. El backend ya reintenta ante ese choque (Task 3), pero el arreglo barato es no disparar la segunda request. Decision del owner 2026-08-10 tras el review de Task 3.
 
 - [ ] **Step 5: Typecheck**
 
