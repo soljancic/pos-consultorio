@@ -1720,11 +1720,21 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
+              {/* En celular se cae la palabra "Hoja" (las flechas a los lados
+                  ya dicen que esto navega hojas) y el ancho reservado baja de
+                  96 a 48px. El ancho reservado existe para que el contador no
+                  salte al pasar de 9 a 10; con `tabular-nums` 48px alcanzan
+                  para "20/20". */}
               <span
-                className="min-w-[6rem] text-center text-sm font-medium tabular-nums text-foreground"
+                className="min-w-[3rem] text-center text-sm font-medium tabular-nums text-foreground sm:min-w-[6rem]"
                 aria-live="polite"
               >
-                Hoja {indiceActivo + 1} / {hojas.length}
+                <span className="sm:hidden">
+                  {indiceActivo + 1}/{hojas.length}
+                </span>
+                <span className="hidden sm:inline">
+                  Hoja {indiceActivo + 1} / {hojas.length}
+                </span>
               </span>
               <button
                 type="button"
@@ -1761,7 +1771,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
                 className={cn(btnOutlineUI, 'h-11 px-2.5 sm:px-3')}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Hoja
+                {/* sr-only y no `hidden`: el boton conserva su nombre
+                    accesible ("Hoja") en celular, donde solo se ve el +. */}
+                <span className="sr-only sm:not-sr-only">Hoja</span>
               </button>
               <button
                 type="button"
