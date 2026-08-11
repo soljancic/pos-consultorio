@@ -32,7 +32,7 @@ export class RecetasService {
   ) {
     const cita = await this.atenciones.citaConGuardDeEscritura(consultorioId, citaId, usuarioId, rol)
     if (!cita.atencion) {
-      throw new BadRequestException('Registre la atencion antes de emitir una receta')
+      throw new BadRequestException('Registre la atención antes de emitir una receta')
     }
 
     const [receta] = await this.prisma.$transaction([

@@ -74,7 +74,7 @@ export class AtencionesService {
 
     if (rol !== 'ADMIN') {
       if (rol !== 'DOCTOR') {
-        throw new ForbiddenException('Solo el doctor o el administrador registran la atencion')
+        throw new ForbiddenException('Solo el doctor o el administrador registran la atención')
       }
       const propio = await this.prisma.doctor.findFirst({
         where: { consultorioId, usuarioId },
@@ -127,7 +127,7 @@ export class AtencionesService {
     const atencion = await this.prisma.atencion.findFirst({
       where: { citaId, cita: { consultorioId, deletedAt: null } },
     })
-    if (!atencion) throw new NotFoundException('La cita no tiene atencion registrada')
+    if (!atencion) throw new NotFoundException('La cita no tiene atención registrada')
     return atencion
   }
 
@@ -142,7 +142,7 @@ export class AtencionesService {
 
     if (!ESTADOS_ATENDIBLES.includes(cita.estado)) {
       throw new BadRequestException(
-        `No se puede registrar atencion en una cita ${cita.estado}`,
+        `No se puede registrar atención en una cita ${cita.estado}`,
       )
     }
 
@@ -151,7 +151,7 @@ export class AtencionesService {
     if (dto.servicioId && dto.servicioId !== cita.servicioId) {
       if (cita.estado === EstadoCita.COBRADO) {
         throw new BadRequestException(
-          'La cita ya esta cobrada: anule el pago antes de cambiar el servicio',
+          'La cita ya está cobrada: anule el pago antes de cambiar el servicio',
         )
       }
       servicioNuevo = await this.prisma.servicio.findFirst({
@@ -267,18 +267,18 @@ export class AtencionesService {
   ) {
     const cita = await this.citaConGuardDeEscritura(consultorioId, citaId, usuarioId, rol)
     if (!cita.atencion) {
-      throw new BadRequestException('Registre la atencion antes de adjuntar archivos')
+      throw new BadRequestException('Registre la atención antes de adjuntar archivos')
     }
     if (!MIMES_ADJUNTO.includes(file.mimetype)) {
-      throw new BadRequestException('Solo se aceptan imagenes (JPG, PNG, WebP) o PDF')
+      throw new BadRequestException('Solo se aceptan imágenes (JPG, PNG, WebP) o PDF')
     }
     if (file.size > MAX_ADJUNTO_BYTES) {
-      throw new BadRequestException('El archivo supera el maximo de 5 MB')
+      throw new BadRequestException('El archivo supera el máximo de 5 MB')
     }
 
     const existentes = (cita.atencion.adjuntos as AdjuntoMeta[] | null) ?? []
     if (existentes.length >= MAX_ADJUNTOS_POR_ATENCION) {
-      throw new BadRequestException(`Maximo ${MAX_ADJUNTOS_POR_ATENCION} adjuntos por atencion`)
+      throw new BadRequestException(`Máximo ${MAX_ADJUNTOS_POR_ATENCION} adjuntos por atención`)
     }
 
     // Nombre en disco controlado por el server; el original queda solo como metadato
@@ -291,7 +291,7 @@ export class AtencionesService {
     )
     const destino = resolve(this.uploadsDir, relativo)
     if (!destino.startsWith(this.uploadsDir)) {
-      throw new BadRequestException('Ruta de adjunto invalida')
+      throw new BadRequestException('Ruta de adjunto inválida')
     }
     await fs.mkdir(join(destino, '..'), { recursive: true })
     await fs.writeFile(destino, file.buffer)
