@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Eraser,
@@ -155,6 +156,215 @@ function marcarAvisoScribbleDescartado() {
   } catch {
     // Sin storage no hay donde recordar el descarte -- no-opea.
   }
+}
+
+/**
+ * Selector de color del lapiz: combobox compacto para la barra inferior de
+ * una sola fila (Task de compactacion, 2da pasada). Reusa el patron de
+ * popover YA establecido en el proyecto -- mismo mecanismo que
+ * `SplitButton.tsx`, `SelectorPais.tsx` y `RangoFechasPicker.tsx`: estado
+ * local abierto/cerrado, cierre por click afuera (`mousedown` en
+ * `document`) y por Escape, panel `absolute` con `z-50`. No se inventa un
+ * mecanismo nuevo.
+ *
+ * El boton disparador SIEMPRE pinta el color activo (nunca hace falta
+ * abrirlo para saber que color esta puesto -- requisito del owner). Adentro,
+ * las opciones son EXACTAMENTE los mismos botones que existian sueltos en
+ * la barra antes de esta pasada (mismo aria-label "Color {nombre}", mismo
+ * aria-pressed, mismo anillo + check -- nunca solo el tono -- para que la
+ * opcion activa sea distinguible sin depender del color). Solo cambio donde
+ * viven: dentro de un panel que se abre bajo demanda en vez de una fila
+ * siempre visible.
+ */
+function SelectorColor({ color, onElegir }: { color: string; onElegir: (c: string) => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const raiz = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!abierto) return
+    function onMouseDown(e: MouseEvent) {
+      if (!raiz.current?.contains(e.target as Node)) setAbierto(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setAbierto(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [abierto])
+
+  return (
+    <div ref={raiz} className="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        aria-label={`Color: ${NOMBRE_COLOR[color] ?? color}`}
+        title={`Color: ${NOMBRE_COLOR[color] ?? color}`}
+        onClick={() => setAbierto((v) => !v)}
+        className={cn(
+          'inline-flex h-11 shrink-0 items-center gap-1 rounded-full px-2 cursor-pointer transition-colors duration-150',
+          'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+          abierto ? 'bg-muted' : 'hover:bg-muted/60',
+        )}
+      >
+        <span
+          className="h-6 w-6 shrink-0 rounded-full ring-1 ring-black/10"
+          style={{ backgroundColor: color }}
+          aria-hidden="true"
+        />
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-150',
+            abierto && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {abierto && (
+        <div
+          role="group"
+          aria-label="Color del lápiz"
+          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)]"
+        >
+          {COLORES_LAPIZ.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                onElegir(c)
+                setAbierto(false)
+              }}
+              aria-pressed={color === c}
+              aria-label={`Color ${NOMBRE_COLOR[c] ?? c}`}
+              title={NOMBRE_COLOR[c] ?? c}
+              className={cn(
+                'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+                'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-primary' : 'hover:bg-muted/60',
+              )}
+            >
+              <span
+                className="h-6 w-6 rounded-full ring-1 ring-black/10"
+                style={{ backgroundColor: c }}
+                aria-hidden="true"
+              />
+              {color === c && <Check className="absolute h-3.5 w-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Selector de grosor del lapiz: mismo patron y mismo motivo que
+ * `SelectorColor` (ver su JSDoc). El disparador pinta un punto del tamano
+ * del grosor activo; adentro, las opciones son las mismas de siempre
+ * (mismo aria-label "Grosor {nombre}", mismo aria-pressed, mismo anillo +
+ * badge de check -- nunca solo el tamano del punto).
+ */
+function SelectorGrosor({ grosor, onElegir }: { grosor: number; onElegir: (g: number) => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const raiz = useRef<HTMLDivElement>(null)
+  // `findIndex` con predicado, no `.indexOf(grosor)`: `GROSORES_LAPIZ` es
+  // `as const` (tupla `readonly [2, 4, 7]`), asi que `indexOf` solo acepta
+  // el tipo literal `2 | 4 | 7` -- `grosor` (prop) es `number` a proposito,
+  // igual que el estado original en el componente padre (no se toca ese
+  // tipo, es logica ajena a esta pasada).
+  const indiceActivo = Math.max(
+    GROSORES_LAPIZ.findIndex((g) => g === grosor),
+    0,
+  )
+
+  useEffect(() => {
+    if (!abierto) return
+    function onMouseDown(e: MouseEvent) {
+      if (!raiz.current?.contains(e.target as Node)) setAbierto(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setAbierto(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [abierto])
+
+  return (
+    <div ref={raiz} className="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        aria-label={`Grosor: ${NOMBRE_GROSOR[grosor] ?? grosor}`}
+        title={`Grosor: ${NOMBRE_GROSOR[grosor] ?? grosor}`}
+        onClick={() => setAbierto((v) => !v)}
+        className={cn(
+          'inline-flex h-11 shrink-0 items-center gap-1 rounded-full px-2 cursor-pointer transition-colors duration-150',
+          'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+          abierto ? 'bg-muted' : 'hover:bg-muted/60',
+        )}
+      >
+        <span className="grid h-6 w-6 shrink-0 place-items-center" aria-hidden="true">
+          <span
+            className="rounded-full bg-foreground"
+            style={{ width: 6 + indiceActivo * 4, height: 6 + indiceActivo * 4 }}
+          />
+        </span>
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-150',
+            abierto && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {abierto && (
+        <div
+          role="group"
+          aria-label="Grosor del lápiz"
+          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)]"
+        >
+          {GROSORES_LAPIZ.map((g, i) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => {
+                onElegir(g)
+                setAbierto(false)
+              }}
+              aria-pressed={grosor === g}
+              aria-label={`Grosor ${NOMBRE_GROSOR[g] ?? g}`}
+              title={NOMBRE_GROSOR[g] ?? String(g)}
+              className={cn(
+                'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+                'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                grosor === g ? 'ring-2 ring-offset-2 ring-offset-card ring-primary bg-primary/5' : 'hover:bg-muted/60',
+              )}
+            >
+              <span className="rounded-full bg-foreground" style={{ width: 6 + i * 4, height: 6 + i * 4 }} aria-hidden="true" />
+              {grosor === g && (
+                <Check
+                  className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full bg-primary p-0.5 text-primary-foreground"
+                  strokeWidth={3}
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /**
@@ -717,7 +927,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     if (bloqueoDibujoRef.current) return
     if (e.pointerType === 'pen') vioLapiz.current = true
     if (!puedeDibujar(e)) return
-    if (punteroActivo.current !== null) return // ya hay un trazo en curso
+    if (punteroActivo.current !== null) return
 
     e.currentTarget.setPointerCapture(e.pointerId)
     punteroActivo.current = e.pointerId
@@ -1358,54 +1568,18 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col">
-      <header className="shrink-0 flex items-center gap-3 h-14 px-4 sm:px-6 border-b bg-card/90 backdrop-blur-xs">
-        <span
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20"
-          aria-hidden="true"
-        >
-          <PenLine className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-sm font-semibold text-foreground leading-tight truncate">Nota manuscrita</h1>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground leading-snug truncate">
-            <span>Cita #{citaId}</span>
-            {hojaActivaId !== null && (
-              // aria-live="polite": un lector de pantalla anuncia el cambio
-              // sin interrumpir -- el span en si nunca se desmonta mientras
-              // haya una hoja activa, solo cambia su contenido, asi que las
-              // tres transiciones (guardando/guardado/sin guardar) quedan
-              // cubiertas. Color + forma (icono), nunca solo color: "sin
-              // guardar" es el unico estado que realmente pide atencion.
-              <span
-                aria-live="polite"
-                className={cn(
-                  'inline-flex items-center gap-1 shrink-0',
-                  estadoGuardado === 'sin-guardar' && 'text-amber-600 dark:text-amber-400',
-                  estadoGuardado === 'guardado' && 'text-emerald-600 dark:text-emerald-400',
-                )}
-              >
-                {estadoGuardado === 'guardando' && (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                    Guardando…
-                  </>
-                )}
-                {estadoGuardado === 'sin-guardar' && (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                    Sin guardar
-                  </>
-                )}
-                {estadoGuardado === 'guardado' && (
-                  <>
-                    <Check className="h-3 w-3" aria-hidden="true" />
-                    Guardado
-                  </>
-                )}
-              </span>
-            )}
-          </p>
-        </div>
+      {/* Barra superior unica (antes: header + barra de hojas separadas --
+          ~450px de chrome en un Android de 738px de ancho). Cerrar, titulo
+          compacto, navegacion de hojas, agregar/eliminar hoja y el
+          indicador de guardado conviven en una sola fila de 56px (mismo
+          alto que el header viejo), siguiendo el patron de app nativa de
+          Android (Samsung Notes: flecha atras + titulo + iconos a la
+          derecha). "Cita #{citaId}" y el icono-avatar del titulo se
+          soltaron a proposito -- el doctor ya sabe que atencion abrio; el
+          h1 "Nota manuscrita" se mantiene VISIBLE (lo exige el E2E) pero
+          compacto. Children con `gap-2` (8px): piso de separacion entre
+          touch targets adyacentes. */}
+      <header className="shrink-0 flex items-center gap-2 h-14 px-3 sm:px-4 border-b bg-card/90 backdrop-blur-xs">
         <button
           type="button"
           onClick={onClose}
@@ -1420,6 +1594,137 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
+
+        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">Nota manuscrita</h1>
+
+        {isLoading && <p className="shrink-0 text-sm text-muted-foreground">Cargando…</p>}
+
+        {!isLoading && hojas.length === 0 && (
+          <button
+            type="button"
+            onClick={nuevaHoja}
+            disabled={operandoHoja}
+            className={cn(btnPrimaryUI, 'h-11 shrink-0 px-3')}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Primera hoja
+          </button>
+        )}
+
+        {!isLoading && hojas.length > 0 && (
+          <>
+            <div className="inline-flex shrink-0 items-center gap-1" role="group" aria-label="Navegar hojas">
+              <button
+                type="button"
+                onClick={() => hayAnterior && irAHoja(hojas[indiceActivo - 1].id)}
+                disabled={!hayAnterior || operandoHoja}
+                aria-label="Hoja anterior"
+                title="Hoja anterior"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <span
+                className="min-w-[6rem] text-center text-sm font-medium tabular-nums text-foreground"
+                aria-live="polite"
+              >
+                Hoja {indiceActivo + 1} / {hojas.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => haySiguiente && irAHoja(hojas[indiceActivo + 1].id)}
+                disabled={!haySiguiente || operandoHoja}
+                aria-label="Hoja siguiente"
+                title="Hoja siguiente"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="inline-flex shrink-0 items-center gap-2">
+              {/* Motivo visible del boton apagado -- Task de compactacion,
+                  2da pasada: la 1ra pasada solo dejaba un `title` (tooltip),
+                  que no existe en touch; el doctor tocaba "+ Hoja" en el
+                  limite y no pasaba nada, sin ninguna pista. Badge siempre
+                  visible (no hover) en vez de tooltip. `tabular-nums`: mismo
+                  token que el contador de hojas, para no tenerlo saltando. */}
+              {estaEnLimite && (
+                <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+                  Máx. 20
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={nuevaHoja}
+                disabled={operandoHoja || estaEnLimite}
+                title={estaEnLimite ? 'Máximo 20 hojas por atención' : 'Agregar hoja'}
+                className={cn(btnOutlineUI, 'h-11 px-2.5 sm:px-3')}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Hoja
+              </button>
+              <button
+                type="button"
+                onClick={() => hojaActivaId !== null && setHojaABorrar(hojaActivaId)}
+                disabled={hojaActivaId === null || operandoHoja}
+                aria-label="Eliminar hoja actual"
+                title="Eliminar hoja actual"
+                className={cn(
+                  btnIconUI,
+                  'h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                )}
+              >
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Indicador de guardado, reubicado del subtitulo viejo. Icono
+                SIEMPRE + texto solo en los estados que piden atencion
+                (guardando/sin guardar) -- "guardado" (el estado la mayor
+                parte del tiempo) queda en icono solo con texto sr-only:
+                calma visual cuando todo esta bien, texto visible justo
+                cuando algo necesita que el doctor se entere. aria-live
+                sigue en el mismo span, nunca se desmonta mientras haya
+                hoja activa (mismo mecanismo que antes, solo reubicado).
+                Color + forma (icono distinto por estado), nunca solo
+                color. */}
+            <span
+              aria-live="polite"
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 text-xs font-medium',
+                estadoGuardado === 'sin-guardar' && 'text-amber-600 dark:text-amber-400',
+                estadoGuardado === 'guardado' && 'text-emerald-600 dark:text-emerald-400',
+                estadoGuardado === 'guardando' && 'text-muted-foreground',
+              )}
+            >
+              {estadoGuardado === 'guardando' && (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>Guardando…</span>
+                </>
+              )}
+              {estadoGuardado === 'sin-guardar' && (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                  <span>Sin guardar</span>
+                </>
+              )}
+              {estadoGuardado === 'guardado' && (
+                <>
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">Guardado</span>
+                </>
+              )}
+            </span>
+          </>
+        )}
       </header>
 
       {/* Aviso de Scribble (Task 15): fila propia, `shrink-0` como el header y
@@ -1468,93 +1773,37 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       )}
 
-      <div className="shrink-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 py-2 sm:justify-between sm:px-6 border-b bg-card/60">
-        {isLoading && <p className="text-sm text-muted-foreground">Cargando hojas…</p>}
-
-        {!isLoading && hojas.length === 0 && (
-          <button type="button" onClick={nuevaHoja} disabled={operandoHoja} className={cn(btnPrimaryUI, 'h-11')}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Primera hoja
-          </button>
-        )}
-
-        {!isLoading && hojas.length > 0 && (
-          <>
-            <div className="inline-flex items-center gap-1" role="group" aria-label="Navegar hojas">
-              <button
-                type="button"
-                onClick={() => hayAnterior && irAHoja(hojas[indiceActivo - 1].id)}
-                disabled={!hayAnterior || operandoHoja}
-                aria-label="Hoja anterior"
-                title="Hoja anterior"
-                className={cn(
-                  btnIconUI,
-                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-              </button>
-              <span
-                className="min-w-[6rem] text-center text-sm font-medium tabular-nums text-foreground"
-                aria-live="polite"
-              >
-                Hoja {indiceActivo + 1} / {hojas.length}
-              </span>
-              <button
-                type="button"
-                onClick={() => haySiguiente && irAHoja(hojas[indiceActivo + 1].id)}
-                disabled={!haySiguiente || operandoHoja}
-                aria-label="Hoja siguiente"
-                title="Hoja siguiente"
-                className={cn(
-                  btnIconUI,
-                  'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <div className="inline-flex items-center gap-2">
-              {estaEnLimite && <p className="text-xs text-muted-foreground">Máximo 20 hojas por atención</p>}
-              <button
-                type="button"
-                onClick={nuevaHoja}
-                disabled={operandoHoja || estaEnLimite}
-                title={estaEnLimite ? 'Máximo 20 hojas por atención' : 'Agregar hoja'}
-                className={cn(btnOutlineUI, 'h-11')}
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Hoja
-              </button>
-              <button
-                type="button"
-                onClick={() => hojaActivaId !== null && setHojaABorrar(hojaActivaId)}
-                disabled={hojaActivaId === null || operandoHoja}
-                aria-label="Eliminar hoja actual"
-                title="Eliminar hoja actual"
-                className={cn(
-                  btnIconUI,
-                  'h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
-                )}
-              >
-                <Trash2 className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
       <div className="flex-1 min-h-0 overflow-hidden p-4 sm:p-6">
         <div ref={areaRef} className="flex h-full w-full items-center justify-center">
           {anchoCss > 0 && hojaActivaId !== null && (
             <div className="relative touch-none select-none" style={{ width: anchoCss, height: altoCss }}>
-              <canvas ref={canvasFondo} aria-hidden="true" className="absolute inset-0 rounded-md bg-white shadow-sm" />
+              {/*
+                Las medidas CSS son OBLIGATORIAS en los dos canvas, igual que en
+                HojaRenderer. Un <canvas> es un elemento reemplazado: `absolute
+                inset-0` NO lo estira, solo lo clava arriba a la izquierda con su
+                tamano intrinseco -- el de los atributos width/height, que
+                contexto() fija en pixeles FISICOS (CSS * dpr). Sin esto el fondo
+                se dibujaba dpr veces mas grande y desbordaba, y el canvas de
+                captura se quedaba en los 300x150 por defecto hasta que algo lo
+                pintara, asi que los toques le pasaban por al lado y no se podia
+                escribir al reabrir una hoja.
+              */}
+              <canvas
+                ref={canvasFondo}
+                aria-hidden="true"
+                style={{ width: anchoCss, height: altoCss }}
+                className="absolute inset-0 rounded-md bg-white shadow-sm"
+              />
               <canvas
                 ref={canvasVivo}
                 aria-label="Hoja para escribir a mano con el lápiz o el dedo"
                 className="absolute inset-0 rounded-md"
-                style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+                style={{
+                  width: anchoCss,
+                  height: altoCss,
+                  touchAction: 'none',
+                  overscrollBehavior: 'none',
+                }}
                 onPointerDown={alBajar}
                 onPointerMove={alMover}
                 onPointerUp={alSubir}
@@ -1573,8 +1822,20 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       </div>
 
-      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 py-2.5 sm:justify-between sm:px-6 border-t bg-card/90 backdrop-blur-xs">
-        <div className="inline-flex items-center gap-1 rounded-full bg-muted/60 p-1" role="group" aria-label="Herramienta">
+      {/* Barra inferior unica -- 2da pasada: color y grosor colapsan de 3
+          swatches sueltos cada uno a UN combobox cada uno (SelectorColor /
+          SelectorGrosor, arriba), asi que la fila queda en 6 controles
+          (lapiz, borrador, color, grosor, deshacer, rehacer) en vez de 10.
+          La 1ra pasada (10 controles, ~571px estimados) desbordo en el
+          telefono real igual -- el estimado no sobrevivio al dispositivo, y
+          `flex-wrap` actuo como estaba disenado (2 filas). Con 6 controles el
+          calculo de ancho a 738px queda con margen real (~340px, ver reporte
+          en .superpowers/scratch-lienzo-compacto.md) para absorber esa
+          diferencia. `gap-2` (8px) en el contenedor y dentro de cada grupo:
+          piso de separacion entre touch targets adyacentes. `flex-wrap`
+          se deja solo como red de seguridad pasiva -- no deberia disparar. */}
+      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 border-t bg-card/90 backdrop-blur-xs">
+        <div className="inline-flex items-center gap-2 rounded-full bg-muted/60 p-1" role="group" aria-label="Herramienta">
           <button
             type="button"
             onClick={() => setHerramienta('lapiz')}
@@ -1609,59 +1870,16 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <div className="flex items-center gap-1" role="group" aria-label="Color del lápiz">
-            {COLORES_LAPIZ.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                aria-pressed={color === c}
-                aria-label={`Color ${NOMBRE_COLOR[c] ?? c}`}
-                title={NOMBRE_COLOR[c] ?? c}
-                className={cn(
-                  'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
-                  'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
-                  color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-primary' : 'hover:bg-muted/60',
-                )}
-              >
-                <span className="h-6 w-6 rounded-full ring-1 ring-black/10" style={{ backgroundColor: c }} aria-hidden="true" />
-                {color === c && <Check className="absolute h-3.5 w-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
+        <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
 
-          <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
-
-          <div className="flex items-center gap-1" role="group" aria-label="Grosor del lápiz">
-            {GROSORES_LAPIZ.map((g, i) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGrosor(g)}
-                aria-pressed={grosor === g}
-                aria-label={`Grosor ${NOMBRE_GROSOR[g] ?? g}`}
-                title={NOMBRE_GROSOR[g] ?? String(g)}
-                className={cn(
-                  'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
-                  'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
-                  grosor === g ? 'ring-2 ring-offset-2 ring-offset-card ring-primary bg-primary/5' : 'hover:bg-muted/60',
-                )}
-              >
-                <span className="rounded-full bg-foreground" style={{ width: 6 + i * 4, height: 6 + i * 4 }} aria-hidden="true" />
-                {grosor === g && (
-                  <Check
-                    className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full bg-primary p-0.5 text-primary-foreground"
-                    strokeWidth={3}
-                    aria-hidden="true"
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="inline-flex items-center gap-2">
+          <SelectorColor color={color} onElegir={setColor} />
+          <SelectorGrosor grosor={grosor} onElegir={setGrosor} />
         </div>
 
-        <div className="inline-flex items-center gap-1" role="group" aria-label="Deshacer y rehacer">
+        <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+
+        <div className="inline-flex items-center gap-2" role="group" aria-label="Deshacer y rehacer">
           <button
             type="button"
             onClick={deshacer}

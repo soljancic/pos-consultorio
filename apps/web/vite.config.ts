@@ -90,6 +90,12 @@ export default defineConfig({
     },
   },
   server: {
+    // Escucha en todas las interfaces, no solo loopback: sin esto el dev
+    // server queda en [::1] y no se puede abrir desde el celular (ni desde la
+    // IP de red de la propia PC) para probar el lienzo manuscrito, que
+    // necesita un dispositivo tactil real. Va aca y no como flag `--host`
+    // porque pnpm no siempre se lo pasa a vite.
+    host: true,
     port: 5173,
     proxy: {
       '/api': {
