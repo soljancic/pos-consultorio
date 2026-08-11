@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eraser,
+  History,
+  Loader2,
   Pen,
   PenLine,
   Plus,
@@ -25,11 +27,13 @@ import {
   type TrazosHoja,
 } from '@pos/types'
 import { altoHoja, cuantizar, escalaHoja, pathDeTrazo, pintarHoja } from '../../components/manuscrito/dibujar'
+import { borrarBorrador, guardarBorrador, leerBorrador } from '../../components/manuscrito/borradorLocal'
 import { api } from '../../lib/api-client'
 import { cn } from '../../lib/utils'
 import { btnIconUI, btnOutlineUI, btnPrimaryUI } from '../../lib/ui'
 import { toast } from '../../stores/toast.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
+import { ModalHeader } from '../../components/shared/ModalHeader'
 
 interface Props {
   citaId: number
@@ -75,9 +79,10 @@ const NOMBRE_GROSOR: Record<number, string> = { 2: 'Fino', 4: 'Medio', 7: 'Grues
  * estado. `cargarHoja()` es el unico camino que cambia CUAL hoja esta activa
  * (trazosRef + historial + hojaActivaId, todos juntos, nunca por separado).
  *
- * `sucio` marca cambios sin guardar de la hoja activa; Task 11 lo va a
- * consumir para el autoguardado con temporizador (fuera de alcance aca:
- * esta tarea solo guarda al cambiar de hoja, no en el fondo).
+ * `sucio` marca cambios sin guardar de la hoja activa. Task 11 agrega el
+ * autoguardado con temporizador (cada 10s mientras `sucio`) y el borrador
+ * local en IndexedDB (`components/manuscrito/borradorLocal.ts`), red de
+ * seguridad para un corte de conexion a mitad de una nota.
  *
  * Deshacer/rehacer: pila simple sobre la lista de trazos (el estado de una
  * hoja ES su lista de trazos, no hace falta nada mas sofisticado). Cada
@@ -161,6 +166,31 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   const bloqueoDibujoRef = useRef(false)
   const [cambiandoHoja, setCambiandoHoja] = useState(false)
 
+  // Espejo sincronico de `hojaActivaId`, mismo motivo que `sucioRef`: el
+  // flush al desmontar (ver el efecto de "salir de la pantalla" mas abajo)
+  // llama a traves de un ref a la ULTIMA version de `prepararCambioDeHoja`,
+  // cuyo closure necesita leer el `hojaActivaId` mas reciente. Si en cambio
+  // leyera directo el estado capturado en el primer render (`hojaActivaId`
+  // todavia null, antes de la auto-seleccion de la primera hoja), el flush
+  // de salida nunca guardaria nada real.
+  const hojaActivaIdRef = useRef<number | null>(null)
+
+  // Evita dos PUT concurrentes contra la misma hoja: el timer de
+  // autoguardado y un cambio de hoja (irAHoja/nuevaHoja) pueden pedir
+  // guardarActivaSiSucia() casi al mismo tiempo. `operandoHoja` (mas abajo)
+  // no alcanza para esto: depende de que React re-renderice para reflejar
+  // `guardarHoja.isPending`, y hay una ventana real entre que se llama
+  // `mutateAsync` y que ese re-render se refleja en el DOM. Este ref se lee
+  // y escribe sincronicamente, sin esa ventana. Ver `guardarActivaSiSucia`.
+  const guardadoEnCursoRef = useRef<Promise<boolean> | null>(null)
+
+  // Borrador local (IndexedDB) mas rico que lo que trajo el servidor al
+  // cargar esta hoja -- señal de trazos sin subir por un corte de conexion.
+  // `null` = nada que ofrecer. Ver `ofrecerBorradorSiHaceFalta`.
+  const [recuperable, setRecuperable] = useState<{ id: number; borrador: TrazosHoja; servidor: TrazosHoja } | null>(
+    null,
+  )
+
   const qc = useQueryClient()
   const { data: hojas = [], isLoading } = useQuery<HojaManuscritaApi[]>({
     queryKey: ['hojas', citaId],
@@ -192,7 +222,12 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   const guardarHoja = useMutation({
     mutationFn: ({ id, trazos }: { id: number; trazos: TrazosHoja }) =>
       api.put(`/atenciones/cita/${citaId}/hojas/${id}`, { trazos }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hojas', citaId] }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['hojas', citaId] })
+      // El servidor ya tiene esta version confirmada: el borrador local de
+      // ESTA hoja cumplio su funcion.
+      void borrarBorrador(id)
+    },
     onError: (err: any) => toast.fromError(err, 'No se pudo guardar la hoja'),
   })
 
@@ -283,6 +318,48 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     autoSeleccionoRef.current = true
     if (hojaActivaId === null) cargarHoja(hojas[0])
   }, [isLoading, hojas, hojaActivaId])
+
+  // Autoguardado: mientras la hoja activa tenga cambios sin guardar,
+  // reintenta a los 10s. Un timer por ciclo "se ensucio" (sucio false->true),
+  // no un intervalo recurrente: en cuanto guardarActivaSiSucia() resuelve con
+  // exito pone `sucio` en false, lo que dispara este mismo efecto de nuevo
+  // con la guarda `!sucio` -- no programa nada mas hasta el proximo trazo,
+  // que vuelve a poner `sucio` en true y arma un timer nuevo. Reusa
+  // `guardarActivaSiSucia()` a proposito -- el MISMO camino (con el mutex de
+  // `guardadoEnCursoRef`) que usan `irAHoja`/`nuevaHoja`: una segunda ruta de
+  // guardado que se saltee la comparacion de snapshot reintroduciria el bug
+  // critico de Task 10 (trazo dibujado durante un PUT en vuelo, perdido en
+  // silencio al cambiar de hoja).
+  useEffect(() => {
+    if (!sucio || hojaActivaId === null) return
+    const t = setTimeout(() => {
+      void guardarActivaSiSucia()
+    }, 10_000)
+    return () => clearTimeout(t)
+  }, [sucio, hojaActivaId])
+
+  // Guarda lo pendiente al salir de la pantalla: este componente es un
+  // overlay `fixed`, se desmonta cuando el padre deja de renderizarlo tras
+  // `onClose()` (boton X o Escape). `prepararCambioDeHojaRef` siempre apunta
+  // a la version MAS RECIENTE de `prepararCambioDeHoja` (actualizado en cada
+  // render, efecto de abajo sin dependencias): el efecto de limpieza usa
+  // `[]` a proposito (correr una sola vez, al desmontar de verdad, no en
+  // cada cambio de hoja), pero eso significa que su closure quedaria fijo en
+  // el PRIMER render si llamara a `prepararCambioDeHoja` directo -- con
+  // `hojaActivaId` todavia `null` en ese momento (antes de la
+  // auto-seleccion), el flush de salida nunca guardaria nada real. El ref
+  // evita ese cierre obsoleto. `prepararCambioDeHoja` (no solo
+  // `guardarActivaSiSucia`) para tambien comitear un trazo a medio hacer si
+  // el doctor cierra con el lapiz todavia apoyado.
+  const prepararCambioDeHojaRef = useRef<() => Promise<boolean>>(async () => true)
+  useEffect(() => {
+    prepararCambioDeHojaRef.current = prepararCambioDeHoja
+  })
+  useEffect(() => {
+    return () => {
+      void prepararCambioDeHojaRef.current()
+    }
+  }, [])
 
   function contexto(canvas: HTMLCanvasElement | null): CanvasRenderingContext2D | null {
     if (!canvas || anchoCss <= 0) return null
@@ -481,6 +558,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     registrarCambio()
     aplicar([...trazosRef.current.strokes, trazo])
     limpiarVivo()
+
+    // Borrador local cada 5 trazos: barato (fire-and-forget, no bloquea el
+    // dibujo) y alcanza como red de seguridad -- no hace falta en cada uno.
+    // guardarBorrador() nunca lanza (ver su JSDoc en borradorLocal.ts): un
+    // fallo de IndexedDB (privado, cupo lleno, iOS que expulso el storage)
+    // jamas puede interrumpir este handler de puntero.
+    if (hojaActivaId !== null && trazosRef.current.strokes.length % 5 === 0) {
+      void guardarBorrador(hojaActivaId, trazosRef.current)
+    }
   }
 
   /**
@@ -523,6 +609,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    * `sucio` -- cargar una hoja no es editarla -- ni llama pintarFondo(): el
    * efecto sobre [anchoCss, altoCss, hojaActivaId] repinta una vez el canvas
    * de la hoja destino este montado.
+   *
+   * Al final, si hay una hoja real, dispara (sin esperar) el chequeo de
+   * borrador local -- ver `ofrecerBorradorSiHaceFalta`.
    */
   function cargarHoja(hoja: HojaManuscritaApi | null) {
     trazoActivo.current = null
@@ -533,8 +622,33 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     setPuedeRehacer(false)
     sucioRef.current = false
     setSucio(false)
-    trazosRef.current = hoja ? ((hoja.trazos as TrazosHoja) ?? hojaVacia()) : hojaVacia()
+    const delServidor = hoja ? ((hoja.trazos as TrazosHoja) ?? hojaVacia()) : hojaVacia()
+    trazosRef.current = delServidor
+    hojaActivaIdRef.current = hoja?.id ?? null
     setHojaActivaId(hoja?.id ?? null)
+
+    if (hoja) void ofrecerBorradorSiHaceFalta(hoja.id, delServidor)
+  }
+
+  /**
+   * Tras cargar una hoja, revisa si IndexedDB tiene un borrador MAS RICO que
+   * lo que acaba de llegar del servidor (mas trazos -- señal de que un corte
+   * de conexion dejo trazos sin subir). Si es asi, lo OFRECE via `recuperable`
+   * (modal mas abajo en el render) -- nunca lo aplica ni lo descarta en
+   * silencio, la decision es del doctor.
+   *
+   * `leerBorrador` es async: para cuando resuelve, el doctor pudo haber
+   * cambiado de hoja de nuevo (nav rapida). Se compara `hojaActivaIdRef.current`
+   * (espejo sincronico, siempre al dia) contra el `id` que motivo esta
+   * llamada -- si ya no coinciden, el ofrecimiento quedo viejo y se descarta
+   * sin mostrar nada.
+   */
+  async function ofrecerBorradorSiHaceFalta(id: number, delServidor: TrazosHoja) {
+    const borrador = await leerBorrador(id)
+    if (!borrador || hojaActivaIdRef.current !== id) return
+    if (borrador.trazos.strokes.length > delServidor.strokes.length) {
+      setRecuperable({ id, borrador: borrador.trazos, servidor: delServidor })
+    }
   }
 
   /** Indice (0-based) de una hoja en la lista ordenada -- NUNCA su `orden` (ver comentario de `hojaActivaId`). */
@@ -558,30 +672,58 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    * OTRO tap discreto de Deshacer/Rehacer superpuesto con dos guardados de
    * red seguidos, un escenario de probabilidad practicamente nula que no
    * amerita un bucle sin cota. Ver Finding 1 del review de Task 10.
+   *
+   * Task 11: unica funcion que emite el PUT de guardado, reusada por
+   * `irAHoja`/`nuevaHoja` (via `prepararCambioDeHoja`), el timer de
+   * autoguardado y el flush al desmontar -- por diseño, para no reintroducir
+   * el bug que Task 10 arreglo con una segunda ruta de guardado. Como ahora
+   * hay MAS de un llamador que puede pedir un guardado en cualquier momento
+   * (no solo un cambio de hoja explicito), `guardadoEnCursoRef` evita que
+   * dos llamados concurrentes disparen dos PUT en paralelo contra la misma
+   * hoja: el segundo llamado se UNE a la promesa del primero en vez de
+   * arrancar uno nuevo, y recibe el mismo resultado. Esto tambien cierra el
+   * caso "un cambio de hoja arranca justo cuando el autoguardado ya esta en
+   * vuelo": sin unirse, `irAHoja` podria seguir de largo a `cargarHoja()`
+   * (que pisa `trazosRef` con la hoja destino) MIENTRAS el PUT del
+   * autoguardado, todavia en curso, evalua su propia comparacion de snapshot
+   * -- veria `trazosRef.current !== foto` por una razon incorrecta (la hoja
+   * cambio, no que se agrego un trazo) y reenviaria el contenido de la hoja
+   * DESTINO contra el id de la hoja ORIGEN.
    */
   async function guardarActivaSiSucia(): Promise<boolean> {
+    if (guardadoEnCursoRef.current) return guardadoEnCursoRef.current
     // `sucioRef`, no el estado `sucio`: ver su declaracion -- si
     // `terminarGestoEnCurso()` acaba de comitear un trazo en ESTE mismo
     // llamado (dentro de `prepararCambioDeHoja`), el estado todavia no
     // reflejaria ese cambio aca.
     if (!sucioRef.current || hojaActivaId === null) return true
-    const id = hojaActivaId
-    const foto = trazosRef.current
-    try {
-      await guardarHoja.mutateAsync({ id, trazos: foto })
-    } catch {
-      return false
-    }
-    if (trazosRef.current !== foto) {
+
+    const promesa = (async (): Promise<boolean> => {
+      const id = hojaActivaId
+      const foto = trazosRef.current
       try {
-        await guardarHoja.mutateAsync({ id, trazos: trazosRef.current })
+        await guardarHoja.mutateAsync({ id, trazos: foto })
       } catch {
         return false
       }
+      if (trazosRef.current !== foto) {
+        try {
+          await guardarHoja.mutateAsync({ id, trazos: trazosRef.current })
+        } catch {
+          return false
+        }
+      }
+      sucioRef.current = false
+      setSucio(false)
+      return true
+    })()
+
+    guardadoEnCursoRef.current = promesa
+    try {
+      return await promesa
+    } finally {
+      guardadoEnCursoRef.current = null
     }
-    sucioRef.current = false
-    setSucio(false)
-    return true
   }
 
   /**
@@ -641,10 +783,45 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     }
   }
 
+  /**
+   * Aplica el borrador recuperado como el contenido vivo de la hoja (marca
+   * `sucio`, como cualquier otro cambio) y dispara un guardado inmediato en
+   * vez de esperar los 10s del timer -- una vez que el doctor elige
+   * recuperar, mejor persistirlo cuanto antes. Reusa `guardarActivaSiSucia`,
+   * el mismo camino de siempre; no borra el borrador local aca a proposito
+   * -- si el guardado fallara (sigue offline), el borrador queda como
+   * respaldo. Se limpia solo cuando el servidor confirma (`guardarHoja.onSuccess`).
+   */
+  function recuperarBorrador() {
+    if (!recuperable) return
+    aplicar(recuperable.borrador.strokes)
+    setRecuperable(null)
+    void guardarActivaSiSucia()
+  }
+
+  /** Descarta el borrador local ofrecido: el servidor ya tiene la version vigente. */
+  function descartarBorrador() {
+    if (!recuperable) return
+    void borrarBorrador(recuperable.id)
+    setRecuperable(null)
+    toast.success('Borrador descartado')
+  }
+
   const estaEnLimite = hojas.length >= MAX_HOJAS_POR_ATENCION
   const indiceActivo = hojaActivaId !== null ? indiceDe(hojaActivaId) : -1
   const hayAnterior = indiceActivo > 0
   const haySiguiente = indiceActivo >= 0 && indiceActivo < hojas.length - 1
+  // Estado del indicador de guardado (header): "guardando" mientras el PUT
+  // esta en vuelo (via TanStack Query, cubre timer/nav/flush por igual, sin
+  // importar quien lo disparo), "sin guardar" mientras `sucio` y no hay PUT
+  // en curso, "guardado" en el resto (incluye el estado inicial al abrir una
+  // hoja sin cambios -- es correcto: lo que se ve YA es lo que tiene el
+  // servidor).
+  const estadoGuardado: 'guardando' | 'guardado' | 'sin-guardar' = guardarHoja.isPending
+    ? 'guardando'
+    : sucio
+      ? 'sin-guardar'
+      : 'guardado'
   // Fuente unica de verdad para "hay una operacion de hoja en curso": las
   // tres mutations (Task 10 original) MAS `cambiandoHoja` (este round), que
   // cubre la ventana completa de irAHoja/nuevaHoja incluyendo el tramo entre
@@ -669,10 +846,39 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           <h1 className="text-sm font-semibold text-foreground leading-tight truncate">Nota manuscrita</h1>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground leading-snug truncate">
             <span>Cita #{citaId}</span>
-            {sucio && (
-              <span className="inline-flex items-center gap-1 shrink-0 text-amber-600 dark:text-amber-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                Sin guardar
+            {hojaActivaId !== null && (
+              // aria-live="polite": un lector de pantalla anuncia el cambio
+              // sin interrumpir -- el span en si nunca se desmonta mientras
+              // haya una hoja activa, solo cambia su contenido, asi que las
+              // tres transiciones (guardando/guardado/sin guardar) quedan
+              // cubiertas. Color + forma (icono), nunca solo color: "sin
+              // guardar" es el unico estado que realmente pide atencion.
+              <span
+                aria-live="polite"
+                className={cn(
+                  'inline-flex items-center gap-1 shrink-0',
+                  estadoGuardado === 'sin-guardar' && 'text-amber-600 dark:text-amber-400',
+                  estadoGuardado === 'guardado' && 'text-emerald-600 dark:text-emerald-400',
+                )}
+              >
+                {estadoGuardado === 'guardando' && (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                    Guardando…
+                  </>
+                )}
+                {estadoGuardado === 'sin-guardar' && (
+                  <>
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                    Sin guardar
+                  </>
+                )}
+                {estadoGuardado === 'guardado' && (
+                  <>
+                    <Check className="h-3 w-3" aria-hidden="true" />
+                    Guardado
+                  </>
+                )}
               </span>
             )}
           </p>
@@ -925,6 +1131,42 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           onConfirm={() => borrarHoja.mutate(hojaABorrar)}
           onClose={() => setHojaABorrar(null)}
         />
+      )}
+
+      {recuperable && (
+        // No se usa ConfirmarModal aca a proposito: su boton de confirmar es
+        // SIEMPRE btnDestructiveUI (rojo), pensado para acciones irreversibles
+        // de riesgo (eliminar). "Recuperar" es la accion SEGURA y recomendada
+        // -- pintarla de rojo diria, al reves de lo que es cierto, que
+        // recuperar los propios trazos es lo arriesgado. Mismo andamiaje
+        // visual que ConfirmarModal/CancelarCitaModal (ModalHeader +
+        // modal-fade/modal-pop), tono "primary" (default) en vez de
+        // "destructive", con "Recuperar" en btnPrimaryUI (accion recomendada)
+        // y "Descartar" en btnOutlineUI (secundaria) -- mismo patron que
+        // "Mantener"/"Devolver y cancelar" en CancelarCitaModal.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
+          <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-sm">
+            <ModalHeader icon={History} title="Trazos sin guardar" onClose={() => setRecuperable(null)} />
+            <div className="p-6 sm:p-7 space-y-5">
+              <p className="text-sm text-foreground">
+                Encontramos{' '}
+                <span className="font-semibold tabular-nums">
+                  {recuperable.borrador.strokes.length - recuperable.servidor.strokes.length}
+                </span>{' '}
+                trazo{recuperable.borrador.strokes.length - recuperable.servidor.strokes.length === 1 ? '' : 's'} sin
+                guardar en esta hoja, probablemente por un corte de conexión. ¿Querés recuperarlos?
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={descartarBorrador} className={cn(btnOutlineUI, 'flex-1')}>
+                  Descartar
+                </button>
+                <button type="button" onClick={recuperarBorrador} className={cn(btnPrimaryUI, 'flex-1')}>
+                  Recuperar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
