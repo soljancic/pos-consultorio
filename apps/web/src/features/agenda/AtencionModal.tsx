@@ -14,6 +14,7 @@ import { useAuthStore } from '../../stores/auth.store'
 import { ConfirmarModal } from '../../components/shared/ConfirmarModal'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { RecetaModal } from './RecetaModal'
+import { HojasManuscritasPanel } from './HojasManuscritasPanel'
 
 interface Props {
   cita: Cita
@@ -186,6 +187,12 @@ export function AtencionModal({ cita, onClose }: Props) {
               value={form.evolucion}
               disabled={!puedeEditar}
               onChange={(e) => set('evolucion', e.target.value)}
+            />
+            <HojasManuscritasPanel
+              cita={cita}
+              puedeEditar={puedeEditar}
+              hayAtencion={!!atencion}
+              onTranscribir={(texto) => set('evolucion', texto)}
             />
             <FloatingInput
               label="Próximo control"
