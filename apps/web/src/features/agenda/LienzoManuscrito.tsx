@@ -1873,13 +1873,16 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           ocupar abajo se convierte en hoja mas grande, y el ancho que pasa a
           ocupar a la derecha sobraba de todos modos. */}
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-        {/* Margen minimo en celular (4px): la hoja ya se ajusta al maximo dentro
-            de esta caja (ver la medicion por los dos ejes), asi que todo lo que
-            se le saque de padding se convierte en superficie para escribir. Los
-            4px quedan para que se sigan viendo la esquina redondeada y la sombra
-            que hacen leer el rectangulo como una hoja. De sm para arriba sobra
-            pantalla y el aire se mantiene. */}
-        <div className="min-w-0 flex-1 min-h-0 overflow-hidden p-1 sm:p-6">
+        {/* Margen minimo (4px) en TODOS los tamanos, no solo en celular. La
+            hoja ya se ajusta al maximo dentro de esta caja (ver la medicion por
+            los dos ejes), asi que cada pixel de padding que se saque se
+            convierte en hoja mas grande, o sea en letra mas grande. En tablet
+            esto antes eran 24px por lado -- 48px de cada eje regalados en el
+            unico aparato donde el doctor va a escribir de verdad. Los 4px que
+            quedan son para que se sigan viendo la esquina redondeada y la
+            sombra, que son las que hacen leer el rectangulo como una hoja y no
+            como el fondo de la pantalla. */}
+        <div className="min-w-0 flex-1 min-h-0 overflow-hidden p-1">
         <div ref={areaRef} className="flex h-full w-full items-center justify-center">
           {anchoCss > 0 && hojaActivaId !== null && (
             <div className="relative touch-none select-none" style={{ width: anchoCss, height: altoCss }}>
