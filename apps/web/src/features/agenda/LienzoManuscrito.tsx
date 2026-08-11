@@ -1594,7 +1594,20 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    */
   function recuperarBorrador() {
     if (!recuperable) return
-    aplicar(recuperable.borrador.strokes)
+    const borrador = recuperable.borrador
+    // El borrador es una foto ENTERA de la hoja, forma incluida, y restaurar
+    // solo los trazos alcanzaba mientras la forma era una sola. Ya no: la hoja
+    // se puede haber dado vuelta entre que se escribio el borrador y que se
+    // ofrece. Camino real: escribir, borrar todo (la hoja queda vacia y por lo
+    // tanto girable), acostar la tablet, cambiar de hoja y volver. Meter esos
+    // trazos en un papel de otra forma los deja fuera de la hoja, y el servidor
+    // los rechaza con 400 -- o sea que el doctor acepta recuperar su trabajo y
+    // el guardado falla.
+    if (borrador.w !== trazosRef.current.w || borrador.h !== trazosRef.current.h) {
+      trazosRef.current = { ...trazosRef.current, w: borrador.w, h: borrador.h }
+      setMedidas({ w: borrador.w, h: borrador.h })
+    }
+    aplicar(borrador.strokes)
     setRecuperable(null)
     void guardarActivaSiSucia()
   }

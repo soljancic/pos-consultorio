@@ -77,7 +77,7 @@ export function HojasManuscritasPanel({
 
   // Query propia (nunca ['hojas', ...]): esto no cambia con nada que pase
   // adentro de una atencion, solo con un restart del servidor (falta o no
-  // ANTHROPIC_API_KEY) -- staleTime infinito evita refetchearla en cada foco
+  // OPENAI_API_KEY) -- staleTime infinito evita refetchearla en cada foco
   // de ventana o remontada del panel.
   const { data: estadoOcr } = useQuery<{ disponible: boolean }>({
     queryKey: ['transcripcion', 'estado'],
