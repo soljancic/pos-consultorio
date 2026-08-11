@@ -179,14 +179,20 @@ POST   /atenciones/cita/:citaId/hojas/:id/transcribir   OCR de esa hoja
 `POST .../hojas/:id/transcribir` recibe el PNG que el cliente rasterizo (multipart,
 mismo patron que `subirAdjunto`, con tope de tamano en el interceptor).
 
-- El backend llama a `claude-opus-5` (SDK `@anthropic-ai/sdk`) con la imagen y un
-  prompt de transcripcion de manuscrito clinico en espanol.
+- El backend llama al modelo de vision con la imagen y un prompt de transcripcion
+  de manuscrito clinico en espanol.
+  > **Cambio posterior (2026-08-11).** Se implemento con `claude-opus-5`, pero el
+  > owner ya tenia facturacion en OpenAI, asi que el proveedor paso a
+  > `gpt-5.6-luna` (SDK `openai`, Responses API) por costo: $0,20 / $1,20 por
+  > MTok contra $5 / $25, o sea ~20x mas barato por hoja. La tabla de costos de
+  > mas abajo quedo historica. La decision de mantener la llamada detras de una
+  > interfaz chica es justo lo que hizo que el cambio tocara un solo archivo.
 - Guarda `transcripcion` + `transcritoAt` en la hoja y escribe en `log`.
 - Devuelve el texto al frontend.
 - **La imagen no se persiste en ningun lado.** Es un intermedio de la request.
 - La llamada vive detras de una interfaz chica (`TranscripcionService` con un solo
   metodo) para poder cambiar de proveedor sin tocar el controller.
-- `ANTHROPIC_API_KEY` en `apps/api/.env` (gitignoreado) y en las variables de
+- `OPENAI_API_KEY` en `apps/api/.env` (gitignoreado) y en las variables de
   Railway. **Nunca en el frontend ni en un commit.**
 - Si falta la key, el endpoint responde un error claro y el boton de transcribir
   se muestra deshabilitado con el motivo (no se rompe el resto del modulo).
@@ -364,7 +370,7 @@ volumen es de unas pocas sesiones por dia. El modelo queda configurable por env
   - Topes: JSON > 2 MB y hoja 21 son rechazados con 400.
   - DELETE marca `deletedAt` y la hoja deja de listarse, pero la fila sigue.
   - Cada create/update/delete deja fila en `logs`.
-  - Transcribir sin `ANTHROPIC_API_KEY` da error claro y no rompe el resto.
+  - Transcribir sin `OPENAI_API_KEY` da error claro y no rompe el resto.
 - Spec E2E de Playwright para el lienzo, cubriendo el camino que si se puede
   automatizar con puntero generico: abrir, trazar, deshacer, agregar hoja, guardar,
   cerrar y reabrir con los trazos intactos.

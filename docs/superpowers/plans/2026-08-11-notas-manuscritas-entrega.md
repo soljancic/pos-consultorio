@@ -17,14 +17,16 @@ dispositivo, incluida la PC.
 En orden. Los tres primeros son bloqueantes.
 
 - [ ] **`pnpm install`** en la raiz. Dependencias nuevas: `perfect-freehand`
-      (apps/web) y `@anthropic-ai/sdk` (apps/api).
+      (apps/web) y `openai` (apps/api).
 - [ ] **Aplicar la migracion.** `add_hojas_manuscritas` es aditiva (solo
       `CREATE TABLE` + indices + FK); no toca ni borra nada existente.
-- [ ] **`ANTHROPIC_API_KEY`** en `apps/api/.env` y en las variables de Railway.
+- [ ] **`OPENAI_API_KEY`** en `apps/api/.env` y en las variables de Railway.
       Sin la key el modulo funciona igual: solo el boton "Transcribir a texto"
       queda deshabilitado, con una leyenda que explica por que.
-      Opcional: `TRANSCRIPCION_MODEL=claude-sonnet-5` baja el costo por hoja de
-      ~4 a ~2,5 centavos de dolar, a cambio de precision en cursiva.
+      **Generar una key propia para el consultorio**, no reusar la de otro
+      sistema: si hay que revocarla, no tiene que caerse nada mas con ella.
+      Opcional: `TRANSCRIPCION_MODEL` para cambiar de modelo sin deploy. El que
+      se ponga tiene que aceptar imagenes de entrada.
 
 Y correr lo que el agente no pudo (necesitan la API levantada):
 

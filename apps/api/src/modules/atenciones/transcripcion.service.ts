@@ -3,7 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { PrismaService } from '../../prisma/prisma.service'
 import { HojasService } from './hojas.service'
 import { mediaTypeDeImagen, modeloTranscripcion, PROMPT_TRANSCRIPCION, resultadoTranscripcion } from './transcripcion.prompt'
@@ -24,7 +24,7 @@ export class TranscripcionService {
   ) {}
 
   disponible(): boolean {
-    return Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+    return Boolean(process.env.OPENAI_API_KEY?.trim())
   }
 
   async transcribir(
@@ -39,7 +39,7 @@ export class TranscripcionService {
 
     if (!this.disponible()) {
       throw new ServiceUnavailableException(
-        'La transcripción no está configurada en el servidor (falta ANTHROPIC_API_KEY)',
+        'La transcripción no está configurada en el servidor (falta OPENAI_API_KEY)',
       )
     }
     if (imagen.length > MAX_IMAGEN_BYTES) {
@@ -50,43 +50,54 @@ export class TranscripcionService {
       throw new BadRequestException('La imagen de la hoja debe ser PNG o JPEG')
     }
 
-    const client = new Anthropic()
+    // La key sale de OPENAI_API_KEY, que el SDK lee solo. Ver disponible():
+    // sin key no se llega hasta aca.
+    const client = new OpenAI()
     let texto: string
     try {
-      const respuesta = await client.messages.create({
+      const respuesta = await client.responses.create({
         model: modeloTranscripcion(process.env),
-        // Tope conjunto de "thinking" + texto de respuesta (no solo del
-        // texto visible): con el thinking adaptativo que trae claude-opus-5
-        // por defecto una hoja densa puede gastar buena parte del
-        // presupuesto pensando antes de escribir. No se fija `thinking`
-        // (queda en su default adaptativo) ni se desactiva: en este modelo
-        // desactivarlo puede filtrar tags <thinking> dentro del texto
-        // visible y corromper la transcripcion.
-        max_tokens: 16000,
-        // Transcribir letra manuscrita es percepcion, no razonamiento: el
-        // effort default (high) desperdicia presupuesto que le hace falta al
-        // texto visible cuando la letra es dificil.
-        output_config: { effort: 'low' },
-        messages: [
+        // Tope conjunto de razonamiento + texto visible (no solo del texto):
+        // una hoja densa puede gastar buena parte del presupuesto razonando
+        // antes de escribir, y quedarse corta a mitad de la transcripcion.
+        max_output_tokens: 16000,
+        // Transcribir letra manuscrita es percepcion, no razonamiento: un
+        // effort alto desperdicia presupuesto que le hace falta al texto
+        // visible cuando la letra es dificil.
+        reasoning: { effort: 'low' },
+        input: [
           {
             role: 'user',
             content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: imagen.toString('base64') } },
-              { type: 'text', text: PROMPT_TRANSCRIPCION },
+              {
+                type: 'input_image',
+                // El SDK toma la imagen como data URL, no como base64 pelado.
+                image_url: `data:${mediaType};base64,${imagen.toString('base64')}`,
+                // 'high' a proposito: la hoja se manda a 2576px de lado largo
+                // justamente para que se lea la letra. Con 'low' el modelo la
+                // reescala a una miniatura y la cursiva se vuelve ilegible.
+                detail: 'high',
+              },
+              { type: 'input_text', text: PROMPT_TRANSCRIPCION },
             ],
           },
         ],
       })
 
-      // El modelo puede declinar la respuesta, o cortarse por max_tokens a
-      // mitad de frase, o devolver contenido vacio: en ningun caso se
+      // El modelo puede declinar la respuesta, cortarse por presupuesto a
+      // mitad de frase, fallar, o devolver contenido vacio: en ningun caso se
       // persiste como si fuera una transcripcion completa. resultadoTranscripcion
       // decide esto de forma pura (ver transcripcion.prompt.spec.ts).
-      const textoCrudo = respuesta.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-      const resultado = resultadoTranscripcion(respuesta.stop_reason, textoCrudo)
+      const huboRechazo = respuesta.output.some(
+        (item) => item.type === 'message' && item.content.some((parte) => parte.type === 'refusal'),
+      )
+      const resultado = resultadoTranscripcion({
+        estado: respuesta.status,
+        razonIncompleta: respuesta.incomplete_details?.reason,
+        huboRechazo,
+        // output_text es el agregado de las partes de texto de la salida.
+        texto: respuesta.output_text,
+      })
 
       if (!resultado.ok) {
         if (resultado.motivo === 'max_tokens') {
@@ -96,6 +107,11 @@ export class TranscripcionService {
         }
         if (resultado.motivo === 'vacio') {
           throw new ServiceUnavailableException('No se pudo leer texto en esta hoja')
+        }
+        if (resultado.motivo === 'incompleto') {
+          throw new ServiceUnavailableException(
+            'La transcripción no llegó a completarse. Intente de nuevo.',
+          )
         }
         throw new ServiceUnavailableException('El modelo no pudo procesar esta hoja')
       }
