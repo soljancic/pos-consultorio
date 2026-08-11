@@ -71,6 +71,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // dibujar. En celular sin lapiz, el dedo sigue dibujando. Sticky a
   // proposito para toda la vida del editor (no se resetea en pointercancel).
   const vioLapiz = useRef(false)
+  // Herramienta congelada al aceptar el gesto (alBajar): un segundo puntero
+  // que toca un boton de la barra (DOM fuera del canvas, no bloqueado por el
+  // pointer capture del primer puntero) puede cambiar `herramienta` en vivo
+  // a mitad de un trazo. alMover/alSubir leen esta copia congelada, no el
+  // estado vivo, para que ese cambio nunca trunque un trazo ya en curso.
+  const herramientaGesto = useRef<'lapiz' | 'borrador'>('lapiz')
+  // Un solo undo por arrastre de borrador: true apenas el gesto actual borro
+  // al menos un trazo (ver borrarEn). Se resetea en cada alBajar.
+  const borradoRegistrado = useRef(false)
 
   const [herramienta, setHerramienta] = useState<'lapiz' | 'borrador'>('lapiz')
   const [color, setColor] = useState<string>(COLORES_LAPIZ[0])
@@ -203,13 +212,27 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // donde pasa su linea central de puntos.
   const RADIO_BORRADOR = 14
 
-  /** Borra el trazo ENTERO que el punto toca (modelo vectorial, no pixeles). */
+  /**
+   * Borra el trazo ENTERO que el punto toca (modelo vectorial, no pixeles).
+   * Se llama una vez por evento (incluidos los coalescidos) mientras dura el
+   * arrastre del borrador, asi que un solo gesto puede llamarla decenas de
+   * veces. `registrarCambio()` solo se llama en el PRIMER borrado real del
+   * gesto (guardado por `borradoRegistrado`, reseteado en alBajar): el
+   * snapshot que empuja es el estado previo a CUALQUIER borrado del gesto,
+   * asi que un unico "Deshacer" restaura todo lo que el arrastre borro. Un
+   * gesto que no borra nada (arrastre sobre hoja en blanco) nunca toca la
+   * pila de deshacer.
+   */
   function borrarEn(x: number, y: number) {
     const quedan = trazosRef.current.strokes.filter(
       (t) => !t.p.some(([px, py]) => Math.hypot(px - x, py - y) < RADIO_BORRADOR + t.s),
     )
     if (quedan.length === trazosRef.current.strokes.length) return
-    registrarCambio()
+
+    if (!borradoRegistrado.current) {
+      registrarCambio()
+      borradoRegistrado.current = true
+    }
     aplicar(quedan)
   }
 
@@ -226,10 +249,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
 
     e.currentTarget.setPointerCapture(e.pointerId)
     punteroActivo.current = e.pointerId
+    // Congelar herramienta y reiniciar el contador de borrado para ESTE
+    // gesto: ver comentarios en la declaracion de ambos refs.
+    herramientaGesto.current = herramienta
+    borradoRegistrado.current = false
 
     const { x, y } = aEspacioHoja(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect())
 
-    if (herramienta === 'borrador') {
+    if (herramientaGesto.current === 'borrador') {
       borrarEn(x, y)
       return
     }
@@ -253,7 +280,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         : [e.nativeEvent]
     const r = e.currentTarget.getBoundingClientRect()
 
-    if (herramienta === 'borrador') {
+    // Lee la herramienta CONGELADA en alBajar, no el estado vivo: un segundo
+    // puntero tocando la barra a mitad de gesto no debe cambiar de rama aca.
+    if (herramientaGesto.current === 'borrador') {
       for (const ev of eventos) {
         const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r)
         borrarEn(x, y)
@@ -274,6 +303,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     punteroActivo.current = null
     const trazo = trazoActivo.current
     trazoActivo.current = null
+    // No hace falta leer herramientaGesto aca: trazoActivo solo se llena en
+    // alBajar cuando el gesto arranco en 'lapiz' (ver arriba), asi que este
+    // guard ya es, en los hechos, "solo comitear si el gesto fue de lapiz".
     if (!trazo || trazo.p.length === 0) return
 
     registrarCambio()
