@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { IsObject } from 'class-validator'
-import { MAX_HOJAS_POR_ATENCION } from '@pos/types'
+import { MAX_HOJAS_POR_ATENCION, type TrazosHoja } from '@pos/types'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { AtencionesService } from './atenciones.service'
 import { siguienteOrden, validarTrazos } from './manuscrito.validator'
@@ -52,30 +53,71 @@ export class HojasService {
     if (vivas >= MAX_HOJAS_POR_ATENCION) {
       throw new BadRequestException(`Máximo ${MAX_HOJAS_POR_ATENCION} hojas por atención`)
     }
+    // El count de arriba es de mejor esfuerzo: no bloquea, asi que dos altas
+    // concurrentes pueden pasarlo juntas y superar el tope por 1. Se acepta
+    // (no vale la pena una transaccion serializable por esto); lo que si se
+    // resuelve es el choque de `orden` — ver crearConReintento.
 
-    // Incluye las borradas a proposito: siguen ocupando su `orden` por el @@unique.
-    const todas = await this.prisma.hojaManuscrita.findMany({
-      where: { atencionId: cita.atencion.id },
-      select: { orden: true },
-    })
-    const orden = siguienteOrden(todas.map((h) => h.orden))
+    return this.crearConReintento(consultorioId, citaId, cita.atencion.id, trazos, usuarioId)
+  }
 
-    const [hoja] = await this.prisma.$transaction([
-      this.prisma.hojaManuscrita.create({
-        data: { atencionId: cita.atencion.id, orden, trazos: trazos as object },
-      }),
-      this.prisma.log.create({
-        data: {
-          consultorioId,
-          usuarioId,
-          entidad: 'HojaManuscrita',
-          entidadId: citaId,
-          accion: 'CREATE',
-          payloadDespues: { orden, trazos: trazos.strokes.length },
-        },
-      }),
-    ])
-    return hoja
+  /**
+   * Postgres corre en READ COMMITTED: una transaccion no evita que dos
+   * requests concurrentes para la misma atencion (doble tap en "+ Hoja" en
+   * la tablet, o un retry de cliente) lean el mismo maximo y calculen el
+   * mismo `orden`. La guarda real es el `@@unique([atencionId, orden])` de
+   * Prisma; ante ese choque (P2002) se reintenta una sola vez con una
+   * lectura fresca del maximo — nunca se asume que alcanza con sumarle 1
+   * al `orden` que ya fallo.
+   */
+  private async crearConReintento(
+    consultorioId: number,
+    citaId: number,
+    atencionId: number,
+    trazos: TrazosHoja,
+    usuarioId: number,
+  ) {
+    const intentar = async () => {
+      // Incluye las borradas a proposito: siguen ocupando su `orden` por el @@unique.
+      const todas = await this.prisma.hojaManuscrita.findMany({
+        where: { atencionId },
+        select: { orden: true },
+      })
+      const orden = siguienteOrden(todas.map((h) => h.orden))
+
+      const [hoja] = await this.prisma.$transaction([
+        this.prisma.hojaManuscrita.create({
+          data: { atencionId, orden, trazos: trazos as object },
+        }),
+        this.prisma.log.create({
+          data: {
+            consultorioId,
+            usuarioId,
+            entidad: 'HojaManuscrita',
+            entidadId: citaId,
+            accion: 'CREATE',
+            payloadDespues: { orden, trazos: trazos.strokes.length },
+          },
+        }),
+      ])
+      return hoja
+    }
+
+    try {
+      return await intentar()
+    } catch (e) {
+      if (!this.esChoqueDeOrden(e)) throw e
+      try {
+        return await intentar()
+      } catch (e2) {
+        if (!this.esChoqueDeOrden(e2)) throw e2
+        throw new ConflictException('No se pudo crear la hoja: reintenta')
+      }
+    }
+  }
+
+  private esChoqueDeOrden(e: unknown): e is Prisma.PrismaClientKnownRequestError {
+    return e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002'
   }
 
   async actualizar(
