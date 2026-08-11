@@ -9,6 +9,7 @@ import { createReadStream } from 'fs'
 import { AtencionesService, UpsertAtencionDto } from './atenciones.service'
 import { RecetasService, CreateRecetaDto } from './recetas.service'
 import { HojasService, GuardarHojaDto } from './hojas.service'
+import { TranscripcionService } from './transcripcion.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Atenciones')
@@ -19,7 +20,14 @@ export class AtencionesController {
     private service: AtencionesService,
     private recetas: RecetasService,
     private hojas: HojasService,
+    private transcripcion: TranscripcionService,
   ) {}
+
+  @Get('transcripcion/estado')
+  @ApiOperation({ summary: 'Si el servidor tiene configurada la transcripcion' })
+  estadoTranscripcion() {
+    return { disponible: this.transcripcion.disponible() }
+  }
 
   @Get('paciente/:pacienteId')
   @ApiOperation({ summary: 'Linea de tiempo clinica del paciente (q busca en los campos)' })
@@ -121,6 +129,20 @@ export class AtencionesController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.hojas.eliminar(user.consultorioId, citaId, id, user.sub, user.rol)
+  }
+
+  @Post('cita/:citaId/hojas/:id/transcribir')
+  @ApiOperation({ summary: 'Transcribir una hoja manuscrita a texto' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('imagen', { limits: { fileSize: 8 * 1024 * 1024 } }))
+  transcribirHoja(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() imagen?: Express.Multer.File,
+  ) {
+    if (!imagen) throw new BadRequestException('Falta la imagen (campo "imagen")')
+    return this.transcripcion.transcribir(user.consultorioId, citaId, id, user.sub, user.rol, imagen.buffer)
   }
 
   @Post('cita/:citaId/recetas')
