@@ -225,7 +225,14 @@ test('cerrar el editor guarda y reabrir muestra el trazo intacto', async ({ page
   expect(conTrazo).not.toBe(blanco)
 
   // El cierre dispara el guardado por el cleanup de useEffect (deps [],
-  // prepararCambioDeHoja) -- se espera la respuesta real, no un timeout fijo.
+  // guardarAlSalir) -- se espera la respuesta real, no un timeout fijo.
+  //
+  // ALCANCE: acá no hay ningún PUT en vuelo (el trazo se dibuja y se cierra
+  // enseguida, mucho antes del primer tick del autoguardado a los 10s), así
+  // que `guardarActivaSiSucia` es DUEÑA del mutex y devuelve `true` de una.
+  // Este test cubre el flush de salida en general, NO la rama de unión al
+  // mutex, que es donde estaba el bug del review final -- ese camino lo cubre
+  // el último test del archivo.
   const guardado = page.waitForResponse(
     (r) => r.request().method() === 'PUT' && /\/hojas\/\d+$/.test(new URL(r.url()).pathname),
   )
@@ -265,4 +272,90 @@ test('eliminar una hoja usa el ConfirmarModal (no window.confirm) y deja una sol
   await expect(page.getByText('Hoja 1 / 1')).toBeVisible()
 
   expect(dialogosNativos).toHaveLength(0)
+})
+
+// Cuántos trazos viajaron en el cuerpo de un PUT de hoja. try/catch porque
+// esto corre dentro de un handler de evento de Playwright: una excepción ahí
+// tumba el test por una razón que no tiene nada que ver con lo que mide.
+function trazosDe(request: import('@playwright/test').Request): number {
+  try {
+    const cuerpo = request.postDataJSON() as { trazos?: { strokes?: unknown[] } } | null
+    return cuerpo?.trazos?.strokes?.length ?? -1
+  } catch {
+    return -1
+  }
+}
+
+// El camino REAL del Finding 2 del review final de la rama, que el test D NO
+// toca: cerrar el editor con el PUT del AUTOGUARDADO todavía en vuelo.
+//
+// El defecto: `guardarAlSalir` (antes, el cleanup llamando
+// `prepararCambioDeHoja`) pedía un guardado, `guardarActivaSiSucia` veía el
+// mutex tomado y devolvía la promesa del PUT que ya estaba viajando en vez de
+// emitir uno nuevo. Esa promesa resuelve `false` (su foto ya no coincide con
+// la memoria: el doctor dibujó después de que salió) y nadie consumía ese
+// `false` -- el editor se cerraba sin error y el último trazo no viajaba
+// nunca.
+//
+// Se afirma sobre el CUERPO de los PUT, no sobre píxeles: contar tinta en el
+// canvas no distingue un trazo de dos, y lo que el bug producía era
+// exactamente eso -- un solo PUT, con un solo trazo.
+test('cerrar con un autoguardado en vuelo reintenta y no pierde el último trazo', async ({ page }) => {
+  // El intervalo de autoguardado es de 10s fijos desde que monta el editor
+  // (useEffect con deps [] en LienzoManuscrito.tsx) y el PUT se retiene 2s a
+  // propósito más abajo: no entra en el timeout de 30s del config.
+  test.setTimeout(60_000)
+
+  const trazosPorPut: number[] = []
+  page.on('request', (r) => {
+    if (r.method() !== 'PUT') return
+    if (!/\/hojas\/\d+$/.test(new URL(r.url()).pathname)) return
+    trazosPorPut.push(trazosDe(r))
+  })
+
+  await abrirEditor(page)
+  // Test E dejó una sola hoja, y vacía (la que creó Test C sin dibujar).
+  await expect(page.getByText('Hoja 1 / 1')).toBeVisible()
+
+  // Retraso SOLO en el PUT (el POST de "+ Hoja" y los GET pasan sin tocar):
+  // mantiene el guardado del timer en vuelo el tiempo suficiente para dibujar
+  // encima y cerrar. El evento 'request' de Playwright se emite al
+  // INTERCEPTAR, antes de este sleep, así que el waitForRequest de abajo
+  // vuelve con los 2s enteros de margen por delante.
+  const esGuardadoDeHoja = (url: URL) => /\/atenciones\/cita\/\d+\/hojas\/\d+$/.test(url.pathname)
+  const conRetraso = async (route: import('@playwright/test').Route) => {
+    if (route.request().method() === 'PUT') {
+      await new Promise((r) => setTimeout(r, 2000))
+    }
+    await route.continue()
+  }
+  await page.route(esGuardadoDeHoja, conRetraso)
+
+  const canvas = canvasVivoDe(page)
+  const esPutDeHoja = (r: import('@playwright/test').Request) =>
+    r.method() === 'PUT' && /\/hojas\/\d+$/.test(new URL(r.url()).pathname)
+
+  // Se registra la espera ANTES de ensuciar la hoja: la hoja abre limpia, así
+  // que el primer PUT que exista es el del tick del timer con el trazo 1.
+  const primerGuardado = page.waitForRequest(esPutDeHoja)
+  await dibujarTrazo(page, canvas)
+  await primerGuardado
+
+  // Trazo 2 mientras ese PUT sigue retenido por la ruta.
+  await dibujarTrazo(page, canvas)
+
+  // El reintento del flush de salida es el PUT que lleva los DOS trazos.
+  const guardadoConAmbos = page.waitForResponse(
+    (r) => esPutDeHoja(r.request()) && trazosDe(r.request()) === 2,
+  )
+  await page.getByRole('button', { name: 'Cerrar nota manuscrita' }).click()
+  const respuesta = await guardadoConAmbos
+  expect(respuesta.ok()).toBe(true)
+
+  await page.unroute(esGuardadoDeHoja, conRetraso)
+
+  // El del timer llevó 1 trazo (lo único que existía cuando disparó) y hubo
+  // un segundo PUT después: antes del fix, ese segundo no se emitía nunca.
+  expect(trazosPorPut[0]).toBe(1)
+  expect(trazosPorPut.length).toBeGreaterThanOrEqual(2)
 })
