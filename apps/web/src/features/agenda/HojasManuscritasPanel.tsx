@@ -284,7 +284,8 @@ export function HojasManuscritasPanel({
                 // del servidor hacia ChatGPT. Son notas de psicologia: que la
                 // hoja viaje a un tercero se avisa, no se supone.
                 <p className="text-xs text-muted-foreground/70">
-                  Revisá el texto generado. La hoja se envía a ChatGPT para leerla.
+                  Revisá el texto generado. La hoja se envía a ChatGPT para convertirla, puede
+                  haber errores.
                 </p>
               )}
             </div>

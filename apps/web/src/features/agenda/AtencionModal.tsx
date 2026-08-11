@@ -369,10 +369,21 @@ export function AtencionModal({ cita, onClose }: Props) {
                 </button>
               )}
               {puedeMarcarAtendida && (
+                // En celular se lleva la fila entera: al lado de "Cancelar" y
+                // "Guardar" le quedaban ~110px, la etiqueta se partia en dos
+                // lineas y el boton mide h-11 fijo, asi que se apeñuscaba.
+                // Acortar el texto solo no alcanzaba.
                 <button type="button" disabled={guardar.isPending}
                   onClick={() => guardar.mutate({ marcarAtendida: true })}
-                  className={cn(btnPrimaryUI, 'flex-1')}>
-                  {guardar.isPending ? 'Guardando...' : 'Guardar y marcar Atendida'}
+                  className={cn(btnPrimaryUI, 'w-full sm:w-auto sm:flex-1')}>
+                  {guardar.isPending ? (
+                    'Guardando...'
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Guardar y Atendida</span>
+                      <span className="hidden sm:inline">Guardar y marcar Atendida</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
