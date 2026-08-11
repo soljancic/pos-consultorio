@@ -281,6 +281,16 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // cada borrador local como su "base" -- ver `ofrecerBorradorSiHaceFalta`,
   // es lo que permite distinguir un borrador que adelanta al servidor de uno
   // que quedo ATRAS de el.
+  //
+  // INVARIANTE (fix round 2): la base y el borrador vivo de la hoja se
+  // mueven JUNTOS. Un borrador escrito con una base que despues avanza queda
+  // inalcanzable -- sigue fisicamente en IndexedDB, pero el chequeo de
+  // direccion lo rechaza y nunca se ofrece. Los tres puntos donde la base se
+  // asigna respetan esto: `cargarHoja` (la hoja entrante trae el borrador que
+  // se va a EVALUAR, no uno que haya que realinear), la rama de coincidencia
+  // de `guardarActivaSiSucia` (borra el borrador, no queda nada que
+  // desalinear) y su rama de desajuste (reescribe el borrador con la base
+  // nueva -- ver el comentario ahi).
   const baseServidorRef = useRef<Trazo[]>([])
 
   // Id de la hoja que ya recibio el aviso de "error permanente al guardar"
@@ -1107,7 +1117,8 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
       // locales (ver `ofrecerBorradorSiHaceFalta`). Condicionado a que la
       // hoja activa siga siendo la misma: si cambio bajo los pies, esta base
       // pertenece a otra hoja y escribirla seria mentir sobre la actual.
-      if (hojaActivaIdRef.current === id) {
+      const mismaHoja = hojaActivaIdRef.current === id
+      if (mismaHoja) {
         baseServidorRef.current = foto.strokes
         avisoPermanenteRef.current = null
       }
@@ -1122,6 +1133,28 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         void borrarBorrador(id)
         return true
       }
+      // Rama de DESAJUSTE (fix round 2): el PUT entro, pero la memoria ya se
+      // adelanto. La base ACABA de moverse a `foto.strokes` tres lineas
+      // arriba -- y cualquier borrador que ya estuviera escrito lo estaba
+      // con la base ANTERIOR. `ofrecerBorradorSiHaceFalta` lo rechazaria por
+      // su segunda condicion (base != lo que el servidor tiene ahora) aunque
+      // contenga trabajo que el servidor no tiene: el borrador queda fisico
+      // en IndexedDB pero inalcanzable por la UI. Es el mismo patron que este
+      // review viene persiguiendo, un nivel mas arriba -- la invariante que
+      // introdujo la ronda anterior ("la base siempre refleja lo que el
+      // servidor tiene") la falsificaba el propio orden de escritura del
+      // flush de salida.
+      //
+      // Se reescribe el borrador aca mismo con la base fresca y el contenido
+      // actual, para que borrador y base se muevan SIEMPRE juntos: este es el
+      // unico punto donde la base avanza dejando un borrador vivo detras (en
+      // la rama de coincidencia el borrador se borra, y en `cargarHoja` el
+      // borrador de la hoja entrante es justamente el que se va a evaluar).
+      //
+      // Fire-and-forget como todo escritura de borrador: `guardarBorrador`
+      // nunca rechaza (atrapa lo suyo), asi que un fallo de IndexedDB no
+      // puede filtrarse al camino de guardado ni cambiar lo que se retorna.
+      if (mismaHoja) void guardarBorrador(id, trazosRef.current, foto.strokes)
       return false
     })()
 
@@ -1165,6 +1198,13 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    *    lo va a ofrecer -- y ademas PISA cualquier borrador viejo que hubiera
    *    quedado de una sesion anterior, que es justo el registro peligroso
    *    que Finding 3 describe.
+   *
+   *    Este borrador lleva la base VIGENTE EN ESTE INSTANTE, que el paso 3
+   *    puede hacer avanzar un momento despues (si se une a un PUT que
+   *    termina entrando). La rama de desajuste de `guardarActivaSiSucia` lo
+   *    reescribe con la base nueva -- fix round 2; sin eso, este mismo
+   *    borrador quedaba inalcanzable justo en el camino que existe para
+   *    protegerlo.
    *
    * 3. Guardado real, con **un** reintento si el primero devuelve `false`
    *    (mitad (b)). El caso: el timer ya tiene un PUT en vuelo, asi que la
