@@ -24,7 +24,7 @@ export class AtencionesController {
   ) {}
 
   @Get('transcripcion/estado')
-  @ApiOperation({ summary: 'Si el servidor tiene configurada la transcripcion' })
+  @ApiOperation({ summary: 'Si el servidor tiene configurada la transcripción' })
   estadoTranscripcion() {
     return { disponible: this.transcripcion.disponible() }
   }

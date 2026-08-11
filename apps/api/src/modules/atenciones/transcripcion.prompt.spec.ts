@@ -1,4 +1,4 @@
-import { mediaTypeDeImagen, modeloTranscripcion, PROMPT_TRANSCRIPCION } from './transcripcion.prompt'
+import { mediaTypeDeImagen, modeloTranscripcion, PROMPT_TRANSCRIPCION, resultadoTranscripcion } from './transcripcion.prompt'
 
 describe('modeloTranscripcion', () => {
   it('usa claude-opus-5 por defecto', () => {
@@ -38,5 +38,34 @@ describe('PROMPT_TRANSCRIPCION', () => {
 
   it('marca lo ilegible con [ilegible]', () => {
     expect(PROMPT_TRANSCRIPCION).toContain('[ilegible]')
+  })
+})
+
+describe('resultadoTranscripcion', () => {
+  it('es ok con el texto recortado cuando el modelo termina normalmente y hay texto', () => {
+    expect(resultadoTranscripcion('end_turn', '  Paciente refiere...  ')).toEqual({
+      ok: true,
+      texto: 'Paciente refiere...',
+    })
+  })
+
+  it('no es ok cuando el modelo rechaza la respuesta (stop_reason refusal)', () => {
+    expect(resultadoTranscripcion('refusal', '')).toEqual({ ok: false, motivo: 'refusal' })
+  })
+
+  it('no es ok cuando se corta por max_tokens, aunque haya texto parcial', () => {
+    expect(resultadoTranscripcion('max_tokens', 'Paciente refiere dolor de cab')).toEqual({
+      ok: false,
+      motivo: 'max_tokens',
+    })
+  })
+
+  it('no es ok cuando el texto queda vacio tras el trim, con cualquier otro stop_reason', () => {
+    expect(resultadoTranscripcion('end_turn', '   ')).toEqual({ ok: false, motivo: 'vacio' })
+    expect(resultadoTranscripcion(null, '')).toEqual({ ok: false, motivo: 'vacio' })
+  })
+
+  it('prioriza max_tokens sobre vacio cuando el corte dejo el texto en blanco', () => {
+    expect(resultadoTranscripcion('max_tokens', '')).toEqual({ ok: false, motivo: 'max_tokens' })
   })
 })
