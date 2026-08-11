@@ -83,7 +83,14 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTransc
                 aria-label={`Ver hoja ${i + 1} del ${formatFecha(hoja.createdAt)}`}
                 className="shrink-0 flex flex-col items-center gap-1 rounded-lg p-1.5 cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
               >
-                <HojaRenderer trazos={hoja.trazos} ancho={64} />
+                {/* aria-hidden: el boton ya lleva su propio aria-label completo
+                    arriba -- sin esto, el canvas role="img" de HojaRenderer
+                    (con su aria-label generico) se anuncia por separado en modo
+                    de exploracion de un lector de pantalla, igual que el
+                    PenLine de "Escribir a mano" se oculta con aria-hidden. */}
+                <span aria-hidden="true">
+                  <HojaRenderer trazos={hoja.trazos} ancho={64} />
+                </span>
                 <span className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
                   {i + 1} &bull; {formatFecha(hoja.createdAt)}
                 </span>
@@ -117,6 +124,14 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTransc
  * sobre clases utilitarias tipo `max-w-full`), asi que el ancho se mide del
  * contenedor real en vez de pasar un numero fijo -- un fijo mas chico que el
  * viewport de un celular angosto desbordaria el modal en vez de encogerse.
+ *
+ * El padding vive en el wrapper EXTERIOR (`p-6 sm:p-7`); `areaRef` cuelga de
+ * un div INTERIOR sin padding propio -- mismo split que usa
+ * LienzoManuscrito.tsx (wrapper con `p-4 sm:p-6`, `areaRef` en el div hijo
+ * sin padding). `clientWidth` incluye el padding del propio elemento
+ * medido: medir el wrapper con padding directamente infla el ancho en
+ * ~48-56px (el padding en si) por encima del espacio real disponible para
+ * el canvas.
  */
 function VisorHoja({ hoja, numero, onClose }: { hoja: HojaManuscritaApi; numero: number; onClose: () => void }) {
   const areaRef = useRef<HTMLDivElement>(null)
@@ -141,10 +156,12 @@ function VisorHoja({ hoja, numero, onClose }: { hoja: HojaManuscritaApi; numero:
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-sm max-h-[90vh] overflow-y-auto">
         <ModalHeader icon={PenLine} title={`Hoja ${numero}`} subtitle={formatFecha(hoja.createdAt)} onClose={onClose} />
-        <div ref={areaRef} className="p-6 sm:p-7 flex justify-center">
-          {ancho > 0 && (
-            <HojaRenderer trazos={hoja.trazos} ancho={ancho} etiqueta={`Hoja ${numero} manuscrita`} />
-          )}
+        <div className="p-6 sm:p-7">
+          <div ref={areaRef} className="flex justify-center">
+            {ancho > 0 && (
+              <HojaRenderer trazos={hoja.trazos} ancho={ancho} etiqueta={`Hoja ${numero} manuscrita`} />
+            )}
+          </div>
         </div>
       </div>
     </div>
