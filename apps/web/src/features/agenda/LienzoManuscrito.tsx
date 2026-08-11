@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Check,
@@ -119,6 +119,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   const [puedeRehacer, setPuedeRehacer] = useState(false)
 
   const [sucio, setSucio] = useState(false)
+  // Espejo sincronico de `sucio`, mismo motivo que `bloqueoDibujoRef` mas
+  // abajo: `guardarActivaSiSucia()` decide si hay algo que guardar en el
+  // mismo tick en que `terminarGestoEnCurso()` puede acabar de llamar
+  // `aplicar()` (que hace `setSucio(true)`) -- leer el estado `sucio` ahi
+  // veria el valor de ANTES de esa llamada (React no aplica `setState`
+  // sincronicamente dentro del mismo call stack), asi que el guardado se
+  // saltaria un trazo recien comiteado. `sucioRef` si se actualiza al
+  // instante.
+  const sucioRef = useRef(false)
 
   // Hoja activa por id real del servidor -- nunca por indice ni por `orden`
   // (el backend asigna `orden` de por vida y una hoja borrada se lo queda
@@ -138,6 +147,19 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // seleccion automatica ocurra una sola vez por sesion del editor; despues,
   // todo cambio de `hojaActivaId` es deliberado (crear/cambiar/borrar).
   const autoSeleccionoRef = useRef(false)
+
+  // Candado de "hay un cambio de hoja en curso" (irAHoja/nuevaHoja), desde
+  // el instante en que arrancan hasta que terminan (guardado previo +
+  // reintento si hace falta + el propio cambio/creacion), NUNCA solo la
+  // ventana de `guardarHoja.isPending` (que se apaga en cuanto el PUT
+  // resuelve, antes de que `cargarHoja()` corra). Dos formas del mismo
+  // candado a proposito: el ref es lo que lee `alBajar` -- sincronico,
+  // sin el retraso de un render -- para rechazar un gesto de dibujo/borrado
+  // NUEVO mientras se cambia de hoja; el estado es el espejo reactivo que
+  // alimenta `operandoHoja` (mas abajo) para deshabilitar los controles de
+  // la barra. Ver Finding 1 y 2 del review de Task 10.
+  const bloqueoDibujoRef = useRef(false)
+  const [cambiandoHoja, setCambiandoHoja] = useState(false)
 
   const qc = useQueryClient()
   const { data: hojas = [], isLoading } = useQuery<HojaManuscritaApi[]>({
@@ -244,7 +266,19 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // crear o borrar) no debe pisar `trazosRef` con lo que devuelva el
   // servidor mientras el doctor sigue escribiendo, ni resucitar una hoja
   // recien borrada mientras la cache de la query todavia esta stale.
-  useEffect(() => {
+  //
+  // `useLayoutEffect`, no `useEffect`: con un efecto pasivo normal, el
+  // PRIMER render tras resolver `hojas` (con `hojaActivaId` todavia null)
+  // se pinta en pantalla ANTES de que el efecto corra -- el doctor ve, por
+  // un frame, "Hoja 0 / N" y el area sin canvas ni estado vacio (ninguno de
+  // los dos gates matchea: `hojaActivaId !== null` es falso Y
+  // `hojas.length === 0` tambien es falso). `useLayoutEffect` corre
+  // sincronicamente DESPUES de aplicar el DOM de ese render pero ANTES de
+  // que el navegador pinte; el `setHojaActivaId` que dispara aca se
+  // resuelve en un segundo render-commit que reemplaza al primero antes de
+  // que llegue a verse. Mismo mecanismo que ya usa React para evitar
+  // parpadeos de layout; aca lo usamos para evitar un parpadeo de dato.
+  useLayoutEffect(() => {
     if (autoSeleccionoRef.current || isLoading || hojas.length === 0) return
     autoSeleccionoRef.current = true
     if (hojaActivaId === null) cargarHoja(hojas[0])
@@ -307,6 +341,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   function aplicar(strokes: Trazo[]) {
     trazosRef.current = { ...trazosRef.current, strokes }
     pintarFondo()
+    sucioRef.current = true
     setSucio(true)
     setPuedeDeshacer(pilaDeshacer.current.length > 0)
     setPuedeRehacer(pilaRehacer.current.length > 0)
@@ -369,6 +404,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   }
 
   function alBajar(e: React.PointerEvent<HTMLCanvasElement>) {
+    // Rechaza CUALQUIER gesto nuevo (lapiz o borrador) mientras un cambio de
+    // hoja esta en curso: `bloqueoDibujoRef` cubre desde el instante en que
+    // irAHoja/nuevaHoja arrancan hasta que terminan del todo (guardado +
+    // reintento + el propio cambio/creacion), no solo la ventana de la
+    // mutation de guardado. Ref, no estado: se lee sincronicamente aca sin
+    // esperar a que un re-render vuelva a crear este closure. Ver Finding 1
+    // del review de Task 10 -- un trazo dibujado mientras el PUT de la hoja
+    // saliente esta en vuelo se perdia silenciosamente al cambiar de hoja.
+    if (bloqueoDibujoRef.current) return
     if (e.pointerType === 'pen') vioLapiz.current = true
     if (!puedeDibujar(e)) return
     if (punteroActivo.current !== null) return // ya hay un trazo en curso
@@ -440,6 +484,38 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   }
 
   /**
+   * Si hay un gesto a medio hacer (el doctor todavia tiene el lapiz o el
+   * dedo apoyado, `punteroActivo` capturado), lo termina de forma prolija:
+   * si era un trazo de lapiz en curso, lo comitea como si hubiera soltado
+   * (mismo resultado que `alSubir`) en vez de descartarlo; si era un
+   * arrastre de borrador, no hay nada que comitear (cada borrado ya se
+   * aplico en el momento via `borrarEn`). En ambos casos libera el pointer
+   * capture y limpia el canvas en vivo, para que cualquier evento tardio de
+   * ESE puntero (ya no coincide con `punteroActivo`) quede inerte.
+   *
+   * Se llama al empezar un cambio de hoja (`prepararCambioDeHoja`, mas
+   * abajo), ANTES de tomar la foto de `trazosRef` que se va a guardar --
+   * asi un gesto en curso en el instante exacto en que el doctor toca
+   * "siguiente" queda incluido en el guardado en vez de perderse. Ver
+   * Finding 1 del review de Task 10.
+   */
+  function terminarGestoEnCurso() {
+    const trazo = trazoActivo.current
+    trazoActivo.current = null
+    if (punteroActivo.current !== null) {
+      const canvas = canvasVivo.current
+      if (canvas?.hasPointerCapture(punteroActivo.current)) {
+        canvas.releasePointerCapture(punteroActivo.current)
+      }
+      punteroActivo.current = null
+    }
+    limpiarVivo()
+    if (!trazo || trazo.p.length === 0) return
+    registrarCambio()
+    aplicar([...trazosRef.current.strokes, trazo])
+  }
+
+  /**
    * Unico camino que cambia CUAL hoja esta activa: escribe trazosRef desde
    * la hoja recibida (o la vacia si `hoja` es null, estado sin ninguna
    * hoja), resetea el historial de deshacer/rehacer (una pila de sheet 1 no
@@ -455,6 +531,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     pilaRehacer.current = []
     setPuedeDeshacer(false)
     setPuedeRehacer(false)
+    sucioRef.current = false
     setSucio(false)
     trazosRef.current = hoja ? ((hoja.trazos as TrazosHoja) ?? hojaVacia()) : hojaVacia()
     setHojaActivaId(hoja?.id ?? null)
@@ -466,48 +543,118 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   }
 
   /**
-   * Cambia a otra hoja. Primero guarda la actual si tiene cambios sin
-   * guardar -- si el guardado falla, no cambia de hoja: el toast de
-   * guardarHoja.onError ya avisa, y los trazos siguen intactos en
-   * trazosRef. Perder trazos al cambiar de hoja es el peor bug posible de
-   * esta pantalla.
+   * Guarda la hoja activa si tiene cambios sin guardar. Devuelve `false` sin
+   * tocar nada si el guardado falla -- el toast ya lo dispara
+   * `guardarHoja.onError`. `alBajar` rechaza cualquier gesto NUEVO mientras
+   * `bloqueoDibujoRef` esta activo (ver `alBajar`), pero eso no cubre otras
+   * vias que tambien escriben `trazosRef` sin pasar por el canvas --
+   * Deshacer/Rehacer son botones sueltos, no bloqueados por el pointer
+   * capture de nada. Por eso, tras el `await`, comparamos `trazosRef.current`
+   * contra la foto que mandamos: si cambio, reintentamos UNA vez con la
+   * version mas reciente antes de dar el guardado por completo. Un solo
+   * reintento (no un loop) porque, para esa segunda vuelta, el gesto de
+   * dibujo YA esta bloqueado desde antes de la primera llamada -- lo unico
+   * que podria volver a mover `trazosRef` en la ventana del reintento es
+   * OTRO tap discreto de Deshacer/Rehacer superpuesto con dos guardados de
+   * red seguidos, un escenario de probabilidad practicamente nula que no
+   * amerita un bucle sin cota. Ver Finding 1 del review de Task 10.
    */
-  async function irAHoja(id: number) {
-    if (id === hojaActivaId || guardarHoja.isPending) return
-    if (sucio && hojaActivaId !== null) {
+  async function guardarActivaSiSucia(): Promise<boolean> {
+    // `sucioRef`, no el estado `sucio`: ver su declaracion -- si
+    // `terminarGestoEnCurso()` acaba de comitear un trazo en ESTE mismo
+    // llamado (dentro de `prepararCambioDeHoja`), el estado todavia no
+    // reflejaria ese cambio aca.
+    if (!sucioRef.current || hojaActivaId === null) return true
+    const id = hojaActivaId
+    const foto = trazosRef.current
+    try {
+      await guardarHoja.mutateAsync({ id, trazos: foto })
+    } catch {
+      return false
+    }
+    if (trazosRef.current !== foto) {
       try {
-        await guardarHoja.mutateAsync({ id: hojaActivaId, trazos: trazosRef.current })
+        await guardarHoja.mutateAsync({ id, trazos: trazosRef.current })
       } catch {
-        return
+        return false
       }
     }
-    const destino = hojas.find((h) => h.id === id)
-    if (!destino) return // la lista cambio bajo los pies (poco probable, defensivo)
-    cargarHoja(destino)
+    sucioRef.current = false
+    setSucio(false)
+    return true
+  }
+
+  /**
+   * Preambulo comun a `irAHoja`/`nuevaHoja`: termina cualquier gesto a medio
+   * hacer (para que quede incluido en lo que se guarda, no perdido) y guarda
+   * la hoja activa si quedo sucia. Devuelve `false` si el guardado fallo --
+   * el llamador no debe seguir con el cambio/creacion.
+   */
+  async function prepararCambioDeHoja(): Promise<boolean> {
+    terminarGestoEnCurso()
+    return guardarActivaSiSucia()
+  }
+
+  /**
+   * Cambia a otra hoja. Bloquea gestos de dibujo nuevos y guarda la actual
+   * si hace falta ANTES de tocar nada; si el guardado falla, no cambia de
+   * hoja (los trazos siguen intactos en `trazosRef`, el toast ya avisa).
+   * Perder trazos al cambiar de hoja es el peor bug posible de esta
+   * pantalla.
+   */
+  async function irAHoja(id: number) {
+    if (id === hojaActivaId || operandoHoja) return
+    bloqueoDibujoRef.current = true
+    setCambiandoHoja(true)
+    try {
+      const ok = await prepararCambioDeHoja()
+      if (!ok) return
+      const destino = hojas.find((h) => h.id === id)
+      if (!destino) return // la lista cambio bajo los pies (poco probable, defensivo)
+      cargarHoja(destino)
+    } finally {
+      bloqueoDibujoRef.current = false
+      setCambiandoHoja(false)
+    }
   }
 
   /**
    * Crea una hoja nueva y salta a ella. Saltar a la hoja nueva es, para
-   * quien escribe, lo mismo que cambiar de hoja: si la actual tiene cambios
-   * sin guardar se guarda primero, con el mismo criterio de "si falla, no
-   * avanza" que `irAHoja`.
+   * quien escribe, lo mismo que cambiar de hoja: mismo preambulo de
+   * `irAHoja` (bloqueo + guardado previo con reintento), asi que un doble
+   * tap en "+ Hoja" o un trazo mientras la creacion esta en vuelo no puede
+   * perder nada tampoco.
    */
   async function nuevaHoja() {
-    if (crearHoja.isPending || guardarHoja.isPending || hojas.length >= MAX_HOJAS_POR_ATENCION) return
-    if (sucio && hojaActivaId !== null) {
-      try {
-        await guardarHoja.mutateAsync({ id: hojaActivaId, trazos: trazosRef.current })
-      } catch {
-        return
-      }
+    if (operandoHoja || estaEnLimite) return
+    bloqueoDibujoRef.current = true
+    setCambiandoHoja(true)
+    try {
+      const ok = await prepararCambioDeHoja()
+      if (!ok) return
+      await crearHoja.mutateAsync()
+    } catch {
+      // el toast ya lo dispara crearHoja.onError
+    } finally {
+      bloqueoDibujoRef.current = false
+      setCambiandoHoja(false)
     }
-    crearHoja.mutate()
   }
 
   const estaEnLimite = hojas.length >= MAX_HOJAS_POR_ATENCION
   const indiceActivo = hojaActivaId !== null ? indiceDe(hojaActivaId) : -1
   const hayAnterior = indiceActivo > 0
   const haySiguiente = indiceActivo >= 0 && indiceActivo < hojas.length - 1
+  // Fuente unica de verdad para "hay una operacion de hoja en curso": las
+  // tres mutations (Task 10 original) MAS `cambiandoHoja` (este round), que
+  // cubre la ventana completa de irAHoja/nuevaHoja incluyendo el tramo entre
+  // que el guardado resuelve y que cargarHoja()/crearHoja() terminan -- una
+  // ventana que `guardarHoja.isPending` por si solo no cubre. Gatea TODOS
+  // los controles de navegacion y ciclo de vida de hoja (flechas, + Hoja,
+  // eliminar); el borrado ademas queda protegido por el propio
+  // ConfirmarModal, que bloquea fisicamente el resto de la UI. Ver Finding 2
+  // del review de Task 10.
+  const operandoHoja = crearHoja.isPending || guardarHoja.isPending || borrarHoja.isPending || cambiandoHoja
 
   return (
     <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col">
@@ -550,7 +697,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         {isLoading && <p className="text-sm text-muted-foreground">Cargando hojas…</p>}
 
         {!isLoading && hojas.length === 0 && (
-          <button type="button" onClick={nuevaHoja} disabled={crearHoja.isPending} className={cn(btnPrimaryUI, 'h-11')}>
+          <button type="button" onClick={nuevaHoja} disabled={operandoHoja} className={cn(btnPrimaryUI, 'h-11')}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             Primera hoja
           </button>
@@ -562,7 +709,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               <button
                 type="button"
                 onClick={() => hayAnterior && irAHoja(hojas[indiceActivo - 1].id)}
-                disabled={!hayAnterior || guardarHoja.isPending}
+                disabled={!hayAnterior || operandoHoja}
                 aria-label="Hoja anterior"
                 title="Hoja anterior"
                 className={cn(
@@ -581,7 +728,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               <button
                 type="button"
                 onClick={() => haySiguiente && irAHoja(hojas[indiceActivo + 1].id)}
-                disabled={!haySiguiente || guardarHoja.isPending}
+                disabled={!haySiguiente || operandoHoja}
                 aria-label="Hoja siguiente"
                 title="Hoja siguiente"
                 className={cn(
@@ -598,7 +745,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               <button
                 type="button"
                 onClick={nuevaHoja}
-                disabled={crearHoja.isPending || guardarHoja.isPending || estaEnLimite}
+                disabled={operandoHoja || estaEnLimite}
                 title={estaEnLimite ? 'Máximo 20 hojas por atención' : 'Agregar hoja'}
                 className={cn(btnOutlineUI, 'h-11')}
               >
@@ -608,7 +755,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               <button
                 type="button"
                 onClick={() => hojaActivaId !== null && setHojaABorrar(hojaActivaId)}
-                disabled={hojaActivaId === null || borrarHoja.isPending}
+                disabled={hojaActivaId === null || operandoHoja}
                 aria-label="Eliminar hoja actual"
                 title="Eliminar hoja actual"
                 className={cn(
