@@ -1100,7 +1100,18 @@ export class TranscripcionService {
     try {
       const respuesta = await client.messages.create({
         model: modeloTranscripcion(process.env),
-        max_tokens: 8000,
+        // CORREGIDO EN IMPLEMENTACION (2026-08-11): 8000 no alcanzaba. En
+        // claude-opus-5 omitir `thinking` corre pensamiento adaptativo por
+        // defecto, y max_tokens es el tope de pensamiento MAS texto. Una hoja
+        // densa consumia el presupuesto razonando y devolvia la transcripcion
+        // cortada, que se persistia y se logueaba como exito. Ver tambien
+        // `output_config.effort` abajo y el helper `resultadoTranscripcion`.
+        max_tokens: 16000,
+        // Transcribir manuscrito es percepcion, no razonamiento; el default es
+        // `high` y ahi es presupuesto desperdiciado. NO poner
+        // `thinking: { type: 'disabled' }`: en Opus 5 eso puede filtrar
+        // etiquetas <thinking> al texto visible y corromper la transcripcion.
+        output_config: { effort: 'low' },
         messages: [
           {
             role: 'user',
@@ -2269,23 +2280,55 @@ Obligatorio.
 
 - [ ] **Step 2: Exponer las hojas en la linea de tiempo del API**
 
-En `atenciones.service.ts`, en `findByPaciente` (~linea 99), agregar al `include`:
+> **CORREGIDO EN IMPLEMENTACION (2026-08-11), decision del owner.** Este paso
+> decia originalmente que el `include` trajera `trazos: true` "asi la miniatura
+> se dibuja sin una request extra por atencion". Estaba mal: el tope real es de
+> **20 hojas por atencion** (no 3) y **2 MB por hoja**, y un paciente de anios con
+> sesiones semanales llega a 100-300 atenciones. Eso son **10-45 MB en una sola
+> respuesta**, sin paginar y sin compresion en el API. Peor: el buscador de la
+> historia keyea la query por cada valor de `useDeferredValue`, que despriorriza
+> el render pero **no** debouncea la red, asi que ese peso se re-paga tipeando.
+
+La linea de tiempo **no lleva trazos**. El `include` trae solo lo necesario para
+saber que la sesion tiene hojas y para pedirlas despues:
 
 ```typescript
         hojas: {
           where: { deletedAt: null },
           orderBy: { orden: 'asc' },
-          select: { id: true, orden: true, trazos: true },
+          select: { id: true, orden: true, createdAt: true },
         },
 ```
 
-Asi la miniatura se dibuja sin una request extra por atencion.
+La entrada de la linea de tiempo muestra un indicador ("3 hojas manuscritas") en
+vez de miniaturas dibujadas. Al tocarlo se piden los trazos de esa atencion con
+`GET /atenciones/cita/:citaId/hojas` (Task 4) bajo la misma queryKey
+`['hojas', citaId]` que ya usa el panel del modal — asi las dos entradas comparten
+cache en vez de duplicar la descarga.
 
-- [ ] **Step 3: Mostrar las miniaturas**
+**El costo aceptado** es perder el escaneo visual de la historia. La propiedad que
+se compra a cambio: la historia clinica carga igual de rapido para un paciente
+nuevo que para uno de diez anios.
 
-En cada entrada de la linea de tiempo con hojas, una fila de miniaturas (`<HojaRenderer ancho={56} />`) dentro de un contenedor `overflow-x-auto`. Al tocar una, se abre un visor a pantalla completa en **solo lectura**, con flechas para pasar de hoja y boton de cerrar.
+- [ ] **Step 3: Mostrar el indicador y el visor**
 
-Esto se ve **en cualquier dispositivo, incluida la PC**: la restriccion a tablet/celular es solo para escribir.
+En cada entrada de la linea de tiempo con hojas, un indicador con la cantidad
+("3 hojas manuscritas") que funciona como boton. Al tocarlo se piden los trazos y
+se abre el visor en **solo lectura**, con flechas para pasar de hoja y boton de
+cerrar. Manejar el estado de carga con honestidad: el doctor toca y los trazos
+tardan un momento en llegar; no mostrar un visor vacio mientras tanto.
+
+**El visor va a pantalla completa de verdad** (`fixed inset-0`, sin tope de ancho),
+siguiendo el patron de `LienzoManuscrito.tsx`. No alcanza con una tarjeta centrada
+`max-w-sm`: en un celular se ve casi igual y no se nota, pero en una PC —que es el
+caso que este paso existe para cubrir— el doctor termina leyendo cursiva densa en
+un canvas de ~320px en el medio del monitor.
+
+El visor es **un componente compartido** con el panel del modal de Atencion
+(Task 12), no una segunda copia. Ver una hoja funciona igual desde los dos lados.
+
+Esto se ve **en cualquier dispositivo, incluida la PC**: la restriccion a
+tablet/celular es solo para escribir.
 
 - [ ] **Step 4: Typecheck**
 
