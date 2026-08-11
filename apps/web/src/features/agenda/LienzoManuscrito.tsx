@@ -1595,7 +1595,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">Nota manuscrita</h1>
+        {/* En celular el titulo se aplastaba a cero ancho (es lo unico que
+            puede encoger en esta fila) pero seguia ocupando su lugar y sus dos
+            separaciones, dejando un hueco entre la X y el contador y empujando
+            el resto contra el borde derecho. Se saca del flujo en celular; de
+            sm para arriba entra completo y hace de separador flexible. Sigue
+            renderizandose ahi, que es donde corre el E2E que lo exige visible. */}
+        <h1 className="hidden min-w-0 flex-1 truncate text-sm font-semibold text-foreground sm:block">
+          Nota manuscrita
+        </h1>
 
         {isLoading && <p className="shrink-0 text-sm text-muted-foreground">Cargando…</p>}
 
