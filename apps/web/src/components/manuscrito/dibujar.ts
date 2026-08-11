@@ -1,5 +1,5 @@
 import { getStroke } from 'perfect-freehand'
-import type { PuntoTrazo, Trazo, TrazosHoja } from '@pos/types'
+import { HOJA_H, HOJA_W, type PuntoTrazo, type Trazo, type TrazosHoja } from '@pos/types'
 
 // Opciones de perfect-freehand afinadas para escritura (no para dibujo libre):
 // streamline bajo mantiene la letra fiel, thinning medio da el efecto pluma.
@@ -19,6 +19,24 @@ export function cuantizar(x: number, y: number, presion: number): PuntoTrazo {
 }
 
 /**
+ * Alto en pixeles CSS que preserva la proporcion A4 de la hoja (HOJA_W x
+ * HOJA_H) para un ancho de render dado. Espacio: pixeles CSS -> pixeles CSS.
+ */
+export function altoHoja(ancho: number): number {
+  return Math.round((ancho * HOJA_H) / HOJA_W)
+}
+
+/**
+ * Factor de escala que mapea el espacio logico de la hoja (0..HOJA_W,
+ * 0..HOJA_H) a pixeles fisicos del canvas, para un ancho de render en
+ * pixeles CSS y un devicePixelRatio dados. Espacio: logico de hoja ->
+ * fisico de canvas.
+ */
+export function escalaHoja(ancho: number, dpr: number): number {
+  return (ancho * dpr) / HOJA_W
+}
+
+/**
  * Convierte un trazo en un Path2D listo para rellenar. getStroke() devuelve el
  * CONTORNO del trazo como poligono; se suaviza con curvas cuadraticas entre
  * puntos medios, que es lo que hace que la letra no se vea facetada.
@@ -26,6 +44,9 @@ export function cuantizar(x: number, y: number, presion: number): PuntoTrazo {
 export function pathDeTrazo(trazo: Trazo, simularPresion: boolean): Path2D {
   const contorno = getStroke(trazo.p as number[][], {
     ...OPCIONES_BASE,
+    // trazo.s se captura como grosor tipo radio; getStroke espera un
+    // DIAMETRO. El x2 tiene que ser identico en el editor (trazo en vivo) y
+    // aca (replay) o el trazo cambia de grosor al recargar la pagina.
     size: trazo.s * 2,
     simulatePressure: simularPresion,
   }) as number[][]
