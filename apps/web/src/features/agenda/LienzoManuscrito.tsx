@@ -60,6 +60,52 @@ function presionDe(e: { pressure: number; pointerType: string }): number {
   return e.pressure > 0 ? e.pressure : 0.5
 }
 
+// Compara dos trazos por VALOR (color, grosor, cada punto) -- no por
+// identidad de objeto ni via JSON.stringify(). Sale apenas encuentra una
+// diferencia (`.every()` corta corto), sin construir ninguna
+// representacion intermedia. Ver `trazosIguales` para el motivo de evitar
+// JSON.stringify(). Pura, vive fuera del componente por el mismo motivo
+// que aEspacioHoja/presionDe.
+function trazoIgual(a: Trazo, b: Trazo): boolean {
+  if (a.c !== b.c || a.s !== b.s || a.p.length !== b.p.length) return false
+  return a.p.every((punto, i) => punto[0] === b.p[i][0] && punto[1] === b.p[i][1] && punto[2] === b.p[i][2])
+}
+
+/**
+ * Compara dos listas de trazos por CONTENIDO. Usada para decidir si el
+ * borrador local de una hoja difiere de lo que el servidor tiene -- ver
+ * `ofrecerBorradorSiHaceFalta`.
+ *
+ * No usa `JSON.stringify()`: la columna `trazos` es `Json` sobre Postgres,
+ * que sin `@db.Json` mapea a `jsonb` por defecto -- y jsonb SI reordena las
+ * claves de un objeto al guardarlo (documentado por Postgres; en la
+ * practica jsonb ordena las claves para su representacion binaria interna,
+ * no es un caso raro). Comparar el string serializado del borrador local
+ * (armado por el cliente en el orden `{c, s, p}`) contra el de la hoja que
+ * vuelve del servidor (reordenada por jsonb) daria "distintos" para el
+ * MISMO contenido en CASI TODA recarga -- una falsa alarma constante, no
+ * una rareza. Comparar por valor, campo a campo (`trazoIgual`), es inmune
+ * a esto.
+ *
+ * Corte previo por longitud (`a.length !== b.length`) antes de comparar
+ * nada mas -- pero si las longitudes COINCIDEN, sigue cayendo a la
+ * comparacion real trazo por trazo: nunca se asume "iguales" solo porque
+ * tienen la misma cantidad. Esa suposicion (cantidad como proxy de
+ * contenido) fue exactamente el bug de la ronda anterior (recuperacion
+ * comparando por `strokes.length`).
+ *
+ * El orden de los elementos SI importa (no es una comparacion de
+ * conjuntos): la app solo agrega trazos al final o filtra preservando el
+ * orden relativo (deshacer/rehacer intercambian snapshots completos, nunca
+ * reordenan) -- dos listas con el mismo contenido pero orden distinto no
+ * deberian ocurrir nunca en la practica, asi que compararlas posicion por
+ * posicion es correcto y mas barato que una comparacion insensible al
+ * orden.
+ */
+function trazosIguales(a: Trazo[], b: Trazo[]): boolean {
+  return a.length === b.length && a.every((t, i) => trazoIgual(t, b[i]))
+}
+
 // Nombres en espanol de las paletas de @pos/types, solo para aria-label/title
 // (accesibilidad). Si la paleta cambia de valores, cae al hex/numero crudo en
 // vez de romper: nunca se usan para logica, solo como copy.
@@ -679,25 +725,37 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     hojaActivaIdRef.current = hoja?.id ?? null
     setHojaActivaId(hoja?.id ?? null)
 
-    if (hoja) void ofrecerBorradorSiHaceFalta(hoja.id, hoja.updatedAt)
+    if (hoja) void ofrecerBorradorSiHaceFalta(hoja.id, delServidor)
   }
 
   /**
-   * Tras cargar una hoja, revisa si IndexedDB tiene un borrador mas NUEVO
-   * que lo que acaba de llegar del servidor -- señal de que un corte de
+   * Tras cargar una hoja, revisa si IndexedDB tiene un borrador que DIFIERE
+   * de lo que acaba de llegar del servidor -- señal de que un corte de
    * conexion dejo cambios sin subir. Si es asi, lo OFRECE via `recuperable`
    * (modal mas abajo en el render) -- nunca lo aplica ni lo descarta en
    * silencio, la decision es del doctor.
    *
-   * Comparacion por TIEMPO (`borrador.guardadoAt` vs `servidorActualizadoEn`),
-   * no por cantidad de trazos: contar trazos es semanticamente incorrecto
-   * en cuanto el doctor puede BORRAR -- una edicion legitima que borra 3
-   * trazos y deja la hoja mas corta no es "menos completa" que la version
-   * del servidor, es mas RECIENTE. Comparar tamaños haria que ese borrado
-   * nunca se detecte como cambio pendiente, o peor, que el borrador viejo
-   * (con los trazos ya borrados) se ofrezca como si fuera lo mas nuevo
-   * porque tiene MAS trazos. El timestamp responde la pregunta correcta:
-   * cual de los dos es mas reciente, sin importar si crecio o encogio.
+   * Comparacion por CONTENIDO (`trazosIguales`), NO por tiempo ni por
+   * cantidad de trazos (fix-round de review, cierre del residual de
+   * desfasaje de reloj que quedo abierto en la ronda anterior). El
+   * borrador SOLO se escribe desde el editor en vivo, y el editor SIEMPRE
+   * arranca sembrado con la copia del servidor (`cargarHoja`, arriba) --
+   * asi que un borrador cuyo CONTENIDO difiere de lo que el servidor tiene
+   * ahora es, por construccion, trabajo local que el servidor no tiene,
+   * sin importar cuando se escribio ninguno de los dos. Esto no necesita
+   * ningun reloj:
+   * - Comparar por TIEMPO (version anterior:
+   *   `borrador.guardadoAt > Date.parse(hoja.updatedAt)`) comparaba un
+   *   reloj de CLIENTE contra uno de SERVIDOR. Un reloj de tablet
+   *   atrasado (zona horaria mal puesta, DST, un dispositivo que estuvo
+   *   apagado semanas) hacia que un borrador genuinamente mas nuevo
+   *   comparara como mas viejo -- el ofrecimiento nunca se disparaba, y
+   *   el doctor quedaba silenciosamente sin la unica red de seguridad
+   *   que existe especificamente para ese corte de conexion.
+   * - Comparar por CANTIDAD de trazos (dos rondas atras) es semanticamente
+   *   incorrecto en cuanto el doctor puede BORRAR: una edicion legitima
+   *   que borra 3 trazos y deja la hoja mas corta no es "menos completa"
+   *   que la version del servidor, es distinta.
    *
    * `leerBorrador` es async: para cuando resuelve, el doctor pudo haber
    * cambiado de hoja de nuevo (nav rapida). Se compara `hojaActivaIdRef.current`
@@ -705,10 +763,10 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    * llamada -- si ya no coinciden, el ofrecimiento quedo viejo y se descarta
    * sin mostrar nada.
    */
-  async function ofrecerBorradorSiHaceFalta(id: number, servidorActualizadoEn: string) {
+  async function ofrecerBorradorSiHaceFalta(id: number, delServidor: TrazosHoja) {
     const borrador = await leerBorrador(id)
     if (!borrador || hojaActivaIdRef.current !== id) return
-    if (borrador.guardadoAt > Date.parse(servidorActualizadoEn)) {
+    if (!trazosIguales(borrador.trazos.strokes, delServidor.strokes)) {
       setRecuperable({ id, borrador: borrador.trazos, guardadoAt: borrador.guardadoAt })
     }
   }
