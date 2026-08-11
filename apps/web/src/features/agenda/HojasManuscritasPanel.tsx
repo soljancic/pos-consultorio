@@ -88,13 +88,30 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucio
   const transcribir = useMutation({
     mutationFn: async () => {
       const textos: string[] = []
+      // Se saltean las hojas SIN TRAZOS antes de empezar. "+ Hoja" crea y
+      // persiste una hoja vacia al instante, asi que un doctor que la toca y
+      // cierra deja una hoja en blanco al final -- muy comun. El backend
+      // responde 503 "No se pudo leer texto en esta hoja" para una pagina en
+      // blanco (correctamente: no hay nada que leer) y el catch de abajo
+      // aborta TODO el lote, asi que dos hojas escritas no producian nada
+      // salvo "Hoja 3 de 3: No se pudo leer texto en esta hoja", sin pista
+      // de que bastaba con borrar la hoja vacia. Ademas ahorra una llamada
+      // al modelo (cuesta plata) por cada hoja en blanco.
+      //
+      // Se conserva el numero de cada hoja DENTRO DE LA LISTA COMPLETA
+      // (`numero`), no su posicion en el lote filtrado: es el mismo numero
+      // que muestra la miniatura del panel, asi que si una hoja falla el
+      // doctor sabe exactamente cual mirar.
+      const aTranscribir = hojas
+        .map((hoja, i) => ({ hoja, numero: i + 1 }))
+        .filter(({ hoja }) => ((hoja.trazos as TrazosHoja | null)?.strokes?.length ?? 0) > 0)
+
       // Secuencial a proposito, en `orden` (el orden que ya trae `hojas`, el
       // backend las lista con `orderBy: { orden: 'asc' }`): son pocas hojas y
       // en paralelo el costo y la exposicion a rate-limit se disparan sin
       // ganancia real.
-      for (let i = 0; i < hojas.length; i++) {
-        const hoja = hojas[i]
-        setProgreso({ actual: i + 1, total: hojas.length })
+      for (const { hoja, numero } of aTranscribir) {
+        setProgreso({ actual: numero, total: hojas.length })
         let texto: string
         try {
           const blob = await rasterizarHoja(hoja.trazos as TrazosHoja)
@@ -114,10 +131,13 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucio
           // backend lo mando) POR QUE -- las tres razones de un 503 son
           // distintas (declinado / cortado por limite / nada legible) y las
           // manda ya distinguidas el propio backend (Task 5).
-          throw new Error(mensajeDeHoja(err, i + 1, hojas.length))
+          throw new Error(mensajeDeHoja(err, numero, hojas.length))
         }
         if (texto) textos.push(texto)
       }
+      // Si no quedo ninguna hoja con trazos, esto es '' y `onSuccess` muestra
+      // el mismo mensaje que cuando ninguna hoja dio texto -- sin arrancar un
+      // lote que solo podia terminar en un 503.
       return textos.join('\n\n')
     },
     onSuccess: (texto) => {

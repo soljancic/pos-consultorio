@@ -25,7 +25,11 @@ type AtencionTimeline = {
   evolucion: string | null
   proximoControl: string | null
   adjuntos: AdjuntoMeta[] | null
-  hojas: HojaResumen[]
+  // Opcional a proposito: la PWA cachea los GET de la API con NetworkFirst
+  // (`consultech-api`), asi que un doctor offline despues de este deploy
+  // puede recibir una respuesta cacheada de ANTES del deploy, sin la clave
+  // `hojas` -- leerla sin guardia tiraba la pagina entera del paciente.
+  hojas?: HojaResumen[]
   cita: {
     id: number
     fechaHora: string
@@ -122,7 +126,7 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                     </p>
                   )}
                 </div>
-                {a.hojas.length > 0 && (
+                {(a.hojas?.length ?? 0) > 0 && (
                   <div className="pt-1">
                     {/* Sin miniaturas dibujadas a proposito (fix round 1,
                         Finding 1): mostrarlas exigiria traer `trazos` de
@@ -136,7 +140,7 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                       className="inline-flex items-center gap-1.5 h-11 px-3 rounded-full border text-primary text-xs font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
                     >
                       <PenLine className="h-3.5 w-3.5" aria-hidden="true" />
-                      {a.hojas.length === 1 ? '1 hoja manuscrita' : `${a.hojas.length} hojas manuscritas`}
+                      {a.hojas!.length === 1 ? '1 hoja manuscrita' : `${a.hojas!.length} hojas manuscritas`}
                     </button>
                   </div>
                 )}
@@ -199,19 +203,29 @@ function VisorHojasBajoDemanda({
     queryFn: () => api.get<HojaManuscritaApi[]>(`/atenciones/cita/${citaId}/hojas`).then((r) => r.data),
   })
 
-  // Escape cierra tambien mientras carga o si hubo error -- una vez que
-  // llegan los datos, VisorHojaManuscrita toma el control del teclado.
+  // `hojas.length > 0`, no solo `hojas`: un array VACIO es truthy, y
+  // VisorHojaManuscrita con cero hojas devuelve `null` (no tiene hoja que
+  // pintar) -- el overlay nunca se montaba, nadie podia disparar `onClose`,
+  // `visorCita` quedaba seteado y volver a tocar la pill no hacia nada hasta
+  // recargar la pagina. Pasa de verdad: entre que la linea de tiempo trajo
+  // el conteo y que el doctor toca la pill, esas hojas pueden haberse
+  // borrado desde el modal de la atencion.
+  const hojasListas = hojas && hojas.length > 0 ? hojas : null
+
+  // Escape cierra tambien mientras carga, si hubo error o si la atencion se
+  // quedo sin hojas -- una vez que hay datos que mostrar, VisorHojaManuscrita
+  // toma el control del teclado.
   useEffect(() => {
-    if (hojas) return
+    if (hojasListas) return
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [hojas, onClose])
+  }, [hojasListas, onClose])
 
-  if (hojas) {
-    return <VisorHojaManuscrita hojas={hojas} indiceInicial={indiceInicial} onClose={onClose} />
+  if (hojasListas) {
+    return <VisorHojaManuscrita hojas={hojasListas} indiceInicial={indiceInicial} onClose={onClose} />
   }
 
   return (
@@ -233,6 +247,14 @@ function VisorHojasBajoDemanda({
             description="Revisá la conexión e intentá de nuevo."
             onRetry={() => refetch()}
           />
+        ) : hojas ? (
+          // Llegaron datos pero la lista vino vacia: las hojas se borraron
+          // entre que la linea de tiempo trajo el conteo y este toque. Estado
+          // explicito, con su boton de cerrar arriba -- nunca un spinner que
+          // no va a terminar nunca.
+          <p role="status" className="max-w-xs text-center text-sm text-muted-foreground">
+            Esta atención ya no tiene hojas manuscritas.
+          </p>
         ) : (
           // Esta rama solo se pinta mientras `hojas` todavia no llego y no
           // hubo error -- por construccion eso es siempre "cargando" (sin
