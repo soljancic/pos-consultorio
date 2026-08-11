@@ -21,6 +21,7 @@ Estas reglas aplican a **todas** las tareas. Estan en `CLAUDE.md` y en `PLAN.md`
 - Roles: `@Roles(Rol.ADMIN)` con el enum de `@pos/types`, nunca strings.
 - **Prohibido `window.confirm` / `alert` / `prompt`**. Usar los modales del design system (patron `ConfirmarModal`).
 - **Copy visible al usuario en espanol CON acentos.** Identificadores de codigo sin acentos.
+  **Esto incluye los mensajes de `BadRequestException` / `NotFoundException` / `ForbiddenException` del API**: el frontend los muestra tal cual con `toast.fromError`, asi que son copy visible. Decision del owner 2026-08-10, que ademas pidio corregir los mensajes ya existentes del modulo de atenciones (Task 3, Step 2).
 - **Toda UI nueva o modificada pasa por los skills `impeccable` + `ui-ux-pro-max` + `frontend-design` ANTES de escribir el JSX.** Esta como paso explicito en cada tarea de UI.
 - Tokens de `apps/web/src/lib/ui.ts` (`cardUI`, `inputUI`, `btnPrimaryUI`, `btnOutlineUI`, `btnIconUI`, `errorUI`). Touch targets >= 44px, `focus-visible` ring, color + forma (no solo color), transiciones 150-300ms.
 - **La pagina nunca scrollea en X.** Contenido ancho en su propia caja `overflow-x-auto`.
@@ -723,7 +724,60 @@ export class HojasService {
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [ ] **Step 2: Poner acentos en los mensajes de error del modulo**
+
+Decision del owner (2026-08-10): los mensajes de excepcion del API son copy visible
+—`toast.fromError` los muestra tal cual— asi que van en espanol correcto. Ademas
+de escribir los nuevos con acentos, **corregir los que ya existen** en el modulo.
+
+Barrer los tres archivos del modulo y poner tildes donde faltan, **sin cambiar la
+redaccion ni el significado de ningun mensaje**:
+
+- `apps/api/src/modules/atenciones/atenciones.service.ts`
+- `apps/api/src/modules/atenciones/recetas.service.ts`
+- `apps/api/src/modules/atenciones/atenciones.controller.ts`
+
+Los que cambian (buscar tambien los que usan template literals con backticks, que
+un grep de comillas simples no encuentra):
+
+| Antes | Despues |
+|---|---|
+| `La cita no tiene atencion registrada` | `La cita no tiene atención registrada` |
+| `Registre la atencion antes de adjuntar archivos` | `Registre la atención antes de adjuntar archivos` |
+| `Registre la atencion antes de emitir una receta` | `Registre la atención antes de emitir una receta` |
+| `Solo el doctor o el administrador registran la atencion` | `Solo el doctor o el administrador registran la atención` |
+| `No se puede registrar atencion en una cita ${cita.estado}` | `No se puede registrar atención en una cita ${cita.estado}` |
+| `El archivo supera el maximo de 5 MB` | `El archivo supera el máximo de 5 MB` |
+| `Maximo ${MAX_ADJUNTOS_POR_ATENCION} adjuntos por atencion` | `Máximo ${MAX_ADJUNTOS_POR_ATENCION} adjuntos por atención` |
+| `Ruta de adjunto invalida` | `Ruta de adjunto inválida` |
+| `Solo se aceptan imagenes (JPG, PNG, WebP) o PDF` | `Solo se aceptan imágenes (JPG, PNG, WebP) o PDF` |
+| `Los pagos registrados superan el precio del nuevo servicio: anule pagos antes de cambiarlo` | sin cambios (ya esta correcto) |
+
+**No tocar:** nombres de variables, claves de `payloadAntes`/`payloadDespues`,
+valores de `entidad` en los logs, ni comentarios. Solo los strings que viajan al
+usuario.
+
+Y aplicar la misma regla a los mensajes nuevos de `hojas.service.ts` del Step 1:
+
+| En el Step 1 | Corregido |
+|---|---|
+| `Registre la atencion antes de escribir a mano` | `Registre la atención antes de escribir a mano` |
+| `Maximo ${MAX_HOJAS_POR_ATENCION} hojas por atencion` | `Máximo ${MAX_HOJAS_POR_ATENCION} hojas por atención` |
+| `Hoja no encontrada` | sin cambios |
+
+Los mensajes de `manuscrito.validator.ts` (Task 1) tambien llegan al usuario via
+`BadRequestException`: corregirlos igual — `Version de trazos no soportada`,
+`Dimensiones de hoja invalidas`, `Color de trazo invalido`, `Grosor de trazo
+invalido`, `Cada punto debe ser [x, y, presion] numerico`, `La presion debe estar
+entre 0 y 1`, `Un trazo supera el maximo de N puntos`, `La hoja pesa mas de 2 MB`.
+
+**OJO:** los tests de Task 1 hacen match con regex (`/version/i`, `/presion/i`,
+`/dimensiones/i`, `/puntos/i`, `/pesa/i`, `/color/i`, `/grosor/i`, `/punto/i`,
+`/fuera/i`). Poner tildes rompe `/version/i` contra `Versión` y `/presion/i` contra
+`presión`. Al cambiar los mensajes, **actualizar los regex de
+`manuscrito.validator.spec.ts` en el mismo commit** y volver a correr los tests.
+
+- [ ] **Step 3: Typecheck**
 
 ```bash
 cd apps/api && npx tsc --noEmit
@@ -731,19 +785,20 @@ cd apps/api && npx tsc --noEmit
 
 Esperado: sin errores.
 
-- [ ] **Step 3: Correr la suite de unit tests (regresion)**
+- [ ] **Step 4: Correr la suite de unit tests (regresion)**
 
 ```bash
 cd apps/api && npx jest
 ```
 
-Esperado: PASS. Los tests de Task 1 y los de la maquina de estados siguen verdes.
+Esperado: PASS. Los tests de Task 1 (con los regex ya actualizados) y los de la
+maquina de estados siguen verdes.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add apps/api/src/modules/atenciones/hojas.service.ts
-git commit -m "feat(manuscrito): service CRUD de hojas con guard de escritura y log"
+git add apps/api/src/modules/atenciones/
+git commit -m "feat(manuscrito): service CRUD de hojas + acentos en mensajes del modulo"
 ```
 
 ---
