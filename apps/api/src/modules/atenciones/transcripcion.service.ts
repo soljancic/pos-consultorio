@@ -39,11 +39,11 @@ export class TranscripcionService {
 
     if (!this.disponible()) {
       throw new ServiceUnavailableException(
-        'La transcripcion no esta configurada en el servidor (falta ANTHROPIC_API_KEY)',
+        'La transcripción no está configurada en el servidor (falta ANTHROPIC_API_KEY)',
       )
     }
     if (imagen.length > MAX_IMAGEN_BYTES) {
-      throw new BadRequestException('La imagen de la hoja supera el maximo de 8 MB')
+      throw new BadRequestException('La imagen de la hoja supera el máximo de 8 MB')
     }
     const mediaType = mediaTypeDeImagen(imagen)
     if (!mediaType) {
