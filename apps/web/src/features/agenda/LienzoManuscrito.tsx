@@ -319,45 +319,52 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     if (hojaActivaId === null) cargarHoja(hojas[0])
   }, [isLoading, hojas, hojaActivaId])
 
-  // Autoguardado: mientras la hoja activa tenga cambios sin guardar,
-  // reintenta a los 10s. Un timer por ciclo "se ensucio" (sucio false->true),
-  // no un intervalo recurrente: en cuanto guardarActivaSiSucia() resuelve con
-  // exito pone `sucio` en false, lo que dispara este mismo efecto de nuevo
-  // con la guarda `!sucio` -- no programa nada mas hasta el proximo trazo,
-  // que vuelve a poner `sucio` en true y arma un timer nuevo. Reusa
-  // `guardarActivaSiSucia()` a proposito -- el MISMO camino (con el mutex de
-  // `guardadoEnCursoRef`) que usan `irAHoja`/`nuevaHoja`: una segunda ruta de
-  // guardado que se saltee la comparacion de snapshot reintroduciria el bug
-  // critico de Task 10 (trazo dibujado durante un PUT en vuelo, perdido en
-  // silencio al cambiar de hoja).
+  // Autoguardado: un intervalo fijo de 10s para toda la vida del componente
+  // (deps `[]`, no `[sucio, hojaActivaId]`) -- CADA tick llama
+  // `guardarActivaSiSucia()`, que internamente no-opea si no hay nada sucio
+  // o si ya hay un guardado en vuelo (mutex `guardadoEnCursoRef`).
+  //
+  // Un timer rearmado solo en la transicion `sucio` false->true (la version
+  // anterior de este efecto) tiene un hueco real: si el primer intento
+  // falla (offline), `guardarActivaSiSucia()` NO toca `sucio` en la rama de
+  // error (sigue en `true`, sin cambiar de VALOR) -- React bailea de
+  // re-renderizar cuando `setState` recibe el mismo valor primitivo que ya
+  // tenia, asi que el efecto NUNCA vuelve a correr y NUNCA se arma un timer
+  // nuevo, aunque el doctor siga escribiendo (cada trazo llama
+  // `setSucio(true)`, ya `true`, mismo bailout). El intervalo fijo no
+  // depende de que ningun estado CAMBIE DE VALOR: vuelve a preguntar cada
+  // 10s pase lo que pase, asi que reintenta indefinidamente mientras la
+  // conexion siga caida y haya algo pendiente.
+  //
+  // Reusa `guardarActivaSiSucia()` a proposito -- el MISMO camino (con el
+  // mutex de `guardadoEnCursoRef`) que usan `irAHoja`/`nuevaHoja`: una
+  // segunda ruta de guardado que se saltee la comparacion de snapshot
+  // reintroduciria el bug critico de Task 10 (trazo dibujado durante un PUT
+  // en vuelo, perdido en silencio al cambiar de hoja).
   useEffect(() => {
-    if (!sucio || hojaActivaId === null) return
-    const t = setTimeout(() => {
+    const t = setInterval(() => {
       void guardarActivaSiSucia()
     }, 10_000)
-    return () => clearTimeout(t)
-  }, [sucio, hojaActivaId])
+    return () => clearInterval(t)
+  }, [])
 
   // Guarda lo pendiente al salir de la pantalla: este componente es un
   // overlay `fixed`, se desmonta cuando el padre deja de renderizarlo tras
-  // `onClose()` (boton X o Escape). `prepararCambioDeHojaRef` siempre apunta
-  // a la version MAS RECIENTE de `prepararCambioDeHoja` (actualizado en cada
-  // render, efecto de abajo sin dependencias): el efecto de limpieza usa
-  // `[]` a proposito (correr una sola vez, al desmontar de verdad, no en
-  // cada cambio de hoja), pero eso significa que su closure quedaria fijo en
-  // el PRIMER render si llamara a `prepararCambioDeHoja` directo -- con
-  // `hojaActivaId` todavia `null` en ese momento (antes de la
-  // auto-seleccion), el flush de salida nunca guardaria nada real. El ref
-  // evita ese cierre obsoleto. `prepararCambioDeHoja` (no solo
-  // `guardarActivaSiSucia`) para tambien comitear un trazo a medio hacer si
-  // el doctor cierra con el lapiz todavia apoyado.
-  const prepararCambioDeHojaRef = useRef<() => Promise<boolean>>(async () => true)
-  useEffect(() => {
-    prepararCambioDeHojaRef.current = prepararCambioDeHoja
-  })
+  // `onClose()` (boton X o Escape). Efecto de limpieza con deps `[]` a
+  // proposito (correr una sola vez, al desmontar de verdad, no en cada
+  // cambio de hoja): eso ata el closure de este efecto al PRIMER render,
+  // pero es seguro llamar directo a `prepararCambioDeHoja` -- misma razon
+  // que el timer de arriba tambien puede llamar `guardarActivaSiSucia`
+  // directo desde su propio closure fijo: ninguna de las dos depende de
+  // ningun estado CAPTURADO por closure (`prepararCambioDeHoja` y todo lo
+  // que llama -- `terminarGestoEnCurso`, `guardarActivaSiSucia` -- solo leen
+  // refs y setters de estado, estables por React), asi que da igual desde
+  // que render se haya "congelado" el closure. `prepararCambioDeHoja` (no
+  // solo `guardarActivaSiSucia`) para tambien comitear un trazo a medio
+  // hacer si el doctor cierra con el lapiz todavia apoyado.
   useEffect(() => {
     return () => {
-      void prepararCambioDeHojaRef.current()
+      void prepararCambioDeHoja()
     }
   }, [])
 
@@ -689,17 +696,28 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
    * -- veria `trazosRef.current !== foto` por una razon incorrecta (la hoja
    * cambio, no que se agrego un trazo) y reenviaria el contenido de la hoja
    * DESTINO contra el id de la hoja ORIGEN.
+   *
+   * Lee `hojaActivaIdRef` (no el estado `hojaActivaId`) a proposito: el
+   * timer de autoguardado (mas abajo) es un `setInterval` fijo que llama
+   * esta funcion desde el closure del PRIMER render (efecto con deps `[]`).
+   * Si leyera el estado, esa llamada veria para siempre el `hojaActivaId`
+   * de ese primer render (`null`, antes de la auto-seleccion) y el
+   * autoguardado nunca guardaria nada real. Los refs son el MISMO objeto
+   * mutable en todos los renders, asi que leerlos desde cualquier closure
+   * (viejo o nuevo) da siempre el valor actual.
    */
   async function guardarActivaSiSucia(): Promise<boolean> {
     if (guardadoEnCursoRef.current) return guardadoEnCursoRef.current
-    // `sucioRef`, no el estado `sucio`: ver su declaracion -- si
+    // `sucioRef`/`hojaActivaIdRef`, no el estado: ver el parrafo anterior
+    // (llamador desde closure potencialmente viejo) y, ademas, si
     // `terminarGestoEnCurso()` acaba de comitear un trazo en ESTE mismo
-    // llamado (dentro de `prepararCambioDeHoja`), el estado todavia no
-    // reflejaria ese cambio aca.
-    if (!sucioRef.current || hojaActivaId === null) return true
+    // llamado (dentro de `prepararCambioDeHoja`), el estado `sucio` todavia
+    // no reflejaria ese cambio aca (mismo motivo original de `sucioRef`).
+    const hojaId = hojaActivaIdRef.current
+    if (!sucioRef.current || hojaId === null) return true
 
     const promesa = (async (): Promise<boolean> => {
-      const id = hojaActivaId
+      const id = hojaId
       const foto = trazosRef.current
       try {
         await guardarHoja.mutateAsync({ id, trazos: foto })
