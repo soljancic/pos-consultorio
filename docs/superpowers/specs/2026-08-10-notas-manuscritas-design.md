@@ -47,13 +47,31 @@ Se evaluaron alternativas "sin IA" a pedido del owner:
 - **Google Cloud Vision / Azure Document Intelligence:** mejores que Tesseract, pero
   siguen siendo ML, los datos igual salen del servidor y flaquean con cursiva ligada.
   Misma exposicion de privacidad por menos precision.
-- **iPadOS Scribble / teclado Samsung:** genuinamente local y gratis, pero convierte
-  a texto *dentro de un campo de texto*; no guarda la hoja. **Complementa**, no
-  reemplaza: el doctor ya puede tipear con el lapiz en "Evolucion" hoy, sin codigo.
+- **iPadOS Scribble / teclado Samsung:** genuinamente local, gratis y privado.
+  Scribble anda en los campos de texto de contenido web en Safari, o sea que el
+  doctor ya puede tipear con el lapiz en "Evolucion" hoy, sin una linea de codigo.
+  Pero convierte a texto *dentro de un campo*; no guarda la hoja. Y peor: **en el
+  lienzo estorba** (ver §4, "Scribble se pelea con el lienzo"). No es una
+  alternativa al OCR, es su competencia directa por el mismo lapiz.
 
 Conclusion: "sin IA" no es el eje real — toda transcripcion de manuscrito es un
 modelo entrenado. El eje es donde corre. Se elige `claude-opus-5` por precision en
 cursiva, detras de una interfaz que permita cambiar de proveedor tocando un archivo.
+
+### Por que no se usan las APIs nativas de dibujo del iPad / Android
+
+`PencilKit` (iPadOS) y `androidx.ink` (Android) resuelven todo esto de fabrica:
+paleta de herramientas, tinta afinada por el fabricante, el doble toque del Pencil 2.
+**Ninguna es alcanzable desde una PWA**: son frameworks nativos, no hay puente en
+JavaScript. Llegar a ellas exige envolver la app en un shell nativo y publicar en
+App Store y Play Store — cuentas de desarrollador, revisiones, builds y dos canales
+de distribucion mas, para un negocio de 5-10 personas que ya tiene la PWA en
+produccion.
+
+La ganancia real seria chica: Pointer Events en Safari y Chrome ya exponen presion,
+inclinacion y (desde Safari 18.2) los eventos agrupados del Pencil. Lo unico que se
+pierde de verdad es el doble toque del Pencil 2, que la web no expone. Cambiar de
+plataforma por un atajo de herramienta no cierra.
 
 **Nota de privacidad (asumida y aceptada por el owner):** la hoja sale del servidor
 propio hacia la API de Anthropic (retencion 30 dias, no se usa para entrenamiento).
@@ -192,14 +210,53 @@ el owner corre `pnpm install`).
 ### Captura
 
 - **Pointer Events**: `pointerdown` / `pointermove` / `pointerup` / `pointercancel`.
-- `e.pressure` modula el grosor; `getCoalescedEvents()` recupera los puntos que el
-  navegador agrupa entre frames (el Pencil muestrea por encima de 120 Hz).
+- `e.pressure` modula el grosor.
+- `getCoalescedEvents()` recupera los puntos que el navegador agrupa entre frames
+  (el Pencil muestrea por encima de 120 Hz). **Safari lo soporta recien desde la
+  18.2** (iPadOS 18.2), asi que va con deteccion de capacidad:
+  `typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e]`.
+  En un iPad viejo el trazo pierde algo de finura en movimientos rapidos, pero
+  funciona.
 - `touch-action: none` y `overscroll-behavior: none` en el lienzo: sin scroll ni
   zoom accidental del navegador mientras se escribe.
 - **Rechazo de palma**: apenas se ve un `pointerType === 'pen'` en la sesion, los
   punteros `touch` dejan de dibujar y pasan a mover/acercar la hoja. En celular sin
   lapiz, el dedo dibuja.
 - `setPointerCapture` en el `pointerdown` para no perder el trazo al salir del canvas.
+
+### Scribble se pelea con el lienzo (gotcha grande, iPad)
+
+**iPadOS Scribble corre a nivel de sistema y vigila el Apple Pencil globalmente.**
+Cuando detecta un patron que parece escritura, **intercepta el trazo antes de que
+llegue al canvas**. El caso reportado es un trazo vertical-horizontal-vertical (una
+"H", un "4"): el tercer segmento se pierde. Escribir texto cursivo sobre un canvas
+es exactamente el patron que Scribble intenta capturar, o sea que este es el peor
+caso posible, no un borde raro.
+
+No hay opt-out desde la web. Los apps nativos pueden rechazar Scribble por vista
+(`UIScribbleInteraction`); una PWA no tiene equivalente. `touch-action: none` no
+alcanza porque la intercepcion pasa por encima del navegador.
+
+**Consecuencia y decision:** para escribir la nota en el lienzo hay que apagar
+Scribble en el iPad (Ajustes → Apple Pencil → Scribble → Off). Eso resigna la
+conversion gratis de lapiz a texto dentro de los campos de texto — que es
+justamente lo que nuestro OCR reemplaza. El intercambio cierra:
+
+| | Scribble ON | Scribble OFF (recomendado) |
+|---|---|---|
+| Lienzo manuscrito | trazos perdidos al escribir letras | confiable |
+| Lapiz en campos de texto | convierte a texto gratis, local | no convierte |
+| Manuscrito a texto | — | via el boton "Transcribir" |
+
+Dado que la decision es que **el manuscrito ES la nota**, Scribble OFF es lo
+correcto. A implementar:
+
+- Una nota en el `/ayuda` del proyecto con el paso a paso para apagarlo.
+- Un aviso una sola vez la primera vez que se abre el lienzo en un iPad, con la
+  ruta de Ajustes. Descartable y recordado en `localStorage`.
+- **Verificar en hardware real si el problema sigue vigente** en la version de
+  iPadOS del doctor antes de dar el aviso por necesario: el reporte es de un
+  tercero, no de la documentacion de Apple, y Apple pudo haberlo ajustado.
 
 ### Render
 
@@ -316,7 +373,15 @@ volumen es de unas pocas sesiones por dia. El modelo queda configurable por env
     exacta al escribir el test en vez de asumirla. Si resulta caro, dejarlos fuera
     del E2E y cubrirlos en la prueba manual de abajo, que igual es obligatoria.
 - Prueba manual obligatoria en hardware real (iPad con Apple Pencil y un Android con
-  lapiz): el rechazo de palma y la presion no se validan de verdad en un emulador.
+  lapiz). Un emulador no valida nada de esto:
+  - Rechazo de palma apoyando la mano mientras se escribe.
+  - Presion: el trazo tiene que engrosar al apretar.
+  - **Escribir un parrafo largo de cursiva con Scribble ENCENDIDO y contar si se
+    pierden trazos.** Es el gotcha de §4 y define si el aviso de apagar Scribble es
+    necesario o si Apple ya lo corrigio.
+  - Repetir con Scribble apagado y confirmar que no se pierde ninguno.
+  - Version de iPadOS del dispositivo del doctor, para saber si `getCoalescedEvents`
+    esta disponible (18.2+) o si cae al fallback.
 
 ---
 
