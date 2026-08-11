@@ -192,6 +192,7 @@ export function AtencionModal({ cita, onClose }: Props) {
               cita={cita}
               puedeEditar={puedeEditar}
               hayAtencion={!!atencion}
+              evolucionActual={form.evolucion}
               onTranscribir={(texto) => set('evolucion', texto)}
             />
             <FloatingInput

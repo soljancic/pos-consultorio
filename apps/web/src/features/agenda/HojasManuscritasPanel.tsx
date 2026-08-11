@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { PenLine } from 'lucide-react'
-import type { Cita, HojaManuscritaApi } from '@pos/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, Loader2, PenLine, ScanText } from 'lucide-react'
+import type { Cita, HojaManuscritaApi, TrazosHoja } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatFecha } from '../../lib/utils'
+import { cn, formatFecha } from '../../lib/utils'
+import { btnDestructiveUI, btnOutlineUI, btnPrimaryUI } from '../../lib/ui'
+import { toast } from '../../stores/toast.store'
 import { HojaRenderer } from '../../components/manuscrito/HojaRenderer'
+import { rasterizarHoja } from '../../components/manuscrito/rasterizar'
 import { ModalHeader } from '../../components/shared/ModalHeader'
 import { LienzoManuscrito } from './LienzoManuscrito'
 
@@ -19,6 +22,17 @@ interface Props {
   cita: Cita
   puedeEditar: boolean
   hayAtencion: boolean
+  /**
+   * Valor EN VIVO del campo Evolucion (el `form.evolucion` de AtencionModal),
+   * no el que quedo guardado en el servidor. Task 13 lo necesita para decidir
+   * si hay que preguntar reemplazar/agregar o llenar directo -- usar el valor
+   * del servidor dejaria pasar por "vacio" un campo que el doctor esta
+   * escribiendo en ese mismo instante y todavia no guardo, pisandolo en
+   * silencio. Es la unica razon por la que este componente termino
+   * necesitando un prop mas de AtencionModal (el resto de la tarea vive
+   * entero aca adentro).
+   */
+  evolucionActual: string
   onTranscribir: (texto: string) => void
 }
 
@@ -29,12 +43,12 @@ interface Props {
  * `HojaRenderer` en una tira horizontal con su propio scroll -- nunca
  * scroll horizontal de la pagina.
  *
- * `onTranscribir` ya viaja en la interfaz para que Task 13 (boton
- * "Transcribir a texto") no tenga que volver a tocar AtencionModal; esta
- * tarea no dibuja ese boton (fuera de alcance, ver plan).
+ * Task 13 agrega "Transcribir a texto": rasteriza cada hoja (rasterizar.ts),
+ * las manda en orden al endpoint de Task 5 y mete el resultado en Evolucion
+ * via `onTranscribir`.
  */
-export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTranscribir }: Props) {
-  void onTranscribir
+export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucionActual, onTranscribir }: Props) {
+  const qc = useQueryClient()
 
   // Misma queryKey que usa el editor (LienzoManuscrito): compartida via
   // TanStack Query, asi que un guardado/creacion/borrado adentro del editor
@@ -46,8 +60,87 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTransc
     enabled: hayAtencion,
   })
 
+  // Query propia (nunca ['hojas', ...]): esto no cambia con nada que pase
+  // adentro de una atencion, solo con un restart del servidor (falta o no
+  // ANTHROPIC_API_KEY) -- staleTime infinito evita refetchearla en cada foco
+  // de ventana o remontada del panel.
+  const { data: estadoOcr } = useQuery<{ disponible: boolean }>({
+    queryKey: ['transcripcion', 'estado'],
+    queryFn: () => api.get<{ disponible: boolean }>('/atenciones/transcripcion/estado').then((r) => r.data),
+    staleTime: Infinity,
+  })
+
   const [escribiendo, setEscribiendo] = useState(false)
   const [hojaVista, setHojaVista] = useState<{ hoja: HojaManuscritaApi; numero: number } | null>(null)
+
+  // Progreso real de la transcripcion en curso (hoja N de M) -- el boton lo
+  // muestra en su propia etiqueta, ver mas abajo. `decisionPendiente` guarda
+  // el texto YA transcrito mientras se pregunta reemplazar/agregar (null =
+  // nada pendiente). `avisoRevision` queda en `true` para siempre una vez que
+  // se inserto texto generado, hasta que el panel se desmonte: no tiene
+  // sentido volver a `false` solo porque arranca un segundo intento, el
+  // aviso sigue siendo cierto sobre lo que ya hay en el campo.
+  const [progreso, setProgreso] = useState<{ actual: number; total: number } | null>(null)
+  const [decisionPendiente, setDecisionPendiente] = useState<string | null>(null)
+  const [avisoRevision, setAvisoRevision] = useState(false)
+
+  const transcribir = useMutation({
+    mutationFn: async () => {
+      const textos: string[] = []
+      // Secuencial a proposito, en `orden` (el orden que ya trae `hojas`, el
+      // backend las lista con `orderBy: { orden: 'asc' }`): son pocas hojas y
+      // en paralelo el costo y la exposicion a rate-limit se disparan sin
+      // ganancia real.
+      for (let i = 0; i < hojas.length; i++) {
+        const hoja = hojas[i]
+        setProgreso({ actual: i + 1, total: hojas.length })
+        let texto: string
+        try {
+          const blob = await rasterizarHoja(hoja.trazos as TrazosHoja)
+          const fd = new FormData()
+          fd.append('imagen', blob, `hoja-${hoja.orden}.png`)
+          const { data } = await api.post<{ texto: string }>(
+            `/atenciones/cita/${cita.id}/hojas/${hoja.id}/transcribir`,
+            fd,
+          )
+          texto = data.texto
+        } catch (err) {
+          // Aborta ACA, sin seguir con las hojas que faltan: devolver "dos
+          // hojas de tres" como si fuera el texto completo (sin avisar que
+          // la tercera fallo) seria peor que no devolver nada -- el doctor
+          // pegaria una nota incompleta pensando que es todo lo que escribio.
+          // `mensajeDeHoja` arma un mensaje que dice CUAL hoja fallo y (si el
+          // backend lo mando) POR QUE -- las tres razones de un 503 son
+          // distintas (declinado / cortado por limite / nada legible) y las
+          // manda ya distinguidas el propio backend (Task 5).
+          throw new Error(mensajeDeHoja(err, i + 1, hojas.length))
+        }
+        if (texto) textos.push(texto)
+      }
+      return textos.join('\n\n')
+    },
+    onSuccess: (texto) => {
+      if (!texto) {
+        toast.error('No se pudo leer texto en ninguna hoja')
+        return
+      }
+      if (evolucionActual.trim().length > 0) {
+        setDecisionPendiente(texto) // abre el modal de reemplazar/agregar
+      } else {
+        onTranscribir(texto)
+        setAvisoRevision(true)
+      }
+    },
+    onError: (err: any) => toast.fromError(err, err.message),
+    onSettled: () => {
+      setProgreso(null)
+      // Aunque el intento haya abortado a mitad de camino, las hojas que SI
+      // se transcribieron ya quedaron guardadas en el servidor (Task 5 las
+      // persiste una por una) -- invalidar refleja eso en cache pase lo que
+      // pase, no solo cuando el intento completo sale bien.
+      qc.invalidateQueries({ queryKey: ['hojas', cita.id] })
+    },
+  })
 
   const puedeEscribir = puedeEditar && hayAtencion && ESCRITURA_DISPONIBLE
   const avisarQueFaltaTactil = puedeEditar && hayAtencion && hojas.length > 0 && !ESCRITURA_DISPONIBLE
@@ -102,6 +195,47 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTransc
               Para escribir a mano, abrí esta atención desde una tablet o un celular con lápiz.
             </p>
           )}
+
+          {/* Transcribir: en cualquier dispositivo (a diferencia de "Escribir a
+              mano", lee hojas ya guardadas, no captura trazo), mientras se
+              pueda editar la atencion -- transcribir escribe en Evolucion. */}
+          {puedeEditar && (
+            <div className="mt-2.5 flex flex-col items-start gap-1.5">
+              <button
+                type="button"
+                onClick={() => transcribir.mutate()}
+                disabled={transcribir.isPending || !estadoOcr?.disponible}
+                className={btnOutlineUI}
+              >
+                {transcribir.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Transcribiendo hoja {progreso?.actual ?? 1} de {progreso?.total ?? hojas.length}…
+                  </>
+                ) : (
+                  <>
+                    <ScanText className="h-4 w-4" aria-hidden="true" />
+                    Transcribir a texto
+                  </>
+                )}
+              </button>
+              {estadoOcr && !estadoOcr.disponible && (
+                <p className="text-xs text-muted-foreground/70">
+                  La transcripción automática no está configurada en el servidor.
+                </p>
+              )}
+            </div>
+          )}
+
+          {avisoRevision && (
+            <p
+              role="status"
+              className="mt-2.5 flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>Texto generado desde tu escritura. Revisalo antes de guardar.</span>
+            </p>
+          )}
         </>
       )}
 
@@ -110,6 +244,80 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, onTransc
       {hojaVista && (
         <VisorHoja hoja={hojaVista.hoja} numero={hojaVista.numero} onClose={() => setHojaVista(null)} />
       )}
+
+      {decisionPendiente !== null && (
+        <DecisionTranscripcionModal
+          onReemplazar={() => {
+            onTranscribir(decisionPendiente)
+            setDecisionPendiente(null)
+            setAvisoRevision(true)
+          }}
+          onAgregar={() => {
+            onTranscribir(`${evolucionActual}\n\n${decisionPendiente}`)
+            setDecisionPendiente(null)
+            setAvisoRevision(true)
+          }}
+          onCancelar={() => setDecisionPendiente(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Extrae un mensaje legible para el doctor a partir de lo que fallo al
+ * transcribir UNA hoja. Prioriza el mensaje que mando el backend (Task 5 ya
+ * distingue declinado / cortado por limite / nada legible con tres textos
+ * distintos), despues el de un Error de cliente (p.ej. rasterizarHoja sin
+ * contexto de canvas), y por ultimo un generico. Con mas de una hoja, antepone
+ * "Hoja N de M" para que el doctor sepa DONDE se corto sin tener que adivinar
+ * por el contador del boton (que ya se apago para cuando llega el toast).
+ */
+function mensajeDeHoja(err: unknown, orden: number, total: number): string {
+  const raw = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message
+  const backend = Array.isArray(raw) ? raw.join(', ') : raw
+  const detalle = backend ?? (err instanceof Error ? err.message : undefined) ?? 'No se pudo transcribir la hoja'
+  return total > 1 ? `Hoja ${orden} de ${total}: ${detalle}` : detalle
+}
+
+/**
+ * Reemplazar/agregar/cancelar cuando Evolucion ya tiene texto propio del
+ * doctor -- nunca se pisa en silencio (Don't del proyecto: prohibido
+ * window.confirm). Mismo andamiaje de modal-sobre-modal que ConfirmarModal /
+ * CancelarCitaModal, tres botones en fila como el caso `tienePrepago` de
+ * CancelarCitaModal: descartar a la izquierda, la opcion destructiva al
+ * medio, la segura (no pisa nada) a la derecha como default visual.
+ */
+function DecisionTranscripcionModal({
+  onReemplazar,
+  onAgregar,
+  onCancelar,
+}: {
+  onReemplazar: () => void
+  onAgregar: () => void
+  onCancelar: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-xs modal-fade p-4">
+      <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-md">
+        <ModalHeader icon={ScanText} title="Transcripción lista" onClose={onCancelar} />
+        <div className="p-6 sm:p-7 space-y-5">
+          <p className="text-sm text-foreground">
+            El campo Evolución ya tiene texto. ¿Qué querés hacer con la transcripción?
+          </p>
+          <div className="flex gap-3">
+            <button type="button" onClick={onCancelar} className={cn(btnOutlineUI, 'flex-1')}>
+              Cancelar
+            </button>
+            <button type="button" onClick={onReemplazar} className={cn(btnDestructiveUI, 'flex-1')}>
+              Reemplazar
+            </button>
+            <button type="button" onClick={onAgregar} className={cn(btnPrimaryUI, 'flex-1')}>
+              Agregar abajo
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
