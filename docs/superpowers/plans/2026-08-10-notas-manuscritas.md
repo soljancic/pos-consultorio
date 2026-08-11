@@ -1779,7 +1779,13 @@ En `alBajar` y `alMover`, si `herramienta === 'borrador'`, llamar `borrarEn(x, y
 
 - [ ] **Step 4: Escribir la barra de herramientas**
 
-Barra superior con: cerrar (izquierda), grupo de herramientas (centro), indicador de guardado (derecha).
+**Las herramientas van en la barra INFERIOR** (lápiz, colores, grosores, deshacer,
+rehacer). La barra superior queda como la dejo Task 8: cerrar y el indicador de
+guardado. Decision del owner 2026-08-10, tras implementarlo asi: en una tablet
+sostenida con las dos manos los pulgares llegan al borde inferior sin soltar el
+lapiz ni tapar la hoja, mientras que una barra superior obliga a cruzar la mano
+por encima de lo que se esta escribiendo. (Este plan decia originalmente "barra
+superior"; estaba equivocado.)
 
 Requisitos no negociables del design system:
 - Cada boton `h-11 w-11` como minimo (44px, WCAG).
