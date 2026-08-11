@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { PenLine, X } from 'lucide-react'
+import { Check, Eraser, Pen, PenLine, Redo2, Undo2, X } from 'lucide-react'
 import {
   COLORES_LAPIZ,
   GROSORES_LAPIZ,
@@ -38,6 +38,12 @@ function presionDe(e: { pressure: number; pointerType: string }): number {
   return e.pressure > 0 ? e.pressure : 0.5
 }
 
+// Nombres en espanol de las paletas de @pos/types, solo para aria-label/title
+// (accesibilidad). Si la paleta cambia de valores, cae al hex/numero crudo en
+// vez de romper: nunca se usan para logica, solo como copy.
+const NOMBRE_COLOR: Record<string, string> = { '#111827': 'Negro', '#1d4ed8': 'Azul', '#b91c1c': 'Rojo' }
+const NOMBRE_GROSOR: Record<number, string> = { 2: 'Fino', 4: 'Medio', 7: 'Grueso' }
+
 /**
  * Editor de una hoja manuscrita: captura el trazo del lapiz/dedo y lo pinta.
  * Una sola hoja en memoria, sin persistir (eso llega en Tareas 10 y 11).
@@ -45,10 +51,13 @@ function presionDe(e: { pressure: number; pointerType: string }): number {
  * Estado pensado como seam para lo que sigue:
  * - `trazosRef` guarda TODOS los trazos cerrados de la hoja actual; Task 10
  *   lo convierte en un array de hojas + un indice de hoja activa.
- * - `color`/`grosor` son const por ahora (sin UI para cambiarlos); Task 9 los
- *   sube a useState y les cablea la barra inferior (hoy un placeholder).
  * - `sucio` marca cambios sin guardar; Task 11 lo consume para el autoguardado
  *   y lo vuelve a poner en false tras guardar.
+ *
+ * Deshacer/rehacer: pila simple sobre la lista de trazos (el estado de una
+ * hoja ES su lista de trazos, no hace falta nada mas sofisticado). Cada
+ * mutacion (trazo nuevo, borrado) llama `registrarCambio()` ANTES de mutar,
+ * lo que empuja el estado previo a `pilaDeshacer` y vacia `pilaRehacer`.
  */
 export function LienzoManuscrito({ citaId, onClose }: Props) {
   const areaRef = useRef<HTMLDivElement>(null)
@@ -63,9 +72,15 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // proposito para toda la vida del editor (no se resetea en pointercancel).
   const vioLapiz = useRef(false)
 
-  // Placeholder de herramientas para Task 9 (sin UI para cambiarlos todavia).
-  const color: string = COLORES_LAPIZ[0]
-  const grosor: number = GROSORES_LAPIZ[1]
+  const [herramienta, setHerramienta] = useState<'lapiz' | 'borrador'>('lapiz')
+  const [color, setColor] = useState<string>(COLORES_LAPIZ[0])
+  const [grosor, setGrosor] = useState<number>(GROSORES_LAPIZ[1])
+
+  // Deshacer/rehacer: pila de listas de trazos completas (ver JSDoc arriba).
+  const pilaDeshacer = useRef<Trazo[][]>([])
+  const pilaRehacer = useRef<Trazo[][]>([])
+  const [puedeDeshacer, setPuedeDeshacer] = useState(false)
+  const [puedeRehacer, setPuedeRehacer] = useState(false)
 
   const [sucio, setSucio] = useState(false)
 
@@ -153,6 +168,51 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     pintarFondo()
   }, [anchoCss, altoCss])
 
+  /** Reemplaza la lista de trazos y repinta. Unico camino que escribe en trazosRef. */
+  function aplicar(strokes: Trazo[]) {
+    trazosRef.current = { ...trazosRef.current, strokes }
+    pintarFondo()
+    setSucio(true)
+    setPuedeDeshacer(pilaDeshacer.current.length > 0)
+    setPuedeRehacer(pilaRehacer.current.length > 0)
+  }
+
+  /** Llamar ANTES de cada cambio (trazo nuevo, borrado). */
+  function registrarCambio() {
+    pilaDeshacer.current.push(trazosRef.current.strokes)
+    pilaRehacer.current = []
+  }
+
+  function deshacer() {
+    const anterior = pilaDeshacer.current.pop()
+    if (!anterior) return
+    pilaRehacer.current.push(trazosRef.current.strokes)
+    aplicar(anterior)
+  }
+
+  function rehacer() {
+    const siguiente = pilaRehacer.current.pop()
+    if (!siguiente) return
+    pilaDeshacer.current.push(trazosRef.current.strokes)
+    aplicar(siguiente)
+  }
+
+  // Radio del borrador en espacio logico de hoja (0..HOJA_W, 0..HOJA_H), no
+  // en pixeles CSS. Se suma el grosor del propio trazo (t.s) al radio fijo
+  // para que un trazo grueso sea borrable donde visualmente se ve, no solo
+  // donde pasa su linea central de puntos.
+  const RADIO_BORRADOR = 14
+
+  /** Borra el trazo ENTERO que el punto toca (modelo vectorial, no pixeles). */
+  function borrarEn(x: number, y: number) {
+    const quedan = trazosRef.current.strokes.filter(
+      (t) => !t.p.some(([px, py]) => Math.hypot(px - x, py - y) < RADIO_BORRADOR + t.s),
+    )
+    if (quedan.length === trazosRef.current.strokes.length) return
+    registrarCambio()
+    aplicar(quedan)
+  }
+
   function puedeDibujar(e: React.PointerEvent) {
     if (e.pointerType === 'pen') return true
     if (e.pointerType === 'mouse') return true
@@ -168,6 +228,12 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     punteroActivo.current = e.pointerId
 
     const { x, y } = aEspacioHoja(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect())
+
+    if (herramienta === 'borrador') {
+      borrarEn(x, y)
+      return
+    }
+
     trazoActivo.current = {
       c: color,
       s: grosor,
@@ -176,7 +242,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   }
 
   function alMover(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (punteroActivo.current !== e.pointerId || !trazoActivo.current) return
+    if (punteroActivo.current !== e.pointerId) return
 
     // getCoalescedEvents recupera los puntos que el navegador agrupa entre
     // frames (el Pencil muestrea a mas de 120 Hz). Safari lo tiene recien
@@ -185,8 +251,17 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
       typeof e.nativeEvent.getCoalescedEvents === 'function'
         ? e.nativeEvent.getCoalescedEvents()
         : [e.nativeEvent]
-
     const r = e.currentTarget.getBoundingClientRect()
+
+    if (herramienta === 'borrador') {
+      for (const ev of eventos) {
+        const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r)
+        borrarEn(x, y)
+      }
+      return
+    }
+
+    if (!trazoActivo.current) return
     for (const ev of eventos) {
       const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r)
       trazoActivo.current.p.push(cuantizar(x, y, presionDe(ev)))
@@ -201,10 +276,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     trazoActivo.current = null
     if (!trazo || trazo.p.length === 0) return
 
-    trazosRef.current = { ...trazosRef.current, strokes: [...trazosRef.current.strokes, trazo] }
+    registrarCambio()
+    aplicar([...trazosRef.current.strokes, trazo])
     limpiarVivo()
-    pintarFondo()
-    setSucio(true)
   }
 
   return (
@@ -264,8 +338,122 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       </div>
 
-      <footer className="shrink-0 flex items-center justify-center h-16 px-4 border-t bg-card/90 backdrop-blur-xs">
-        <p className="text-xs text-muted-foreground">Colores y grosores de lápiz próximamente</p>
+      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 py-2.5 sm:justify-between sm:px-6 border-t bg-card/90 backdrop-blur-xs">
+        <div className="inline-flex items-center gap-1 rounded-full bg-muted/60 p-1" role="group" aria-label="Herramienta">
+          <button
+            type="button"
+            onClick={() => setHerramienta('lapiz')}
+            aria-pressed={herramienta === 'lapiz'}
+            aria-label="Lápiz"
+            title="Lápiz"
+            className={cn(
+              'grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+              'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+              herramienta === 'lapiz'
+                ? 'bg-card text-primary shadow-xs ring-1 ring-primary/25'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Pen className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setHerramienta('borrador')}
+            aria-pressed={herramienta === 'borrador'}
+            aria-label="Borrador"
+            title="Borrador"
+            className={cn(
+              'grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+              'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+              herramienta === 'borrador'
+                ? 'bg-card text-primary shadow-xs ring-1 ring-primary/25'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Eraser className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-1" role="group" aria-label="Color del lápiz">
+            {COLORES_LAPIZ.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                aria-pressed={color === c}
+                aria-label={`Color ${NOMBRE_COLOR[c] ?? c}`}
+                title={NOMBRE_COLOR[c] ?? c}
+                className={cn(
+                  'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+                  'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-primary' : 'hover:bg-muted/60',
+                )}
+              >
+                <span className="h-6 w-6 rounded-full ring-1 ring-black/10" style={{ backgroundColor: c }} aria-hidden="true" />
+                {color === c && <Check className="absolute h-3.5 w-3.5 text-white" strokeWidth={3} aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+
+          <div className="flex items-center gap-1" role="group" aria-label="Grosor del lápiz">
+            {GROSORES_LAPIZ.map((g, i) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGrosor(g)}
+                aria-pressed={grosor === g}
+                aria-label={`Grosor ${NOMBRE_GROSOR[g] ?? g}`}
+                title={NOMBRE_GROSOR[g] ?? String(g)}
+                className={cn(
+                  'relative grid h-11 w-11 shrink-0 place-items-center rounded-full cursor-pointer transition-all duration-150',
+                  'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60',
+                  grosor === g ? 'ring-2 ring-offset-2 ring-offset-card ring-primary bg-primary/5' : 'hover:bg-muted/60',
+                )}
+              >
+                <span className="rounded-full bg-foreground" style={{ width: 6 + i * 4, height: 6 + i * 4 }} aria-hidden="true" />
+                {grosor === g && (
+                  <Check
+                    className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full bg-primary p-0.5 text-primary-foreground"
+                    strokeWidth={3}
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="inline-flex items-center gap-1" role="group" aria-label="Deshacer y rehacer">
+          <button
+            type="button"
+            onClick={deshacer}
+            disabled={!puedeDeshacer}
+            aria-label="Deshacer"
+            title="Deshacer"
+            className={cn(
+              btnIconUI,
+              'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+            )}
+          >
+            <Undo2 className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={rehacer}
+            disabled={!puedeRehacer}
+            aria-label="Rehacer"
+            title="Rehacer"
+            className={cn(
+              btnIconUI,
+              'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+            )}
+          >
+            <Redo2 className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
       </footer>
     </div>
   )
