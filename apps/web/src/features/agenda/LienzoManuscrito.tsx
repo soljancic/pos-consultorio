@@ -1781,7 +1781,13 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-hidden p-4 sm:p-6">
+      {/* Margen minimo en celular (4px): la hoja ya se ajusta al maximo dentro
+          de esta caja (ver la medicion por los dos ejes), asi que todo lo que
+          se le saque de padding se convierte en superficie para escribir. Los
+          4px quedan para que se sigan viendo la esquina redondeada y la sombra
+          que hacen leer el rectangulo como una hoja. De sm para arriba sobra
+          pantalla y el aire se mantiene. */}
+      <div className="flex-1 min-h-0 overflow-hidden p-1 sm:p-6">
         <div ref={areaRef} className="flex h-full w-full items-center justify-center">
           {anchoCss > 0 && hojaActivaId !== null && (
             <div className="relative touch-none select-none" style={{ width: anchoCss, height: altoCss }}>
