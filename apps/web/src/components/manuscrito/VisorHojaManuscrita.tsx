@@ -50,14 +50,24 @@ interface Props {
  * dispare.
  */
 export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
+  // Congelada al montar (nunca sigue al `hojas` en vivo de la queryKey del
+  // llamador): esto es un visor de LECTURA, no debe cambiar lo que muestra
+  // por una mutacion de otra pestaña/dispositivo mientras el doctor lo tiene
+  // abierto (p.ej. si se borra otra hoja de la misma atencion, un indice que
+  // siguiera la lista en vivo podria empezar a apuntar a una hoja distinta a
+  // mitad de sesion de lectura, o quedar fuera de rango). Sin este freeze, el
+  // panel (que pasa el array vivo de useQuery) y la linea de tiempo (que ya
+  // pasa un array capturado en el momento del click, ver HistoriaClinicaTimeline)
+  // se comportarian distinto entre si -- mismo componente, dos semanticas.
+  const [hojasFijas] = useState(hojas)
   const [indice, setIndice] = useState(indiceInicial)
   const areaRef = useRef<HTMLDivElement>(null)
   const [ancho, setAncho] = useState(0)
 
-  const hoja = hojas[indice]
-  const hayVarias = hojas.length > 1
+  const hoja = hojasFijas[indice]
+  const hayVarias = hojasFijas.length > 1
   const hayAnterior = indice > 0
-  const haySiguiente = indice < hojas.length - 1
+  const haySiguiente = indice < hojasFijas.length - 1
 
   useEffect(() => {
     const el = areaRef.current
@@ -85,11 +95,11 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
       }
       if (!hayVarias) return
       if (e.key === 'ArrowLeft') setIndice((i) => Math.max(0, i - 1))
-      if (e.key === 'ArrowRight') setIndice((i) => Math.min(hojas.length - 1, i + 1))
+      if (e.key === 'ArrowRight') setIndice((i) => Math.min(hojasFijas.length - 1, i + 1))
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [hayVarias, hojas.length, onClose])
+  }, [hayVarias, hojasFijas.length, onClose])
 
   if (!hoja) return null
 
@@ -98,7 +108,7 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
       <div className="bg-card rounded-2xl border shadow-2xl ring-1 ring-black/5 modal-pop w-full max-w-sm max-h-[90vh] overflow-y-auto">
         <ModalHeader
           icon={PenLine}
-          title={hayVarias ? `Hoja ${indice + 1} de ${hojas.length}` : 'Hoja manuscrita'}
+          title={hayVarias ? `Hoja ${indice + 1} de ${hojasFijas.length}` : 'Hoja manuscrita'}
           subtitle={formatFecha(hoja.createdAt)}
           onClose={onClose}
         />
@@ -124,7 +134,7 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
               <span className="text-sm text-muted-foreground tabular-nums min-w-[4.5rem] text-center">
-                {indice + 1} de {hojas.length}
+                {indice + 1} de {hojasFijas.length}
               </span>
               <button
                 type="button"
