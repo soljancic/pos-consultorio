@@ -21,6 +21,15 @@ function Hoja($nPuntos) {
   return @{ v = 1; w = 1240; h = 1754; strokes = @(@{ c = "#111827"; s = 4; p = $puntos }) }
 }
 
+# A4 apaisada: los mismos 1240x1754 dados vuelta. Los puntos van bien a la
+# derecha (x > 1240) a proposito: ahi es donde una hoja acostada se distingue
+# de una parada, y es lo que rechazaria un validador que asumiera la vertical.
+function HojaApaisada($nPuntos) {
+  $puntos = @()
+  for ($i = 0; $i -lt $nPuntos; $i++) { $puntos += ,@((1300 + ($i % 400)), 100.5, 0.6) }
+  return @{ v = 1; w = 1754; h = 1240; strokes = @(@{ c = "#111827"; s = 4; p = $puntos }) }
+}
+
 Invoke-RestMethod -Uri "$base/auth/register" -Method Post -ContentType "application/json" -Body (@{ consultorioNombre = "Man $ts"; adminNombre = "Admin"; email = $email; password = "Password123!" } | ConvertTo-Json) | Out-Null
 $login = Invoke-RestMethod -Uri "$base/auth/login" -Method Post -ContentType "application/json" -Body (@{ email = $email; password = "Password123!" } | ConvertTo-Json)
 $h = @{ Authorization = "Bearer $($login.accessToken)" }
@@ -91,6 +100,27 @@ Write-Output "11 ORDEN TRAS BORRAR: orden=$($h3.orden) (esp 3, NO 2)"
 # 12) Hoja inexistente -> 404
 Esperar-Error { Invoke-RestMethod -Uri "$base/atenciones/cita/$($cita.id)/hojas/999999" -Method Delete -Headers $h } 404 "12 HOJA INEXISTENTE"
 
+# 13) Hoja APAISADA: se acepta, y sus puntos se validan contra SUS medidas.
+# Sin esto, escribir en la mitad derecha de una hoja acostada daria 400.
+$hApa = Invoke-RestMethod -Uri "$base/atenciones/cita/$($cita.id)/hojas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ trazos = (HojaApaisada 5) } | ConvertTo-Json -Depth 10)
+Write-Output "13 HOJA APAISADA: w=$($hApa.trazos.w) h=$($hApa.trazos.h) (esp 1754x1240)"
+
+# 14) Las dos formas conviven en la MISMA atencion, cada una con la suya.
+$mix = Invoke-RestMethod -Uri "$base/atenciones/cita/$($cita.id)/hojas" -Headers $h
+$formas = (@($mix) | ForEach-Object { "$($_.trazos.w)x$($_.trazos.h)" }) -join " "
+Write-Output "14 FORMAS MEZCLADAS: $formas (esp 1240x1754 1240x1754 1754x1240)"
+
+# 15) Un punto que se pasa del borde de ABAJO de la apaisada -> 400. Ese mismo
+# alto es legitimo en una hoja parada: la validacion tiene que mirar la hoja
+# que le mandan, no la vertical.
+$fuera = @{ v = 1; w = 1754; h = 1240; strokes = @(@{ c = "#111827"; s = 4; p = @(,@(20, 1500, 0.6)) }) }
+Esperar-Error { Invoke-RestMethod -Uri "$base/atenciones/cita/$($cita.id)/hojas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ trazos = $fuera } | ConvertTo-Json -Depth 10) } 400 "15 PUNTO FUERA DE LA APAISADA"
+
+# 16) Medidas que no son A4 en ninguna orientacion -> 400 (el cuadrado usa dos
+# lados validos, asi que descarta un validador que solo mire los numeros).
+$cuadrada = @{ v = 1; w = 1240; h = 1240; strokes = @() }
+Esperar-Error { Invoke-RestMethod -Uri "$base/atenciones/cita/$($cita.id)/hojas" -Method Post -Headers $h -ContentType "application/json" -Body (@{ trazos = $cuadrada } | ConvertTo-Json -Depth 10) } 400 "16 MEDIDAS INVALIDAS"
+
 Write-Output ""
-Write-Output "Nota: el caso de transcribir sin ANTHROPIC_API_KEY (503) y el tope de 20 hojas"
+Write-Output "Nota: el caso de transcribir sin OPENAI_API_KEY (503) y el tope de 20 hojas"
 Write-Output "se verifican a mano; el primero requiere la env vacia y el segundo 20 POSTs."
