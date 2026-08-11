@@ -10,6 +10,14 @@ en hojas A4 dentro del modal de Atencion, y puede pasarla a texto al campo
 "Evolucion / notas". Escribir es solo tablet y celular; leer es en cualquier
 dispositivo, incluida la PC.
 
+**Cambio de comportamiento (2026-08-11).** Notas manuscritas, adjuntos y recetas
+ya NO exigen guardar la atencion primero. La fila de `Atencion` se crea sola la
+primera vez que se usa uno de los tres, con lo que haya en el formulario; abrir
+el modal para mirar no crea nada. Consecuencia a tener presente: **"Cancelar" ya
+no deshace todo** -- si se escribio una hoja, la atencion y la hoja quedan. Es la
+regla que adjuntos y recetas ya seguian por su cuenta (se guardan por su propio
+endpoint apenas se cargan); ahora la fila padre la sigue tambien.
+
 ---
 
 ## 1. Lo que falta hacer antes de usarlo

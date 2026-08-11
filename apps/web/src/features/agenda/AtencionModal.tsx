@@ -63,15 +63,47 @@ export function AtencionModal({ cita, onClose }: Props) {
     }
   }, [atencion])
 
+  /** Lo que hay cargado en el formulario, listo para el PUT (upsert por cita). */
+  function payloadAtencion() {
+    return {
+      ...Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === '' ? undefined : v])
+      ),
+      ...(puedeEditar && { servicioId: Number(servicioId) }),
+    }
+  }
+
+  // Hoja manuscrita, adjunto y receta cuelgan de un atencionId: hasta que esa
+  // fila existe no hay de donde colgarlos. En vez de exigirle al doctor un
+  // "Guardar" previo, la primera vez que usa uno de los tres se guarda la
+  // atencion con lo que haya escrito hasta ese momento. Abrir el modal para
+  // mirar NO crea nada: esto corre solo cuando el doctor va a escribir algo.
+  const creandoRef = useRef<Promise<void> | null>(null)
+
+  async function asegurarAtencion(): Promise<void> {
+    if (atencion) return
+    // Un solo PUT aunque entren dos toques juntos (doble click en "Adjuntar",
+    // o adjuntar y recetar casi a la vez). El upsert es idempotente por cita,
+    // asi que un PUT de mas no rompe nada, pero si crearia dos logs.
+    const enVuelo =
+      creandoRef.current ??
+      (creandoRef.current = (async () => {
+        try {
+          const { data } = await api.put(`/atenciones/cita/${cita.id}`, payloadAtencion())
+          // setQueryData y no invalidate: el que llamo sigue de largo apenas
+          // esto resuelve y necesita ver la atencion ya creada, sin esperar el
+          // ida y vuelta de un refetch.
+          qc.setQueryData(['atencion', cita.id], data)
+        } finally {
+          creandoRef.current = null
+        }
+      })())
+    await enVuelo
+  }
+
   const guardar = useMutation({
     mutationFn: async ({ marcarAtendida }: { marcarAtendida: boolean }) => {
-      const payload = {
-        ...Object.fromEntries(
-          Object.entries(form).map(([k, v]) => [k, v === '' ? undefined : v])
-        ),
-        ...(puedeEditar && { servicioId: Number(servicioId) }),
-      }
-      await api.put(`/atenciones/cita/${cita.id}`, payload)
+      await api.put(`/atenciones/cita/${cita.id}`, payloadAtencion())
       if (marcarAtendida) {
         await api.put(`/citas/${cita.id}/estado`, { estado: EstadoCita.ATENDIDA })
       }
@@ -94,13 +126,14 @@ export function AtencionModal({ cita, onClose }: Props) {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
-  // Adjuntos (E2-M4 f2): solo cuando la atencion ya existe
+  // Adjuntos (E2-M4 f2)
   const adjuntos: AdjuntoMeta[] = atencion?.adjuntos ?? []
   const fileRef = useRef<HTMLInputElement>(null)
   const [adjuntoABorrar, setAdjuntoABorrar] = useState<number | null>(null)
 
   const subirAdjunto = useMutation({
     mutationFn: async (archivo: File) => {
+      await asegurarAtencion()
       const fd = new FormData()
       fd.append('archivo', archivo)
       await api.post(`/atenciones/cita/${cita.id}/adjuntos`, fd)
@@ -113,6 +146,20 @@ export function AtencionModal({ cita, onClose }: Props) {
 
   // Recetas (E2-M5)
   const [recetaAbierta, setRecetaAbierta] = useState(false)
+  const [abriendoReceta, setAbriendoReceta] = useState(false)
+
+  async function abrirReceta() {
+    setAbriendoReceta(true)
+    try {
+      await asegurarAtencion()
+      setRecetaAbierta(true)
+    } catch (err) {
+      toast.fromError(err, 'Error al guardar la atención')
+    } finally {
+      setAbriendoReceta(false)
+    }
+  }
+
   const { data: recetas = [] } = useQuery<Array<{ id: number; createdAt: string; contenido: { medicamentos: string[] } }>>({
     queryKey: ['recetas', cita.id],
     queryFn: () => api.get(`/atenciones/cita/${cita.id}/recetas`).then((r) => r.data),
@@ -192,6 +239,7 @@ export function AtencionModal({ cita, onClose }: Props) {
               cita={cita}
               puedeEditar={puedeEditar}
               hayAtencion={!!atencion}
+              onAsegurarAtencion={asegurarAtencion}
               evolucionActual={form.evolucion}
               onTranscribir={(texto) => set('evolucion', texto)}
             />
@@ -208,7 +256,7 @@ export function AtencionModal({ cita, onClose }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="block text-sm font-medium text-foreground">Adjuntos</span>
-                {puedeEditar && atencion && (
+                {puedeEditar && (
                   <>
                     <input
                       ref={fileRef}
@@ -234,9 +282,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                 )}
               </div>
               {adjuntos.length === 0 ? (
-                <p className="text-xs text-muted-foreground/70">
-                  {atencion ? 'Sin adjuntos' : 'Guarde la atención para poder adjuntar archivos'}
-                </p>
+                <p className="text-xs text-muted-foreground/70">Sin adjuntos</p>
               ) : (
                 <ul className="space-y-1">
                   {adjuntos.map((a, i) => (
@@ -273,11 +319,12 @@ export function AtencionModal({ cita, onClose }: Props) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="block text-sm font-medium text-foreground">Recetas</span>
-                {puedeEditar && atencion && (
+                {puedeEditar && (
                   <button
                     type="button"
-                    onClick={() => setRecetaAbierta(true)}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+                    disabled={abriendoReceta}
+                    onClick={abrirReceta}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
                   >
                     <FileSignature className="h-3.5 w-3.5" aria-hidden="true" />
                     Nueva receta
@@ -285,9 +332,7 @@ export function AtencionModal({ cita, onClose }: Props) {
                 )}
               </div>
               {recetas.length === 0 ? (
-                <p className="text-xs text-muted-foreground/70">
-                  {atencion ? 'Sin recetas emitidas' : 'Guarde la atención para poder emitir recetas'}
-                </p>
+                <p className="text-xs text-muted-foreground/70">Sin recetas emitidas</p>
               ) : (
                 <ul className="space-y-1">
                   {recetas.map((r) => (

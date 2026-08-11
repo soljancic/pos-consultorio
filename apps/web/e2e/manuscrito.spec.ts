@@ -104,6 +104,15 @@ async function abrirEditor(page: Page) {
   await expect(page.getByRole('heading', { name: 'Nota manuscrita', level: 1 })).toBeVisible()
 }
 
+/**
+ * El input "Motivo de consulta" del modal de Atencion. Se busca por el texto
+ * de la etiqueta y se sube al contenedor, igual que smoke.spec.ts: los
+ * FloatingInput no asocian label e input de una forma que getByLabel entienda.
+ */
+function motivoDe(page: Page): Locator {
+  return page.getByText('Motivo de consulta').locator('..').locator('input')
+}
+
 function canvasVivoDe(page: Page): Locator {
   return page.locator('canvas[aria-label="Hoja para escribir a mano con el lápiz o el dedo"]')
 }
@@ -139,22 +148,31 @@ async function dibujarTrazo(page: Page, canvas: Locator) {
   await page.mouse.up()
 }
 
-test('guardar la atención habilita el panel de notas manuscritas', async ({ page }) => {
+test('escribir a mano no exige guardar la atención primero', async ({ page }) => {
   await abrirAtencion(page)
 
-  // Sin atención guardada todavía: leyenda distinta, sin link para escribir
-  // (hayAtencion=false -> puedeEscribir=false en HojasManuscritasPanel.tsx).
-  await expect(page.getByText('Guarde la atención para poder escribir a mano')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Escribir a mano' })).toHaveCount(0)
+  // La atención todavía NO existe en la base y aun asi se puede escribir: el
+  // link esta desde que se abre el modal, sin pedir un "Guardar" previo
+  // (decision del owner 2026-08-11). La atencion se crea sola al tocarlo, con
+  // lo que haya cargado en el formulario hasta ese momento.
+  await expect(page.getByText('Sin notas manuscritas')).toBeVisible()
+  await motivoDe(page).fill('llego con la atencion sin guardar')
 
-  await page.getByRole('button', { name: 'Guardar', exact: true }).click()
-  // El guardado cierra el modal (onSuccess llama onClose() sin condicion).
+  await page.getByRole('button', { name: 'Escribir a mano' }).click()
+  await expect(page.getByRole('heading', { name: 'Nota manuscrita', level: 1 })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cerrar nota manuscrita' }).click()
+
+  // Se cierra el modal con Cancelar, sin haber tocado "Guardar" ni una vez.
+  await page.getByRole('button', { name: 'Cancelar' }).click()
   await expect(page.getByRole('heading', { name: 'Atención', level: 2 })).not.toBeVisible()
 
-  // Reabrir: la atención ya existe -> leyenda de vacío + link para escribir.
+  // Al reabrir, el motivo esta: la atencion se creo sola al abrir el editor, y
+  // se llevo lo que ya estaba escrito en el formulario. Se afirma por el motivo
+  // y no creando una hoja a proposito: este archivo corre en serie y la prueba
+  // siguiente espera una atencion SIN hojas ("Primera hoja").
   await cardDe(page).getByRole('button', { name: 'Registrar o ver atención' }).click()
-  await expect(page.getByText('Sin notas manuscritas')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Escribir a mano' })).toBeVisible()
+  await expect(motivoDe(page)).toHaveValue('llego con la atencion sin guardar')
 })
 
 test('dibujar con el puntero agrega un trazo que Deshacer puede quitar', async ({ page }) => {

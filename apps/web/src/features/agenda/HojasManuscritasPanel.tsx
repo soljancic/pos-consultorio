@@ -35,6 +35,13 @@ interface Props {
    */
   evolucionActual: string
   onTranscribir: (texto: string) => void
+  /**
+   * Guarda la atencion si todavia no existe. Las hojas cuelgan de un
+   * atencionId, asi que hay que llamarla ANTES de abrir el editor -- si no, la
+   * primera hoja se crearia contra una atencion que no esta. Resuelve de una
+   * cuando la atencion ya existe.
+   */
+  onAsegurarAtencion: () => Promise<void>
 }
 
 /**
@@ -48,7 +55,14 @@ interface Props {
  * las manda en orden al endpoint de Task 5 y mete el resultado en Evolucion
  * via `onTranscribir`.
  */
-export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucionActual, onTranscribir }: Props) {
+export function HojasManuscritasPanel({
+  cita,
+  puedeEditar,
+  hayAtencion,
+  evolucionActual,
+  onTranscribir,
+  onAsegurarAtencion,
+}: Props) {
   const qc = useQueryClient()
 
   // Misma queryKey que usa el editor (LienzoManuscrito): compartida via
@@ -163,8 +177,24 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucio
     },
   })
 
-  const puedeEscribir = puedeEditar && hayAtencion && ESCRITURA_DISPONIBLE
-  const avisarQueFaltaTactil = puedeEditar && hayAtencion && hojas.length > 0 && !ESCRITURA_DISPONIBLE
+  // hayAtencion NO entra aca: si la atencion todavia no existe se crea sola al
+  // tocar "Escribir a mano" (ver abrirEditor). Lo unico que puede impedir
+  // escribir es el permiso o el dispositivo.
+  const puedeEscribir = puedeEditar && ESCRITURA_DISPONIBLE
+  const avisarQueFaltaTactil = puedeEditar && hojas.length > 0 && !ESCRITURA_DISPONIBLE
+  const [abriendoEditor, setAbriendoEditor] = useState(false)
+
+  async function abrirEditor() {
+    setAbriendoEditor(true)
+    try {
+      await onAsegurarAtencion()
+      setEscribiendo(true)
+    } catch (err: any) {
+      toast.fromError(err, 'Error al guardar la atención')
+    } finally {
+      setAbriendoEditor(false)
+    }
+  }
 
   return (
     <div>
@@ -173,8 +203,9 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucio
         {puedeEscribir && (
           <button
             type="button"
-            onClick={() => setEscribiendo(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded transition-colors duration-150"
+            disabled={abriendoEditor}
+            onClick={abrirEditor}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:underline focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 rounded disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
           >
             <PenLine className="h-3.5 w-3.5" aria-hidden="true" />
             Escribir a mano
@@ -184,7 +215,9 @@ export function HojasManuscritasPanel({ cita, puedeEditar, hayAtencion, evolucio
 
       {hojas.length === 0 ? (
         <p className="text-xs text-muted-foreground/70">
-          {hayAtencion ? 'Sin notas manuscritas' : 'Guarde la atención para poder escribir a mano'}
+          {puedeEditar && !ESCRITURA_DISPONIBLE
+            ? 'Para escribir a mano, abrí esta atención desde una tablet o un celular con lápiz.'
+            : 'Sin notas manuscritas'}
         </p>
       ) : (
         <>
