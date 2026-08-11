@@ -8,6 +8,7 @@ import type { Response } from 'express'
 import { createReadStream } from 'fs'
 import { AtencionesService, UpsertAtencionDto } from './atenciones.service'
 import { RecetasService, CreateRecetaDto } from './recetas.service'
+import { HojasService, GuardarHojaDto } from './hojas.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Atenciones')
@@ -17,6 +18,7 @@ export class AtencionesController {
   constructor(
     private service: AtencionesService,
     private recetas: RecetasService,
+    private hojas: HojasService,
   ) {}
 
   @Get('paciente/:pacienteId')
@@ -82,6 +84,43 @@ export class AtencionesController {
     @Param('indice', ParseIntPipe) indice: number,
   ) {
     return this.service.eliminarAdjunto(user.consultorioId, citaId, indice, user.sub, user.rol)
+  }
+
+  @Get('cita/:citaId/hojas')
+  @ApiOperation({ summary: 'Hojas manuscritas de la atencion' })
+  listarHojas(@CurrentUser() user: JwtPayload, @Param('citaId', ParseIntPipe) citaId: number) {
+    return this.hojas.listar(user.consultorioId, citaId)
+  }
+
+  @Post('cita/:citaId/hojas')
+  @ApiOperation({ summary: 'Crear una hoja manuscrita (ADMIN o el doctor de la cita)' })
+  crearHoja(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Body() dto: GuardarHojaDto,
+  ) {
+    return this.hojas.crear(user.consultorioId, citaId, dto, user.sub, user.rol)
+  }
+
+  @Put('cita/:citaId/hojas/:id')
+  @ApiOperation({ summary: 'Actualizar los trazos de una hoja (ADMIN o el doctor de la cita)' })
+  actualizarHoja(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: GuardarHojaDto,
+  ) {
+    return this.hojas.actualizar(user.consultorioId, citaId, id, dto, user.sub, user.rol)
+  }
+
+  @Delete('cita/:citaId/hojas/:id')
+  @ApiOperation({ summary: 'Eliminar una hoja manuscrita (borrado soft)' })
+  eliminarHoja(
+    @CurrentUser() user: JwtPayload,
+    @Param('citaId', ParseIntPipe) citaId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.hojas.eliminar(user.consultorioId, citaId, id, user.sub, user.rol)
   }
 
   @Post('cita/:citaId/recetas')

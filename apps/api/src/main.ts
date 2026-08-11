@@ -25,7 +25,14 @@ function validarSecretsProduccion() {
 async function bootstrap() {
   validarSecretsProduccion()
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  // bodyParser: false porque el body parser JSON default de Nest/Express
+  // (100 KB) se registraria antes de que lleguemos a configurar el limite de
+  // 3 MB de abajo, y un segundo `express.json()` agregado despues no lo
+  // reemplaza: el primero ya cortaria el request con 413 antes de que el
+  // segundo corra. Se desactiva el automatico y se registra a mano.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false,
+  })
 
   // Detras del proxy de Railway: sin esto req.ip es la IP del proxy y el
   // rate limiting (login, registro, reservas del portal) colapsa en un solo
@@ -38,6 +45,15 @@ async function bootstrap() {
   app.use(helmet())
   // Lee la cookie httpOnly del refresh token (auth.controller la setea/borra)
   app.use(cookieParser())
+
+  // Las hojas manuscritas mandan hasta 2 MB de trazos en JSON (el default de
+  // body-parser es 100 KB). useBodyParser usa el express interno de
+  // @nestjs/platform-express (no es dependencia directa de apps/api, asi que
+  // no se importa aca). urlencoded se re-registra igual que el default de
+  // Nest (extended:true, sin limite propio) para no cambiar nada mas. El
+  // tope real por hoja lo valida validarTrazos().
+  app.useBodyParser('json', { limit: '3mb' })
+  app.useBodyParser('urlencoded', { extended: true })
 
   app.setGlobalPrefix('api/v1')
 
