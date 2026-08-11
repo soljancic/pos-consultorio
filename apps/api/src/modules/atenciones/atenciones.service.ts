@@ -118,18 +118,24 @@ export class AtencionesService {
             servicio: { select: { nombre: true } },
           },
         },
-        // Task 14: miniaturas de hojas manuscritas en la linea de tiempo, sin
-        // una request extra por atencion. Select acotado (sin transcripcion
-        // ni updatedAt): igual `trazos` es el campo pesado (hasta 2 MB por
-        // hoja, tope de MAX_TRAZOS_BYTES) y no hay forma de evitarlo sin
-        // dejar de poder dibujar la miniatura -- HojaRenderer pinta vectores,
-        // no hay un raster mas liviano guardado aparte. Con historias largas
-        // (muchas atenciones, varias hojas cada una) esto puede volver
-        // pesada la respuesta; ver nota de payload en el reporte de Task 14.
+        // Task 14 (fix round 1, decision del owner): la linea de tiempo
+        // NUNCA trae `trazos` -- ese campo pesa hasta 2 MB por hoja
+        // (MAX_TRAZOS_BYTES) y una atencion admite hasta 20
+        // (MAX_HOJAS_POR_ATENCION); un paciente de largo plazo puede
+        // acumular 100-300 atenciones, asi que traerlo aca convertia esta
+        // respuesta unica y sin paginar en decenas de MB (ver nota de
+        // payload en el reporte de Task 14). Select minimo -- solo `id` y
+        // `orden` -- porque aca lo unico que se necesita es el CONTEO
+        // ("3 hojas manuscritas"); no se trae `createdAt` porque nada en la
+        // linea de tiempo lo muestra: el visor obtiene su propia fecha del
+        // fetch completo que dispara al abrir (mismo endpoint que ya usa el
+        // panel de la atencion, GET /atenciones/cita/:citaId/hojas -- no uno
+        // nuevo), asi que cargarlo aca tambien seria pagar dos veces por el
+        // mismo dato.
         hojas: {
           where: { deletedAt: null },
           orderBy: { orden: 'asc' },
-          select: { id: true, orden: true, trazos: true, createdAt: true },
+          select: { id: true, orden: true },
         },
       },
       orderBy: { cita: { fechaHora: 'desc' } },

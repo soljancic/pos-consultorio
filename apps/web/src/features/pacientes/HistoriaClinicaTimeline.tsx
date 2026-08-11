@@ -1,19 +1,21 @@
-import { useState, useDeferredValue } from 'react'
+import { useEffect, useState, useDeferredValue } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Stethoscope, CalendarPlus, Paperclip } from 'lucide-react'
+import { Search, Stethoscope, CalendarPlus, Paperclip, PenLine, Loader2, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { HojaManuscritaApi } from '@pos/types'
 import { api } from '../../lib/api-client'
-import { formatDia, formatFecha, cn } from '../../lib/utils'
+import { formatDia, cn } from '../../lib/utils'
 import { abrirAdjunto, type AdjuntoMeta } from '../../lib/adjuntos'
-import { inputUI, cardUI } from '../../lib/ui'
-import { HojaRenderer } from '../../components/manuscrito/HojaRenderer'
+import { inputUI, cardUI, btnIconUI } from '../../lib/ui'
+import { ErrorState } from '../../components/shared/ErrorState'
 import { VisorHojaManuscrita } from '../../components/manuscrito/VisorHojaManuscrita'
 
-// Subconjunto de HojaManuscritaApi que trae findByPaciente (sin
-// transcripcion/updatedAt: ver el select acotado en atenciones.service.ts).
-type HojaTimeline = Pick<HojaManuscritaApi, 'id' | 'orden' | 'trazos' | 'createdAt'>
+// Lo minimo para mostrar el conteo ("3 hojas manuscritas") en la linea de
+// tiempo -- ver atenciones.service.ts (findByPaciente) sobre por que NUNCA
+// trae `trazos` aca. El trazo completo se trae recien al abrir el visor
+// (VisorHojasBajoDemanda, mas abajo).
+type HojaResumen = Pick<HojaManuscritaApi, 'id' | 'orden'>
 
 type AtencionTimeline = {
   id: number
@@ -23,7 +25,7 @@ type AtencionTimeline = {
   evolucion: string | null
   proximoControl: string | null
   adjuntos: AdjuntoMeta[] | null
-  hojas: HojaTimeline[]
+  hojas: HojaResumen[]
   cita: {
     id: number
     fechaHora: string
@@ -52,12 +54,14 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
         .then((r) => r.data),
   })
 
-  // Visor de hojas manuscritas de UNA atencion (Task 14): guarda la lista de
-  // esa atencion puntual, no todas las hojas de la historia -- "siguiente"
-  // dentro del visor navega las hojas de la MISMA sesion, no salta a la
-  // sesion de otro dia. Solo lectura, disponible en cualquier dispositivo
-  // (a diferencia del editor, que es tablet/celular).
-  const [visor, setVisor] = useState<{ hojas: HojaTimeline[]; indice: number } | null>(null)
+  // Que atencion (por citaId) esta pidiendo ver sus hojas -- null = ninguna.
+  // Solo guarda la INTENCION; VisorHojasBajoDemanda (mas abajo) es quien
+  // dispara el fetch real al montarse. Task 14 (fix round 1): antes esto
+  // guardaba la lista de hojas ya en mano (venian completas en la propia
+  // query de la linea de tiempo); ahora la linea de tiempo solo sabe CUANTAS
+  // hay por atencion, no su contenido, asi que abrir el visor implica traer
+  // el trazo bajo demanda.
+  const [visorCita, setVisorCita] = useState<{ citaId: number; indiceInicial: number } | null>(null)
 
   return (
     <div className="space-y-4">
@@ -120,28 +124,20 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
                 </div>
                 {a.hojas.length > 0 && (
                   <div className="pt-1">
-                    <span className="block text-xs font-medium text-foreground mb-1">Notas manuscritas</span>
-                    {/* Tira propia con su propio scroll horizontal: la pagina
-                        nunca scrollea en X (regla del proyecto), asi que el
-                        desborde de las miniaturas queda contenido aca adentro. */}
-                    <div className="flex gap-2 overflow-x-auto -mx-1 px-1 py-1">
-                      {a.hojas.map((hoja, i) => (
-                        <button
-                          key={hoja.id}
-                          type="button"
-                          onClick={() => setVisor({ hojas: a.hojas, indice: i })}
-                          aria-label={`Ver hoja ${i + 1} manuscrita del ${formatFecha(hoja.createdAt)}`}
-                          className="shrink-0 rounded-lg p-1 cursor-pointer hover:bg-muted/60 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
-                        >
-                          {/* aria-hidden: el boton ya lleva su propio
-                              aria-label completo -- sin esto el canvas
-                              role="img" de HojaRenderer se anuncia aparte. */}
-                          <span aria-hidden="true">
-                            <HojaRenderer trazos={hoja.trazos} ancho={56} />
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+                    {/* Sin miniaturas dibujadas a proposito (fix round 1,
+                        Finding 1): mostrarlas exigiria traer `trazos` de
+                        TODAS las hojas de TODAS las atenciones en esta
+                        misma query -- justo el payload que la decision del
+                        owner descarta. Es un boton-indicador: toca, carga,
+                        recien ahi se dibuja. */}
+                    <button
+                      type="button"
+                      onClick={() => setVisorCita({ citaId: a.cita.id, indiceInicial: 0 })}
+                      className="inline-flex items-center gap-1.5 h-11 px-3 rounded-full border text-primary text-xs font-medium cursor-pointer hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/60 transition-colors duration-150"
+                    >
+                      <PenLine className="h-3.5 w-3.5" aria-hidden="true" />
+                      {a.hojas.length === 1 ? '1 hoja manuscrita' : `${a.hojas.length} hojas manuscritas`}
+                    </button>
                   </div>
                 )}
                 {(a.adjuntos?.length ?? 0) > 0 && (
@@ -165,13 +161,89 @@ export function HistoriaClinicaTimeline({ pacienteId, onAgendarControl }: Props)
         </ol>
       )}
 
-      {visor && (
-        <VisorHojaManuscrita
-          hojas={visor.hojas}
-          indiceInicial={visor.indice}
-          onClose={() => setVisor(null)}
+      {visorCita && (
+        <VisorHojasBajoDemanda
+          citaId={visorCita.citaId}
+          indiceInicial={visorCita.indiceInicial}
+          onClose={() => setVisorCita(null)}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * Trae las hojas de UNA atencion bajo demanda y las entrega al visor de
+ * pantalla completa (Task 14, fix round 1 -- Finding 1). Mismo endpoint y
+ * misma queryKey que ya usa HojasManuscritasPanel.tsx (`['hojas', citaId]`,
+ * `GET /atenciones/cita/:citaId/hojas`): si el doctor ya abrio esta atencion
+ * en el modal durante la misma sesion, la cache de TanStack Query ya tiene
+ * el dato y el visor abre sin spinner -- comparten cache, no es un
+ * endpoint nuevo ni una segunda forma de pedir lo mismo.
+ *
+ * Mientras no hay datos, se muestra un estado honesto (spinner o error con
+ * reintento) en vez de un visor vacio -- nunca se monta VisorHojaManuscrita
+ * sin hojas para mostrar.
+ */
+function VisorHojasBajoDemanda({
+  citaId,
+  indiceInicial,
+  onClose,
+}: {
+  citaId: number
+  indiceInicial: number
+  onClose: () => void
+}) {
+  const { data: hojas, isError, refetch } = useQuery<HojaManuscritaApi[]>({
+    queryKey: ['hojas', citaId],
+    queryFn: () => api.get<HojaManuscritaApi[]>(`/atenciones/cita/${citaId}/hojas`).then((r) => r.data),
+  })
+
+  // Escape cierra tambien mientras carga o si hubo error -- una vez que
+  // llegan los datos, VisorHojaManuscrita toma el control del teclado.
+  useEffect(() => {
+    if (hojas) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [hojas, onClose])
+
+  if (hojas) {
+    return <VisorHojaManuscrita hojas={hojas} indiceInicial={indiceInicial} onClose={onClose} />
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col">
+      <div className="shrink-0 flex justify-end p-4">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className={cn(btnIconUI, 'h-11 w-11 text-muted-foreground hover:bg-muted hover:text-foreground')}
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-4 pb-10">
+        {isError ? (
+          <ErrorState
+            title="No se pudieron cargar las hojas"
+            description="Revisá la conexión e intentá de nuevo."
+            onRetry={() => refetch()}
+          />
+        ) : (
+          // Esta rama solo se pinta mientras `hojas` todavia no llego y no
+          // hubo error -- por construccion eso es siempre "cargando" (sin
+          // datos exitosos previos no hay forma de que isPending sea false),
+          // asi que no hace falta distinguir el primer intento de un retry.
+          <div className="flex flex-col items-center gap-3" role="status">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">Cargando hojas…</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
