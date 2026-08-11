@@ -229,7 +229,7 @@ function SelectorColor({ color, onElegir }: { color: string; onElegir: (c: strin
         <div
           role="group"
           aria-label="Color del lápiz"
-          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)]"
+          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)] landscape:bottom-auto landscape:left-auto landscape:right-full landscape:top-1/2 landscape:mb-0 landscape:mr-2 landscape:translate-x-0 landscape:-translate-y-1/2"
         >
           {COLORES_LAPIZ.map((c) => (
             <button
@@ -332,7 +332,7 @@ function SelectorGrosor({ grosor, onElegir }: { grosor: number; onElegir: (g: nu
         <div
           role="group"
           aria-label="Grosor del lápiz"
-          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)]"
+          className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border bg-card p-2 shadow-lg max-w-[calc(100vw-2rem)] landscape:bottom-auto landscape:left-auto landscape:right-full landscape:top-1/2 landscape:mb-0 landscape:mr-2 landscape:translate-x-0 landscape:-translate-y-1/2"
         >
           {GROSORES_LAPIZ.map((g, i) => (
             <button
@@ -1781,13 +1781,20 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       )}
 
-      {/* Margen minimo en celular (4px): la hoja ya se ajusta al maximo dentro
-          de esta caja (ver la medicion por los dos ejes), asi que todo lo que
-          se le saque de padding se convierte en superficie para escribir. Los
-          4px quedan para que se sigan viendo la esquina redondeada y la sombra
-          que hacen leer el rectangulo como una hoja. De sm para arriba sobra
-          pantalla y el aire se mantiene. */}
-      <div className="flex-1 min-h-0 overflow-hidden p-1 sm:p-6">
+      {/* Hoja + herramientas. En vertical van una arriba de la otra; en
+          horizontal, lado a lado con las herramientas a la derecha. El motivo
+          no es estetico: la hoja se ajusta por el eje que primero se acaba, y
+          acostado el que se acaba es el ALTO. Cada pixel que la barra deja de
+          ocupar abajo se convierte en hoja mas grande, y el ancho que pasa a
+          ocupar a la derecha sobraba de todos modos. */}
+      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+        {/* Margen minimo en celular (4px): la hoja ya se ajusta al maximo dentro
+            de esta caja (ver la medicion por los dos ejes), asi que todo lo que
+            se le saque de padding se convierte en superficie para escribir. Los
+            4px quedan para que se sigan viendo la esquina redondeada y la sombra
+            que hacen leer el rectangulo como una hoja. De sm para arriba sobra
+            pantalla y el aire se mantiene. */}
+        <div className="min-w-0 flex-1 min-h-0 overflow-hidden p-1 sm:p-6">
         <div ref={areaRef} className="flex h-full w-full items-center justify-center">
           {anchoCss > 0 && hojaActivaId !== null && (
             <div className="relative touch-none select-none" style={{ width: anchoCss, height: altoCss }}>
@@ -1847,9 +1854,19 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           en .superpowers/scratch-lienzo-compacto.md) para absorber esa
           diferencia. `gap-2` (8px) en el contenedor y dentro de cada grupo:
           piso de separacion entre touch targets adyacentes. `flex-wrap`
-          se deja solo como red de seguridad pasiva -- no deberia disparar. */}
-      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 border-t bg-card/90 backdrop-blur-xs">
-        <div className="inline-flex items-center gap-2 rounded-full bg-muted/60 p-1" role="group" aria-label="Herramienta">
+          se deja solo como red de seguridad pasiva -- no deberia disparar.
+
+          Acostado (`landscape:`) esta misma barra pasa a ser una columna a la
+          derecha: mismos controles y mismo orden, en vertical. Los separadores
+          giran a linea horizontal y los desplegables de color y grosor se abren
+          hacia la IZQUIERDA en vez de hacia arriba -- centrados sobre un boton
+          pegado al borde derecho se saldrian de la pantalla. */}
+      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-2 sm:px-4 border-t bg-card/90 backdrop-blur-xs landscape:flex-col landscape:flex-nowrap landscape:border-t-0 landscape:border-l landscape:px-2 landscape:py-3">
+        <div
+          className="inline-flex items-center gap-2 rounded-full bg-muted/60 p-1 landscape:flex-col"
+          role="group"
+          aria-label="Herramienta"
+        >
           <button
             type="button"
             onClick={() => setHerramienta('lapiz')}
@@ -1884,16 +1901,16 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           </button>
         </div>
 
-        <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+        <div className="h-6 w-px shrink-0 bg-border landscape:h-px landscape:w-6" aria-hidden="true" />
 
-        <div className="inline-flex items-center gap-2">
+        <div className="inline-flex items-center gap-2 landscape:flex-col">
           <SelectorColor color={color} onElegir={setColor} />
           <SelectorGrosor grosor={grosor} onElegir={setGrosor} />
         </div>
 
-        <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+        <div className="h-6 w-px shrink-0 bg-border landscape:h-px landscape:w-6" aria-hidden="true" />
 
-        <div className="inline-flex items-center gap-2" role="group" aria-label="Deshacer y rehacer">
+        <div className="inline-flex items-center gap-2 landscape:flex-col" role="group" aria-label="Deshacer y rehacer">
           <button
             type="button"
             onClick={deshacer}
@@ -1922,6 +1939,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           </button>
         </div>
       </footer>
+      </div>
 
       {hojaABorrar !== null && (
         <ConfirmarModal
