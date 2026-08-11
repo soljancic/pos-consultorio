@@ -40,15 +40,17 @@ function abrir(): Promise<IDBDatabase> {
 }
 
 // Conexion nueva por operacion (abrir + transaccion + cerrar) en vez de
-// mantener una sola conexion cacheada. Se llama cada 5 trazos, no por evento
-// de puntero -- en la practica eso es como maximo cada 1-2 segundos incluso
-// para una mano rapida, un ritmo al que el costo de abrir (sub-milisegundo en
-// navegadores modernos, la conexion ya existe a nivel de motor) no compite
-// con nada sensible a latencia. `close()` no aborta la transaccion en curso
-// -- el spec la deja terminar antes de cerrar de verdad -- asi que no hay
-// riesgo de perder la escritura que motivo el open. Si este modulo pasara a
-// llamarse por evento de puntero (pointermove) en vez de cada N trazos, ahi
-// si valdria la pena cachear la conexion; a este ritmo, simple gana.
+// mantener una sola conexion cacheada. Se llama cada 5 ediciones (trazo
+// nuevo, borrado, deshacer, rehacer o recuperar -- ver el throttle en
+// `aplicar()` de LienzoManuscrito.tsx), no por evento de puntero -- en la
+// practica eso es como maximo cada 1-2 segundos incluso para una mano
+// rapida, un ritmo al que el costo de abrir (sub-milisegundo en navegadores
+// modernos, la conexion ya existe a nivel de motor) no compite con nada
+// sensible a latencia. `close()` no aborta la transaccion en curso -- el
+// spec la deja terminar antes de cerrar de verdad -- asi que no hay riesgo
+// de perder la escritura que motivo el open. Si este modulo pasara a
+// llamarse por evento de puntero (pointermove) en vez de cada N ediciones,
+// ahi si valdria la pena cachear la conexion; a este ritmo, simple gana.
 async function conStore<T>(modo: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
   const db = await abrir()
   try {
