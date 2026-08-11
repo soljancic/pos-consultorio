@@ -104,18 +104,6 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // Aviso nativo si se cierra la pestaña con trazos sin guardar: no hay
-  // autoguardado todavia (Task 11), asi que perderlos seria silencioso.
-  useEffect(() => {
-    if (!sucio) return
-    function onBeforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', onBeforeUnload)
-    return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [sucio])
-
   function contexto(canvas: HTMLCanvasElement | null): CanvasRenderingContext2D | null {
     if (!canvas || anchoCss <= 0) return null
     const ctx = canvas.getContext('2d')
@@ -244,7 +232,13 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           type="button"
           onClick={onClose}
           aria-label="Cerrar nota manuscrita"
-          className={cn(btnIconUI, 'shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground')}
+          // btnIconUI es h-9 w-9 (36px): bajo el piso de 44px. Esta pantalla
+          // es la superficie de escritura en tablet, el unico lugar de la app
+          // donde un toque fallado le cuesta al doctor su lugar a mitad de la
+          // nota, asi que el target se agranda local (no se toca el token
+          // compartido, usado en 16+ archivos); el icono queda del mismo
+          // tamano, solo crece el area de toque.
+          className={cn(btnIconUI, 'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground')}
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -257,7 +251,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               <canvas ref={canvasFondo} aria-hidden="true" className="absolute inset-0 rounded-md bg-white shadow-sm" />
               <canvas
                 ref={canvasVivo}
-                aria-label="Hoja para escribir a mano con el lapiz o el dedo"
+                aria-label="Hoja para escribir a mano con el lápiz o el dedo"
                 className="absolute inset-0 rounded-md"
                 style={{ touchAction: 'none', overscrollBehavior: 'none' }}
                 onPointerDown={alBajar}
