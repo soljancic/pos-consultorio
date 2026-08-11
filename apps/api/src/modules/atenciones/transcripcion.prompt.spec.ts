@@ -1,4 +1,10 @@
-import { mediaTypeDeImagen, modeloTranscripcion, PROMPT_TRANSCRIPCION, resultadoTranscripcion } from './transcripcion.prompt'
+import {
+  mediaTypeDeImagen,
+  modeloTranscripcion,
+  normalizarTexto,
+  PROMPT_TRANSCRIPCION,
+  resultadoTranscripcion,
+} from './transcripcion.prompt'
 
 describe('modeloTranscripcion', () => {
   it('usa gpt-5.6-luna por defecto', () => {
@@ -38,6 +44,36 @@ describe('PROMPT_TRANSCRIPCION', () => {
 
   it('marca lo ilegible con [ilegible]', () => {
     expect(PROMPT_TRANSCRIPCION).toContain('[ilegible]')
+  })
+
+  it('aclara que un renglon cortado por el ancho de la hoja no es un salto de linea', () => {
+    // El error mas visible de la primera version: pedia "respetar los saltos de
+    // linea" y devolvia una linea por renglon escrito, partiendo las frases.
+    expect(PROMPT_TRANSCRIPCION).toMatch(/NO es un salto de linea/)
+    expect(PROMPT_TRANSCRIPCION).toMatch(/parrafo continuo/)
+  })
+})
+
+describe('normalizarTexto', () => {
+  it('no toca los saltos simples: separan parrafos, items y titulos', () => {
+    expect(normalizarTexto('Motivo\n- durmio mal\n- ansiedad')).toBe('Motivo\n- durmio mal\n- ansiedad')
+  })
+
+  it('deja como maximo una linea en blanco entre parrafos', () => {
+    expect(normalizarTexto('Primero\n\n\n\nSegundo')).toBe('Primero\n\nSegundo')
+    expect(normalizarTexto('Primero\n\nSegundo')).toBe('Primero\n\nSegundo')
+  })
+
+  it('saca los espacios colgando al final de cada renglon', () => {
+    expect(normalizarTexto('Paciente   \n  refiere\t\n')).toBe('Paciente\n  refiere')
+  })
+
+  it('normaliza los saltos al estilo Windows', () => {
+    expect(normalizarTexto('uno\r\ndos\rtres')).toBe('uno\ndos\ntres')
+  })
+
+  it('recorta los extremos', () => {
+    expect(normalizarTexto('\n\n  Paciente refiere...  \n\n')).toBe('Paciente refiere...')
   })
 })
 

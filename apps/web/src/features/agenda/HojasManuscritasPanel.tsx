@@ -273,9 +273,18 @@ export function HojasManuscritasPanel({
                   </>
                 )}
               </button>
-              {estadoOcr && !estadoOcr.disponible && (
+              {estadoOcr && !estadoOcr.disponible ? (
                 <p className="text-xs text-muted-foreground/70">
                   La transcripción automática no está configurada en el servidor.
+                </p>
+              ) : (
+                // Dos cosas que el doctor tiene que saber ANTES de tocar el
+                // boton, no despues: que el texto hay que revisarlo (lo escribe
+                // un modelo leyendo la letra, se equivoca) y que la hoja sale
+                // del servidor hacia ChatGPT. Son notas de psicologia: que la
+                // hoja viaje a un tercero se avisa, no se supone.
+                <p className="text-xs text-muted-foreground/70">
+                  Revisá el texto generado. La hoja se envía a ChatGPT para leerla.
                 </p>
               )}
             </div>
