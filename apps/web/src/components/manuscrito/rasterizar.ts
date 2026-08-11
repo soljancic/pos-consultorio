@@ -1,4 +1,4 @@
-import { HOJA_H, HOJA_W, OCR_LADO_LARGO, type TrazosHoja } from '@pos/types'
+import { OCR_LADO_LARGO, type TrazosHoja } from '@pos/types'
 import { pintarHoja } from './dibujar'
 
 /**
@@ -10,10 +10,14 @@ import { pintarHoja } from './dibujar'
  * cualquier otro objeto (no hace falta un dispose explicito).
  */
 export async function rasterizarHoja(trazos: TrazosHoja): Promise<Blob> {
-  const escala = OCR_LADO_LARGO / HOJA_H // A4 vertical: el lado largo es el alto
+  // El lado largo depende de la orientacion de ESTA hoja: en la vertical es el
+  // alto y en la apaisada el ancho. Tomarlo siempre del alto mandaria una hoja
+  // horizontal mas grande de lo necesario por un lado y mas chica por el otro.
+  const ladoLargo = Math.max(trazos.w, trazos.h)
+  const escala = OCR_LADO_LARGO / ladoLargo
   const canvas = document.createElement('canvas')
-  canvas.width = Math.round(HOJA_W * escala)
-  canvas.height = Math.round(HOJA_H * escala)
+  canvas.width = Math.round(trazos.w * escala)
+  canvas.height = Math.round(trazos.h * escala)
 
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('No se pudo preparar la imagen de la hoja')

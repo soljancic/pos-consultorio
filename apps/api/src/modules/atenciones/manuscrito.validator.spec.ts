@@ -37,9 +37,30 @@ describe('validarTrazos', () => {
     expect(() => validarTrazos({ ...hojaValida(), v: 99 })).toThrow(/versi/i)
   })
 
-  it('rechaza dimensiones que no son las de la hoja', () => {
+  it('rechaza dimensiones que no son A4 en ninguna de las dos orientaciones', () => {
     expect(() => validarTrazos({ ...hojaValida(), w: 800 })).toThrow(/dimensiones/i)
     expect(() => validarTrazos({ ...hojaValida(), h: 100 })).toThrow(/dimensiones/i)
+    // Ni siquiera un cuadrado con los dos lados de medidas validas.
+    expect(() => validarTrazos({ ...hojaValida(), w: HOJA_W, h: HOJA_W })).toThrow(/dimensiones/i)
+  })
+
+  it('acepta una hoja apaisada (A4 girada)', () => {
+    const hoja = { ...hojaValida(), w: HOJA_H, h: HOJA_W }
+    expect(validarTrazos(hoja)).toEqual(hoja)
+  })
+
+  it('valida los puntos contra las medidas DE ESA hoja, no contra la vertical', () => {
+    // Un punto pasada la mitad derecha de una hoja apaisada: legitimo ahi,
+    // fuera de la hoja en una vertical. Si el validador usara siempre las
+    // medidas verticales, escribir en la mitad derecha de una hoja acostada
+    // daria 400.
+    const apaisadaOk = { ...hojaValida(), w: HOJA_H, h: HOJA_W, strokes: [{ c: '#111827', s: 4, p: [[HOJA_W + 200, 20, 0.5]] }] }
+    expect(validarTrazos(apaisadaOk)).toEqual(apaisadaOk)
+
+    // Y al reves: ese mismo alto es valido en vertical pero se pasa del
+    // borde de abajo de una apaisada.
+    const apaisadaFuera = { ...hojaValida(), w: HOJA_H, h: HOJA_W, strokes: [{ c: '#111827', s: 4, p: [[20, HOJA_W + 200, 0.5]] }] }
+    expect(() => validarTrazos(apaisadaFuera)).toThrow(/fuera de la hoja/i)
   })
 
   it('rechaza un color que no es hex de 6 digitos', () => {

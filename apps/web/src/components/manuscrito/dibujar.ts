@@ -1,5 +1,13 @@
 import { getStroke } from 'perfect-freehand'
-import { HOJA_H, HOJA_W, type PuntoTrazo, type Trazo, type TrazosHoja } from '@pos/types'
+import type { PuntoTrazo, Trazo, TrazosHoja } from '@pos/types'
+
+/**
+ * Medidas logicas de la hoja sobre la que se dibuja. SIEMPRE se toman de la
+ * hoja concreta (`trazos.w` / `trazos.h`) y nunca de una constante: desde que
+ * existen las hojas apaisadas, la vertical dejo de ser la unica forma posible
+ * y asumirla mandaria la mitad de una hoja horizontal fuera del papel.
+ */
+export type MedidasHoja = { w: number; h: number }
 
 // Opciones de perfect-freehand afinadas para escritura (no para dibujo libre):
 // streamline bajo mantiene la letra fiel, thinning medio da el efecto pluma.
@@ -14,7 +22,7 @@ const OPCIONES_BASE = {
  * Redondea el punto antes de guardarlo: 1 decimal en coordenadas y 2 en la
  * presion recorta el JSON casi a la mitad sin que se note en el trazo.
  *
- * Tambien clampea x/y al rango de la hoja (0..HOJA_W, 0..HOJA_H). Con
+ * Tambien clampea x/y al rango de la hoja (0..medidas.w, 0..medidas.h). Con
  * setPointerCapture activo (Task 8) el lapiz sigue reportando coordenadas
  * aunque la mano se vaya del canvas; sin este clamp esos puntos viajarian
  * cientos de unidades fuera de la hoja y el server los rechaza con 400 (el
@@ -26,28 +34,28 @@ const OPCIONES_BASE = {
  * se acuerde de clampear. Ademas es el comportamiento correcto de una hoja de
  * papel real: el trazo se corta visualmente en el borde, no se escapa de el.
  */
-export function cuantizar(x: number, y: number, presion: number): PuntoTrazo {
-  const xc = Math.min(HOJA_W, Math.max(0, x))
-  const yc = Math.min(HOJA_H, Math.max(0, y))
+export function cuantizar(x: number, y: number, presion: number, medidas: MedidasHoja): PuntoTrazo {
+  const xc = Math.min(medidas.w, Math.max(0, x))
+  const yc = Math.min(medidas.h, Math.max(0, y))
   return [Math.round(xc * 10) / 10, Math.round(yc * 10) / 10, Math.round(presion * 100) / 100]
 }
 
 /**
- * Alto en pixeles CSS que preserva la proporcion A4 de la hoja (HOJA_W x
- * HOJA_H) para un ancho de render dado. Espacio: pixeles CSS -> pixeles CSS.
+ * Alto en pixeles CSS que preserva la proporcion de la hoja para un ancho de
+ * render dado. Espacio: pixeles CSS -> pixeles CSS.
  */
-export function altoHoja(ancho: number): number {
-  return Math.round((ancho * HOJA_H) / HOJA_W)
+export function altoHoja(ancho: number, medidas: MedidasHoja): number {
+  return Math.round((ancho * medidas.h) / medidas.w)
 }
 
 /**
- * Factor de escala que mapea el espacio logico de la hoja (0..HOJA_W,
- * 0..HOJA_H) a pixeles fisicos del canvas, para un ancho de render en
+ * Factor de escala que mapea el espacio logico de la hoja (0..medidas.w,
+ * 0..medidas.h) a pixeles fisicos del canvas, para un ancho de render en
  * pixeles CSS y un devicePixelRatio dados. Espacio: logico de hoja ->
  * fisico de canvas.
  */
-export function escalaHoja(ancho: number, dpr: number): number {
-  return (ancho * dpr) / HOJA_W
+export function escalaHoja(ancho: number, dpr: number, medidas: MedidasHoja): number {
+  return (ancho * dpr) / medidas.w
 }
 
 /**

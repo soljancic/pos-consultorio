@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { HOJA_H, type TrazosHoja } from '@pos/types'
+import type { TrazosHoja } from '@pos/types'
 import { cn } from '../../lib/utils'
 import { altoHoja, escalaHoja, pintarHoja } from './dibujar'
 
@@ -19,7 +19,9 @@ interface Props {
  */
 export function HojaRenderer({ trazos, ancho, className, etiqueta }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
-  const alto = altoHoja(ancho)
+  // Las medidas salen de la hoja, no de una constante: una hoja apaisada tiene
+  // otra proporcion y dibujarla contra la vertical la deformaria.
+  const alto = altoHoja(ancho, trazos)
 
   useEffect(() => {
     const canvas = ref.current
@@ -30,12 +32,12 @@ export function HojaRenderer({ trazos, ancho, className, etiqueta }: Props) {
     // devicePixelRatio: sin esto el trazo se ve pixelado en pantallas retina.
     const dpr = Math.min(window.devicePixelRatio || 1, 3)
     // Escala de espacio logico de hoja -> pixeles fisicos del canvas
-    const escala = escalaHoja(ancho, dpr)
+    const escala = escalaHoja(ancho, dpr, trazos)
     // Ambos ejes se derivan de ancho/dpr sin redondear y redondean UNA sola
     // vez (canvas.height NO sale de `alto`, que ya esta redondeado a CSS: si
     // se multiplicara por dpr otra vez seria un doble redondeo).
     canvas.width = Math.round(ancho * dpr)
-    canvas.height = Math.round(escala * HOJA_H)
+    canvas.height = Math.round(escala * trazos.h)
 
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)

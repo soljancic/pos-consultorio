@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, PenLine, X } from 'lucide-react'
-import { HOJA_H, HOJA_W, type HojaManuscritaApi } from '@pos/types'
+import type { HojaManuscritaApi } from '@pos/types'
 import { cn, formatFecha } from '../../lib/utils'
 import { btnIconUI } from '../../lib/ui'
 import { HojaRenderer } from './HojaRenderer'
@@ -84,9 +84,15 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
   const hayAnterior = indice > 0
   const haySiguiente = indice < hojasFijas.length - 1
 
+  // Proporcion de la hoja que se esta mirando: cada hoja guarda sus medidas y
+  // pueden ser distintas entre si (una vertical y la siguiente apaisada dentro
+  // de la misma atencion), asi que la medicion se rehace al pasar de hoja.
+  const anchoLogico = hoja?.trazos.w ?? 0
+  const altoLogico = hoja?.trazos.h ?? 0
+
   useEffect(() => {
     const el = areaRef.current
-    if (!el) return
+    if (!el || anchoLogico <= 0 || altoLogico <= 0) return
 
     function medir() {
       const actual = areaRef.current
@@ -98,7 +104,7 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
       // disponible (misma formula que LienzoManuscrito.tsx): el menor entre
       // este valor y el ancho disponible es el que entra en los dos ejes
       // sin recortar la hoja ni forzar scroll.
-      const anchoPorAlto = (disponibleAlto * HOJA_W) / HOJA_H
+      const anchoPorAlto = (disponibleAlto * anchoLogico) / altoLogico
       setAncho(Math.max(0, Math.floor(Math.min(disponibleAncho, anchoPorAlto))))
     }
 
@@ -106,7 +112,7 @@ export function VisorHojaManuscrita({ hojas, indiceInicial, onClose }: Props) {
     const ro = new ResizeObserver(medir)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [anchoLogico, altoLogico])
 
   // Flechas para pasar de hoja (solo si hay mas de una) + Escape para
   // cerrar: el visor abre en cualquier dispositivo, incluida una PC sin

@@ -1,8 +1,7 @@
 import {
-  HOJA_H,
-  HOJA_W,
   MAX_PUNTOS_POR_TRAZO,
   MAX_TRAZOS_BYTES,
+  MEDIDAS_HOJA_VALIDAS,
   TRAZOS_VERSION,
   type TrazosHoja,
 } from '@pos/types'
@@ -28,8 +27,14 @@ export function validarTrazos(valor: unknown): TrazosHoja {
   if (valor.v !== TRAZOS_VERSION) {
     throw new Error(`Versión de trazos no soportada (esperada ${TRAZOS_VERSION})`)
   }
-  if (valor.w !== HOJA_W || valor.h !== HOJA_H) {
-    throw new Error(`Dimensiones de hoja inválidas (esperadas ${HOJA_W}x${HOJA_H})`)
+  // A4 en cualquiera de sus dos orientaciones, y nada mas. Las medidas se leen
+  // de la hoja (no se asumen) porque a partir de aca definen el rectangulo
+  // contra el que se validan los puntos: si se validara siempre contra la
+  // vertical, una hoja apaisada rechazaria todo lo escrito en su mitad derecha.
+  const medidas = MEDIDAS_HOJA_VALIDAS.find((m) => valor.w === m.w && valor.h === m.h)
+  if (!medidas) {
+    const esperadas = MEDIDAS_HOJA_VALIDAS.map((m) => `${m.w}x${m.h}`).join(' o ')
+    throw new Error(`Dimensiones de hoja inválidas (esperadas ${esperadas})`)
   }
   if (!Array.isArray(valor.strokes)) {
     throw new Error('Los trazos deben traer un arreglo strokes')
@@ -62,7 +67,7 @@ export function validarTrazos(valor: unknown): TrazosHoja {
         throw new Error('Cada punto debe ser [x, y, presión] numérico')
       }
       const [x, y, presion] = punto as [number, number, number]
-      if (x < -MARGEN || x > HOJA_W + MARGEN || y < -MARGEN || y > HOJA_H + MARGEN) {
+      if (x < -MARGEN || x > medidas.w + MARGEN || y < -MARGEN || y > medidas.h + MARGEN) {
         throw new Error('Hay un punto fuera de la hoja')
       }
       if (presion < 0 || presion > 1) {

@@ -10,6 +10,21 @@ en hojas A4 dentro del modal de Atencion, y puede pasarla a texto al campo
 "Evolucion / notas". Escribir es solo tablet y celular; leer es en cualquier
 dispositivo, incluida la PC.
 
+**Orientacion de la hoja (2026-08-11).** La hoja ya no es siempre A4 vertical:
+es A4 en una de sus DOS orientaciones, y cada hoja guarda la suya en sus propias
+`w`/`h`. Las reglas, en orden de importancia:
+
+- Una hoja **nace** con la forma del aparato. Tablet acostada -> hoja apaisada.
+- Una hoja **vacia** se da vuelta sola al girar el aparato.
+- Una hoja **con tinta NUNCA cambia de forma.** Los trazos estan guardados en
+  coordenadas de la hoja: intercambiar ancho por alto los mandaria fuera del
+  papel. Es una imposibilidad del modelo de datos, no una decision de producto.
+- El backend acepta exactamente esas dos medidas y **valida cada punto contra
+  las de la hoja que le mandan**, no contra las verticales.
+- Hueco conocido: una hoja vacia que ya existia no se da vuelta al abrirla con
+  el aparato ya acostado; se da vuelta recien en el proximo giro. Se dejo asi
+  para que abrir el editor no dispare una escritura.
+
 **Cambio de comportamiento (2026-08-11).** Notas manuscritas, adjuntos y recetas
 ya NO exigen guardar la atencion primero. La fila de `Atencion` se crea sola la
 primera vez que se usa uno de los tres, con lo que haya en el formulario; abrir

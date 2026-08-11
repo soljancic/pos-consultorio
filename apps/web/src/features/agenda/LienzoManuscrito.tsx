@@ -21,8 +21,9 @@ import {
 import {
   COLORES_LAPIZ,
   GROSORES_LAPIZ,
-  HOJA_H,
-  HOJA_W,
+  dimensionesHoja,
+  orientacionDeTrazos,
+  type OrientacionHoja,
   MAX_HOJAS_POR_ATENCION,
   MAX_PUNTOS_POR_TRAZO,
   hojaVacia,
@@ -30,7 +31,14 @@ import {
   type Trazo,
   type TrazosHoja,
 } from '@pos/types'
-import { altoHoja, cuantizar, escalaHoja, pathDeTrazo, pintarHoja } from '../../components/manuscrito/dibujar'
+import {
+  altoHoja,
+  cuantizar,
+  escalaHoja,
+  pathDeTrazo,
+  pintarHoja,
+  type MedidasHoja,
+} from '../../components/manuscrito/dibujar'
 import { borrarBorrador, guardarBorrador, leerBorrador } from '../../components/manuscrito/borradorLocal'
 import { api } from '../../lib/api-client'
 import { cn, tiempoRelativo } from '../../lib/utils'
@@ -45,15 +53,41 @@ interface Props {
 }
 
 /**
- * Espacio: pixeles CSS del canvas -> espacio logico de la hoja (0..HOJA_W,
- * 0..HOJA_H). Pura: solo usa el rect del propio elemento, sin estado del
- * componente, asi que vive fuera de LienzoManuscrito.
+ * Espacio: pixeles CSS del canvas -> espacio logico de la hoja (0..medidas.w,
+ * 0..medidas.h). Pura: solo usa el rect del propio elemento y las medidas que
+ * le pasan, sin estado del componente, asi que vive fuera de LienzoManuscrito.
+ *
+ * Las medidas se pasan y no se asumen: desde que la hoja puede ser apaisada,
+ * dar por sentada la vertical mandaria cada punto de la mitad derecha fuera
+ * del papel.
  */
-function aEspacioHoja(clientX: number, clientY: number, rect: DOMRect) {
+function aEspacioHoja(clientX: number, clientY: number, rect: DOMRect, medidas: MedidasHoja) {
   return {
-    x: ((clientX - rect.left) / rect.width) * HOJA_W,
-    y: ((clientY - rect.top) / rect.height) * HOJA_H,
+    x: ((clientX - rect.left) / rect.width) * medidas.w,
+    y: ((clientY - rect.top) / rect.height) * medidas.h,
   }
+}
+
+/**
+ * Orientacion del aparato, en vivo. Se lee de la media query y no de
+ * `screen.orientation`, que en iOS viene incompleta.
+ */
+function useOrientacionDispositivo(): OrientacionHoja {
+  const [orientacion, setOrientacion] = useState<OrientacionHoja>(() =>
+    typeof window !== 'undefined' && window.matchMedia?.('(orientation: landscape)').matches
+      ? 'horizontal'
+      : 'vertical',
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(orientation: landscape)')
+    if (!mq) return
+    const alCambiar = (e: MediaQueryListEvent) => setOrientacion(e.matches ? 'horizontal' : 'vertical')
+    mq.addEventListener('change', alCambiar)
+    return () => mq.removeEventListener('change', alCambiar)
+  }, [])
+
+  return orientacion
 }
 
 // Un dispositivo sin presion reporta 0 (o 0.5 en algunos navegadores) en todos
@@ -393,6 +427,9 @@ function SelectorGrosor({ grosor, onElegir }: { grosor: number; onElegir: (g: nu
  * otra.
  */
 export function LienzoManuscrito({ citaId, onClose }: Props) {
+  // Orientacion del aparato, en vivo. Decide con que forma nace una hoja
+  // nueva, y da vuelta la hoja abierta cuando todavia esta en blanco.
+  const orientacionDispositivo = useOrientacionDispositivo()
   const areaRef = useRef<HTMLDivElement>(null)
   const canvasFondo = useRef<HTMLCanvasElement>(null)
   const canvasVivo = useRef<HTMLCanvasElement>(null)
@@ -549,9 +586,13 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   })
 
   const crearHoja = useMutation({
+    // La hoja nace con la forma del aparato: si el doctor tiene la tablet
+    // acostada, la hoja sale apaisada y le llena la pantalla.
     mutationFn: () =>
       api
-        .post<HojaManuscritaApi>(`/atenciones/cita/${citaId}/hojas`, { trazos: hojaVacia() })
+        .post<HojaManuscritaApi>(`/atenciones/cita/${citaId}/hojas`, {
+          trazos: hojaVacia(orientacionDispositivo),
+        })
         .then((r) => r.data),
     onSuccess: (nueva) => {
       // Actualizacion optimista de la cache ADEMAS del invalidate (no en vez
@@ -649,8 +690,13 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   // Ancho de render en pixeles CSS: se mide el area disponible (ya sin el
   // padding del contenedor) y se elige el mayor ancho que entra tanto a lo
   // ancho como a lo alto sin recortar la hoja ni forzar scroll.
+  // Medidas logicas de la hoja activa. Espejo de `trazosRef.current` para lo
+  // que necesita re-render (el alto en CSS, la medicion, el canvas); todo lo
+  // que corre dentro de un handler de puntero lee `trazosRef.current` directo,
+  // que es la unica fuente. Se actualizan juntos, siempre en cargarHoja().
+  const [medidas, setMedidas] = useState<MedidasHoja>(() => dimensionesHoja('vertical'))
   const [anchoCss, setAnchoCss] = useState(0)
-  const altoCss = altoHoja(anchoCss)
+  const altoCss = altoHoja(anchoCss, medidas)
 
   useEffect(() => {
     const el = areaRef.current
@@ -662,7 +708,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
       const disponibleAncho = actual.clientWidth
       const disponibleAlto = actual.clientHeight
       if (disponibleAncho <= 0 || disponibleAlto <= 0) return
-      const anchoPorAlto = (disponibleAlto * HOJA_W) / HOJA_H
+      const anchoPorAlto = (disponibleAlto * medidas.w) / medidas.h
       setAnchoCss(Math.max(0, Math.floor(Math.min(disponibleAncho, anchoPorAlto))))
     }
 
@@ -670,7 +716,9 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     const ro = new ResizeObserver(medir)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+    // Depende de las medidas: al pasar de una hoja vertical a una apaisada
+    // cambia la proporcion, y con ella el ancho que entra en los dos ejes.
+  }, [medidas])
 
   // Cerrar con Escape (mismo gesto que el resto de overlays de la app).
   useEffect(() => {
@@ -763,12 +811,12 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
     const dpr = Math.min(window.devicePixelRatio || 1, 3)
-    const escala = escalaHoja(anchoCss, dpr)
+    const escala = escalaHoja(anchoCss, dpr, medidas)
     const anchoFisico = Math.round(anchoCss * dpr)
-    // Igual que HojaRenderer: el alto fisico sale de escala*HOJA_H, no de
+    // Igual que HojaRenderer: el alto fisico sale de escala*alto logico, no de
     // altoCss*dpr, para no redondear dos veces (altoCss ya esta redondeado a
     // pixeles CSS).
-    const altoFisico = Math.round(escala * HOJA_H)
+    const altoFisico = Math.round(escala * medidas.h)
     if (canvas.width !== anchoFisico || canvas.height !== altoFisico) {
       canvas.width = anchoFisico
       canvas.height = altoFisico
@@ -781,7 +829,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   function pintarFondo() {
     const ctx = contexto(canvasFondo.current)
     if (!ctx) return
-    ctx.clearRect(0, 0, HOJA_W, HOJA_H)
+    ctx.clearRect(0, 0, medidas.w, medidas.h)
     pintarHoja(ctx, trazosRef.current)
   }
 
@@ -789,14 +837,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   function pintarVivo() {
     const ctx = contexto(canvasVivo.current)
     if (!ctx || !trazoActivo.current) return
-    ctx.clearRect(0, 0, HOJA_W, HOJA_H)
+    ctx.clearRect(0, 0, medidas.w, medidas.h)
     ctx.fillStyle = trazoActivo.current.c
     ctx.fill(pathDeTrazo(trazoActivo.current, trazoActivo.current.p.every((p) => p[2] === 0.5)))
   }
 
   function limpiarVivo() {
     const ctx = contexto(canvasVivo.current)
-    ctx?.clearRect(0, 0, HOJA_W, HOJA_H)
+    ctx?.clearRect(0, 0, medidas.w, medidas.h)
   }
 
   // El canvas de fondo se reasigna width/height dentro de contexto() al
@@ -849,6 +897,39 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     }
   }
 
+  /**
+   * Da vuelta la hoja abierta para que siga al aparato, PERO solo si esta en
+   * blanco. Con tinta encima es imposible: los trazos estan guardados en
+   * coordenadas de la hoja, asi que intercambiar el ancho por el alto los
+   * mandaria fuera del papel (y el servidor los rechazaria). Una hoja vacia no
+   * tiene nada que mover, asi que girarla es gratis y es lo que el doctor
+   * espera al acostar la tablet antes de empezar a escribir.
+   *
+   * Marca la hoja como sucia por el mismo camino que cualquier otro cambio,
+   * asi que el autoguardado la sube sin logica aparte.
+   */
+  function girarHojaVaciaSiHaceFalta(destino: OrientacionHoja) {
+    if (hojaActivaIdRef.current === null) return
+    if (trazosRef.current.strokes.length > 0) return
+    if (orientacionDeTrazos(trazosRef.current) === destino) return
+
+    const { w, h } = dimensionesHoja(destino)
+    trazosRef.current = { ...trazosRef.current, w, h }
+    setMedidas({ w, h })
+    sucioRef.current = true
+    setSucio(true)
+    // El canvas se repinta solo: el efecto de repintado depende de las
+    // medidas via altoCss, y la hoja esta vacia igual.
+  }
+
+  useEffect(() => {
+    girarHojaVaciaSiHaceFalta(orientacionDispositivo)
+    // Solo al girar el aparato. Al cambiar de hoja manda lo que trajo el
+    // servidor (cargarHoja), no la orientacion del aparato: una hoja con
+    // tinta conserva su forma, y una vacia se gira recien en el proximo giro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orientacionDispositivo])
+
   /** Llamar ANTES de cada cambio (trazo nuevo, borrado). */
   function registrarCambio() {
     pilaDeshacer.current.push(trazosRef.current.strokes)
@@ -882,7 +963,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     aplicar(siguiente)
   }
 
-  // Radio del borrador en espacio logico de hoja (0..HOJA_W, 0..HOJA_H), no
+  // Radio del borrador en espacio logico de hoja, no
   // en pixeles CSS. Se suma el grosor del propio trazo (t.s) al radio fijo
   // para que un trazo grueso sea borrable donde visualmente se ve, no solo
   // donde pasa su linea central de puntos.
@@ -936,7 +1017,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     herramientaGesto.current = herramienta
     gestoRegistrado.current = false
 
-    const { x, y } = aEspacioHoja(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect())
+    const { x, y } = aEspacioHoja(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect(), trazosRef.current)
 
     if (herramientaGesto.current === 'borrador') {
       borrarEn(x, y)
@@ -946,7 +1027,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     trazoActivo.current = {
       c: color,
       s: grosor,
-      p: [cuantizar(x, y, presionDe(e))],
+      p: [cuantizar(x, y, presionDe(e), trazosRef.current)],
     }
   }
 
@@ -966,7 +1047,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     // puntero tocando la barra a mitad de gesto no debe cambiar de rama aca.
     if (herramientaGesto.current === 'borrador') {
       for (const ev of eventos) {
-        const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r)
+        const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r, trazosRef.current)
         borrarEn(x, y)
       }
       return
@@ -974,7 +1055,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
 
     if (!trazoActivo.current) return
     for (const ev of eventos) {
-      const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r)
+      const { x, y } = aEspacioHoja(ev.clientX, ev.clientY, r, trazosRef.current)
       // Tope de puntos ANTES de agregar, no despues: el trazo nunca llega a
       // existir con mas de MAX_PUNTOS_POR_TRAZO puntos, ni siquiera por un
       // instante. Ver dividirTrazoActivo.
@@ -982,7 +1063,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         trazoActivo.current.p.length >= MAX_PUNTOS_POR_TRAZO
           ? dividirTrazoActivo(trazoActivo.current)
           : trazoActivo.current
-      activo.p.push(cuantizar(x, y, presionDe(ev)))
+      activo.p.push(cuantizar(x, y, presionDe(ev), trazosRef.current))
     }
     pintarVivo()
   }
@@ -1109,6 +1190,10 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     contadorAplicarRef.current = 0
     const delServidor = hoja ? ((hoja.trazos as TrazosHoja) ?? hojaVacia()) : hojaVacia()
     trazosRef.current = delServidor
+    // Espejo de las medidas para lo que necesita re-render. Va pegado a la
+    // asignacion de trazosRef a proposito: son el mismo hecho, y separarlos es
+    // la forma exacta en que este archivo se rompio seis veces.
+    setMedidas({ w: delServidor.w, h: delServidor.h })
     // La base de esta hoja es, por definicion, lo que acaba de traer el
     // servidor. Ver `baseServidorRef` y `ofrecerBorradorSiHaceFalta`.
     baseServidorRef.current = delServidor.strokes
