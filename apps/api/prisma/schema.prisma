@@ -392,6 +392,7 @@ model Atencion {
   updatedAt      DateTime  @updatedAt
 
   recetas Receta[]
+  hojas   HojaManuscrita[]
 
   @@map("atenciones")
 }
@@ -407,6 +408,32 @@ model Receta {
   // FK de cobertura (claude-db M11): recetas por atencion
   @@index([atencionId])
   @@map("recetas")
+}
+
+// Notas manuscritas (2026-08-10): el doctor escribe la sesion a mano con lapiz.
+// Se guardan los TRAZOS (vectores con presion), no una imagen: durable en
+// Postgres, editable, liviano y redibujable en cualquier resolucion.
+model HojaManuscrita {
+  id            Int       @id @default(autoincrement())
+  atencionId    Int
+  atencion      Atencion  @relation(fields: [atencionId], references: [id])
+  // Numero de hoja dentro de la atencion. Lo asigna el server (max + 1 sobre
+  // TODAS las filas, incluidas las borradas: el @@unique las sigue ocupando).
+  orden         Int
+  // { v, w, h, strokes: [{ c, s, p: [[x, y, presion]] }] } — ver @pos/types
+  trazos        Json
+  // Ultimo texto devuelto por el OCR. Se guarda para auditoria; el texto que el
+  // doctor edita vive en Atencion.evolucion.
+  transcripcion String?
+  transcritoAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@unique([atencionId, orden])
+  // FK de cobertura (claude-db M11): hojas por atencion
+  @@index([atencionId])
+  @@map("hojas_manuscritas")
 }
 
 // ─── FINANCIERO ──────────────────────────────────────────────────────────────
