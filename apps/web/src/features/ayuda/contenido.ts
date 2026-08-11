@@ -98,6 +98,21 @@ export const AYUDA: SeccionAyuda[] = [
         ],
       },
       {
+        id: 'escribir-a-mano',
+        titulo: 'Escribir la nota a mano',
+        intro:
+          'Desde una tablet o un celular con lápiz podés escribir la sesión a mano y después pasarla a texto.',
+        pasos: [
+          'Abrí la cita y tocá "Atención". Guardá la atención una primera vez: recién ahí se habilita escribir a mano.',
+          'En el bloque "Notas manuscritas", tocá "Escribir a mano". Se abre la hoja a pantalla completa.',
+          'Escribí con el lápiz. Podés cambiar grosor y color, borrar trazos y deshacer. La hoja se guarda sola cada pocos segundos.',
+          'Tocá "+ Hoja" para agregar más hojas. Se numeran solas y podés pasar de una a otra con las flechas.',
+          'Al terminar, cerrá la hoja y tocá "Transcribir a texto": el sistema lee tu escritura y la escribe en "Evolución / notas". Revisá el texto antes de guardar.',
+          'En iPad, si notás que se te cortan los trazos, andá a Ajustes → Apple Pencil → Scribble y desactivalo. Scribble intenta convertir tu escritura a texto por su cuenta y a veces se queda con un trazo.',
+          'Desde una computadora podés ver las hojas escritas, pero no escribir: para eso hace falta una tablet o un celular con lápiz.',
+        ],
+      },
+      {
         id: 'receta',
         titulo: 'Emitir una receta',
         intro: 'Generás la receta en PDF con el membrete del consultorio.',

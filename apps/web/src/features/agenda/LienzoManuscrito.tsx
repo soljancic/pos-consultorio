@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Check,
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   Eraser,
   History,
+  Info,
   Loader2,
   Pen,
   PenLine,
@@ -111,6 +113,48 @@ function trazosIguales(a: Trazo[], b: Trazo[]): boolean {
 // vez de romper: nunca se usan para logica, solo como copy.
 const NOMBRE_COLOR: Record<string, string> = { '#111827': 'Negro', '#1d4ed8': 'Azul', '#b91c1c': 'Rojo' }
 const NOMBRE_GROSOR: Record<number, string> = { 2: 'Fino', 4: 'Medio', 7: 'Grueso' }
+
+// Task 15: iPadOS Scribble corre a nivel de SO y puede interceptar un trazo
+// del Pencil sobre el canvas antes de que llegue a este componente -- sin
+// forma de que una pagina web le pida al SO que lo desactive por vista (a
+// diferencia de una app nativa). El aviso solo puede decirle al doctor DONDE
+// apagarlo a mano.
+//
+// Deteccion: iPadOS 13+ pide por defecto el sitio de escritorio, asi que
+// `navigator.userAgent` se reporta como un Mac (sin "iPad") -- un chequeo de
+// user-agent solo no alcanza. `navigator.maxTouchPoints` es lo que separa un
+// iPad real de una Mac real: ninguna Mac (de escritorio o laptop, con o sin
+// mouse/trackpad conectado) tiene pantalla tactil, asi que su
+// `maxTouchPoints` es 0 -- nunca puede dar el falso positivo de mostrarle
+// este aviso a alguien en una Mac. `/iPad/.test(userAgent)` cubre ademas al
+// doctor que desactivo "Solicitar sitio de escritorio" en Safari, caso en el
+// que el user-agent SI dice "iPad" directamente.
+const ES_IPAD =
+  typeof navigator !== 'undefined' &&
+  (/iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
+const CLAVE_AVISO_SCRIBBLE = 'pos-aviso-scribble'
+
+// Envueltas en try/catch: localStorage puede lanzar en navegacion privada
+// (algunos navegadores/webviews todavia lo hacen) o con el storage lleno --
+// un aviso informativo no vale la pena romper el montaje del editor. Sin
+// storage, el peor caso es que el aviso vuelva a aparecer la proxima vez, no
+// un editor roto.
+function avisoScribbleDescartado(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_AVISO_SCRIBBLE) === '1'
+  } catch {
+    return false
+  }
+}
+
+function marcarAvisoScribbleDescartado() {
+  try {
+    localStorage.setItem(CLAVE_AVISO_SCRIBBLE, '1')
+  } catch {
+    // Sin storage no hay donde recordar el descarte -- no-opea.
+  }
+}
 
 /**
  * Editor de notas manuscritas de una atencion: captura el trazo del
@@ -248,6 +292,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   const [recuperable, setRecuperable] = useState<{ id: number; borrador: TrazosHoja; guardadoAt: number } | null>(
     null,
   )
+
+  // Aviso de Scribble (Task 15): solo iPad, una vez por dispositivo. Estado
+  // inicial resuelto en el propio useState (mismo patron que las preferencias
+  // en localStorage de AgendaPage) para que nunca haya un frame de flash --
+  // en una Mac o en un iPad que ya lo descarto, `avisoScribble` nace en
+  // `false` directo, sin useEffect que lo apague un instante despues.
+  const navigate = useNavigate()
+  const [avisoScribble, setAvisoScribble] = useState(() => ES_IPAD && !avisoScribbleDescartado())
 
   const qc = useQueryClient()
   const { data: hojas = [], isLoading } = useQuery<HojaManuscritaApi[]>({
@@ -984,6 +1036,24 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
     toast.success('Borrador descartado')
   }
 
+  /** "Entendido" (o la X): confirmacion explicita de que el doctor ya lo vio -- no vuelve a aparecer en este dispositivo. */
+  function descartarAvisoScribble() {
+    marcarAvisoScribbleDescartado()
+    setAvisoScribble(false)
+  }
+
+  /**
+   * "Ver en Ayuda": lleva al tema del manual (Task 15, `contenido.ts`). NO
+   * marca el aviso como descartado -- a diferencia de "Entendido", ir a leer
+   * mas no es la confirmacion de "ya lo entendi", asi que el aviso puede
+   * volver a aparecer la proxima vez que el doctor abra el editor si nunca
+   * toco "Entendido".
+   */
+  function verAvisoScribbleEnAyuda() {
+    setAvisoScribble(false)
+    navigate('/ayuda#escribir-a-mano')
+  }
+
   const estaEnLimite = hojas.length >= MAX_HOJAS_POR_ATENCION
   const indiceActivo = hojaActivaId !== null ? indiceDe(hojaActivaId) : -1
   const hayAnterior = indiceActivo > 0
@@ -1075,6 +1145,52 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
       </header>
+
+      {/* Aviso de Scribble (Task 15): fila propia, `shrink-0` como el header y
+          la barra de hojas -- nunca `fixed`/`absolute` encima del canvas ni
+          de la barra de herramientas. Informativo, no bloquea: el doctor
+          puede seguir escribiendo con el aviso visible o descartarlo cuando
+          quiera. El area de dibujo (flex-1 mas abajo) se achica mientras esta
+          montado y recupera el espacio al cerrarlo -- el ResizeObserver de
+          `areaRef` ya reacciona a ese cambio de tamano, sin logica extra. */}
+      {avisoScribble && (
+        <div
+          role="note"
+          aria-label="Aviso: Scribble de iPadOS puede cortar trazos"
+          className="shrink-0 flex items-start gap-3 border-b bg-primary/5 px-4 py-3 sm:px-6"
+        >
+          <span
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20"
+            aria-hidden="true"
+          >
+            <Info className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <p className="text-sm font-semibold text-foreground">Si se te cortan los trazos, apagá Scribble</p>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              iPadOS intenta convertir tu escritura a texto y a veces se queda con un trazo. Andá a{' '}
+              <span className="font-medium text-foreground">Ajustes → Apple Pencil → Scribble</span> y desactivalo.
+              La transcripción a texto la hace este sistema con el botón "Transcribir".
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={descartarAvisoScribble} className={btnPrimaryUI}>
+                Entendido
+              </button>
+              <button type="button" onClick={verAvisoScribbleEnAyuda} className={btnOutlineUI}>
+                Ver en Ayuda
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={descartarAvisoScribble}
+            aria-label="Cerrar aviso"
+            className={cn(btnIconUI, 'h-11 w-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground')}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       <div className="shrink-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 px-4 py-2 sm:justify-between sm:px-6 border-b bg-card/60">
         {isLoading && <p className="text-sm text-muted-foreground">Cargando hojas…</p>}
