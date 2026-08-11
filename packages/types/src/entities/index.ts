@@ -1,5 +1,7 @@
 ﻿import { EstadoCita, EstadoCobro, OrigenCita, Rol } from '../enums'
 
+export * from './manuscrito'
+
 export interface Consultorio {
   id: number
   nombre: string
