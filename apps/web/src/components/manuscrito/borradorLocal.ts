@@ -1,4 +1,4 @@
-import type { TrazosHoja } from '@pos/types'
+import type { Trazo, TrazosHoja } from '@pos/types'
 
 // IndexedDB a mano: son ~50 lineas y evita sumar una dependencia por esto.
 // localStorage no sirve -- es sincrono y bloquearia el hilo mientras el
@@ -14,6 +14,20 @@ export interface Borrador {
   hojaId: number
   trazos: TrazosHoja
   guardadoAt: number
+  /**
+   * Contenido que el SERVIDOR tenia para esta hoja en el momento en que se
+   * escribio este borrador. Le da DIRECCION a la comparacion de
+   * recuperacion: un borrador que difiere del servidor solo es trabajo mas
+   * nuevo si el servidor sigue estando donde estaba cuando el borrador se
+   * escribio. Si el servidor avanzo por debajo (un guardado que resolvio
+   * sin coincidir, y despues la sesion murio sin flush), este borrador
+   * quedo ATRAS y aplicarlo destruiria notas ya comiteadas. Ver
+   * `ofrecerBorradorSiHaceFalta` en LienzoManuscrito.tsx.
+   *
+   * Opcional: los registros escritos antes de que existiera este campo no
+   * lo tienen, y se tratan como "sin informacion" (se ofrecen igual).
+   */
+  base?: Trazo[]
 }
 
 function abrir(): Promise<IDBDatabase> {
@@ -68,10 +82,13 @@ async function conStore<T>(modo: IDBTransactionMode, fn: (s: IDBObjectStore) => 
  * Guarda (o pisa) el borrador local de una hoja. Nunca lanza: un fallo se
  * registra en consola y se ignora silenciosamente -- perder un guardado
  * local no debe interrumpir el trazo que se estaba dibujando.
+ *
+ * `base` = lo que el servidor tenia cuando se tomo este borrador (ver el
+ * campo homonimo de `Borrador`).
  */
-export async function guardarBorrador(hojaId: number, trazos: TrazosHoja): Promise<void> {
+export async function guardarBorrador(hojaId: number, trazos: TrazosHoja, base: Trazo[]): Promise<void> {
   try {
-    const borrador: Borrador = { hojaId, trazos, guardadoAt: Date.now() }
+    const borrador: Borrador = { hojaId, trazos, guardadoAt: Date.now(), base }
     await conStore<void>('readwrite', (s) => s.put(borrador))
   } catch (err) {
     console.warn('No se pudo guardar el borrador local', err)
