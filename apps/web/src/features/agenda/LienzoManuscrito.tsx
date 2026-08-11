@@ -1652,7 +1652,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
   const operandoHoja = crearHoja.isPending || guardarHoja.isPending || borrarHoja.isPending || cambiandoHoja
 
   return (
-    <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-neutral-100 dark:bg-neutral-900 flex flex-col landscape:flex-row">
       {/* Barra superior unica (antes: header + barra de hojas separadas --
           ~450px de chrome en un Android de 738px de ancho). Cerrar, titulo
           compacto, navegacion de hojas, agregar/eliminar hoja y el
@@ -1664,7 +1664,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           h1 "Nota manuscrita" se mantiene VISIBLE (lo exige el E2E) pero
           compacto. Children con `gap-2` (8px): piso de separacion entre
           touch targets adyacentes. */}
-      <header className="shrink-0 flex items-center gap-2 h-14 px-3 sm:px-4 border-b bg-card/90 backdrop-blur-xs">
+      <header className="shrink-0 flex items-center gap-2 h-14 px-3 sm:px-4 border-b bg-card/90 backdrop-blur-xs landscape:h-full landscape:w-auto landscape:flex-col landscape:border-b-0 landscape:border-r landscape:px-2 landscape:py-3">
         <button
           type="button"
           onClick={onClose}
@@ -1680,15 +1680,23 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        {/* En celular el titulo se aplastaba a cero ancho (es lo unico que
-            puede encoger en esta fila) pero seguia ocupando su lugar y sus dos
-            separaciones, dejando un hueco entre la X y el contador y empujando
-            el resto contra el borde derecho. Se saca del flujo en celular; de
-            sm para arriba entra completo y hace de separador flexible. Sigue
-            renderizandose ahi, que es donde corre el E2E que lo exige visible. */}
-        <h1 className="hidden min-w-0 flex-1 truncate text-sm font-semibold text-foreground sm:block">
-          Nota manuscrita
-        </h1>
+        {/* El titulo solo se ve cuando hay lugar de verdad.
+            - Acostado: la columna izquierda mide ~56px, no entra. Queda para
+              lectores de pantalla.
+            - Parado y angosto: se aplastaba a cero ancho (es lo unico que puede
+              encoger en esa fila) pero seguia ocupando su lugar y sus dos
+              separaciones, abriendo un hueco entre la X y el contador.
+            - Parado y ancho: entra completo y hace de separador flexible.
+            La decision va en JS y no en `landscape:sr-only`: `sm:` y
+            `landscape:` son dos media queries y cual gana depende del orden en
+            que Tailwind las emite, no del orden en que uno las escribe. */}
+        {orientacionDispositivo === 'horizontal' ? (
+          <h1 className="sr-only">Nota manuscrita</h1>
+        ) : (
+          <h1 className="hidden min-w-0 flex-1 truncate text-sm font-semibold text-foreground sm:block">
+            Nota manuscrita
+          </h1>
+        )}
 
         {isLoading && <p className="shrink-0 text-sm text-muted-foreground">Cargando…</p>}
 
@@ -1706,7 +1714,11 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
 
         {!isLoading && hojas.length > 0 && (
           <>
-            <div className="inline-flex shrink-0 items-center gap-1" role="group" aria-label="Navegar hojas">
+            <div
+              className="inline-flex shrink-0 items-center gap-1 landscape:flex-col"
+              role="group"
+              aria-label="Navegar hojas"
+            >
               <button
                 type="button"
                 onClick={() => hayAnterior && irAHoja(hojas[indiceActivo - 1].id)}
@@ -1720,21 +1732,32 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
-              {/* En celular se cae la palabra "Hoja" (las flechas a los lados
-                  ya dicen que esto navega hojas) y el ancho reservado baja de
-                  96 a 48px. El ancho reservado existe para que el contador no
-                  salte al pasar de 9 a 10; con `tabular-nums` 48px alcanzan
-                  para "20/20". */}
+              {/* Donde no sobra lugar (celular parado, o la columna acostada)
+                  se cae la palabra "Hoja": las flechas a los lados ya dicen que
+                  esto navega hojas. El ancho reservado existe para que el
+                  contador no salte al pasar de 9 a 10; con `tabular-nums` 48px
+                  alcanzan para "20/20". */}
               <span
-                className="min-w-[3rem] text-center text-sm font-medium tabular-nums text-foreground sm:min-w-[6rem]"
+                className={cn(
+                  'text-center text-sm font-medium tabular-nums text-foreground',
+                  orientacionDispositivo === 'horizontal'
+                    ? 'min-w-[3rem]'
+                    : 'min-w-[3rem] sm:min-w-[6rem]',
+                )}
                 aria-live="polite"
               >
-                <span className="sm:hidden">
-                  {indiceActivo + 1}/{hojas.length}
-                </span>
-                <span className="hidden sm:inline">
-                  Hoja {indiceActivo + 1} / {hojas.length}
-                </span>
+                {orientacionDispositivo === 'horizontal' ? (
+                  `${indiceActivo + 1}/${hojas.length}`
+                ) : (
+                  <>
+                    <span className="sm:hidden">
+                      {indiceActivo + 1}/{hojas.length}
+                    </span>
+                    <span className="hidden sm:inline">
+                      Hoja {indiceActivo + 1} / {hojas.length}
+                    </span>
+                  </>
+                )}
               </span>
               <button
                 type="button"
@@ -1751,7 +1774,7 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               </button>
             </div>
 
-            <div className="inline-flex shrink-0 items-center gap-2">
+            <div className="inline-flex shrink-0 items-center gap-2 landscape:flex-col">
               {/* Motivo visible del boton apagado -- Task de compactacion,
                   2da pasada: la 1ra pasada solo dejaba un `title` (tooltip),
                   que no existe en touch; el doctor tocaba "+ Hoja" en el
@@ -1772,8 +1795,14 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 {/* sr-only y no `hidden`: el boton conserva su nombre
-                    accesible ("Hoja") en celular, donde solo se ve el +. */}
-                <span className="sr-only sm:not-sr-only">Hoja</span>
+                    accesible ("Hoja") donde solo se ve el +. */}
+                <span
+                  className={
+                    orientacionDispositivo === 'horizontal' ? 'sr-only' : 'sr-only sm:not-sr-only'
+                  }
+                >
+                  Hoja
+                </span>
               </button>
               <button
                 type="button"
@@ -1878,13 +1907,6 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
         </div>
       )}
 
-      {/* Hoja + herramientas. En vertical van una arriba de la otra; en
-          horizontal, lado a lado con las herramientas a la derecha. El motivo
-          no es estetico: la hoja se ajusta por el eje que primero se acaba, y
-          acostado el que se acaba es el ALTO. Cada pixel que la barra deja de
-          ocupar abajo se convierte en hoja mas grande, y el ancho que pasa a
-          ocupar a la derecha sobraba de todos modos. */}
-      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
         {/* Margen minimo (4px) en TODOS los tamanos, no solo en celular. La
             hoja ya se ajusta al maximo dentro de esta caja (ver la medicion por
             los dos ejes), asi que cada pixel de padding que se saque se
@@ -2039,7 +2061,6 @@ export function LienzoManuscrito({ citaId, onClose }: Props) {
           </button>
         </div>
       </footer>
-      </div>
 
       {hojaABorrar !== null && (
         <ConfirmarModal

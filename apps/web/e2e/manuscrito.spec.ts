@@ -36,7 +36,16 @@ const EMAIL = `manu${ts}@test.com`
 const PASS = 'Password123!'
 const PACIENTE = 'Manu Escrita'
 
-test.use({ hasTouch: true })
+// `viewport` de tablet PARADA, no el 1280x720 de escritorio que trae
+// Playwright. El editor solo se abre en dispositivos tactiles, asi que un
+// escritorio apaisado no es una configuracion que exista en produccion --
+// correr ahi hacia que la suite midiera un layout que ningun doctor ve. Ademas
+// el editor cambia de forma con la orientacion (acostado, el encabezado y las
+// herramientas pasan a columnas a los costados y las etiquetas se acortan para
+// entrar), asi que la orientacion del viewport decide que texto se afirma.
+// 820x1180 es una tablet parada: entra el layout completo, con titulo y
+// "Hoja N / M" enteros.
+test.use({ hasTouch: true, viewport: { width: 820, height: 1180 } })
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
