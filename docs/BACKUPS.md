@@ -2,11 +2,19 @@
 
 Respaldo automático de la Postgres de producción (Railway) hacia Backblaze B2.
 
-- **Workflow:** [.github/workflows/db-backup.yml](../.github/workflows/db-backup.yml)
+- **Dónde corre:** cron service `db-backup` en Railway (proyecto Consultech),
+  construido desde [infra/db-backup/](../infra/db-backup/) (Dockerfile + `backup.sh`).
+- **Respaldo manual alternativo:** [.github/workflows/db-backup.yml](../.github/workflows/db-backup.yml)
+  (GitHub Actions, solo `workflow_dispatch`). Sirve si Railway está caído.
 - **Spec/diseño:** [docs/superpowers/specs/2026-06-18-db-backup-backblaze-design.md](superpowers/specs/2026-06-18-db-backup-backblaze-design.md)
-- **Cuándo corre:** diario 02:00 La Paz (06:00 UTC). También manual.
+- **Cuándo corre:** diario 02:00 La Paz (06:00 UTC, `0 6 * * *` en el servicio de Railway).
 - **Qué guarda:** `daily/` (7 días) + `weekly/` los domingos (8 semanas).
 - **Formato:** `pg_dump -Fc` (custom, comprimido), restaurable con `pg_restore`.
+
+> Historia: hasta 2026-10 el cron corría en GitHub Actions. GitHub desactiva los
+> workflows con `schedule` tras 60 días sin commits en el repo, y eso dejó días
+> sin backup. Por eso el cron se movió a Railway, que no depende de la
+> actividad del repo.
 
 ## Setup inicial (una sola vez, lo hace el owner)
 
@@ -24,21 +32,30 @@ En el bucket B2, agregar 2 reglas por prefijo:
 
 Sin estas reglas los backups se acumulan indefinidamente.
 
-### 3. Secrets en GitHub
-Repo → Settings → Secrets and variables → Actions → New repository secret:
+### 3. Variables en Railway (servicio `db-backup`)
+Railway → proyecto Consultech → servicio `db-backup` → Variables:
 
-| Secret                | Qué es                                                  |
-|-----------------------|--------------------------------------------------------|
-| `DATABASE_PUBLIC_URL` | connection string pública de Railway Postgres          |
-| `B2_KEY_ID`           | keyID de la app key de Backblaze                        |
-| `B2_APP_KEY`          | applicationKey de Backblaze                             |
-| `B2_BUCKET`           | nombre del bucket                                       |
-| `B2_S3_ENDPOINT`      | endpoint S3 (con `https://`)                            |
-| `B2_REGION`           | región del bucket                                       |
+| Variable          | Qué es                                                      |
+|-------------------|-------------------------------------------------------------|
+| `DATABASE_URL`    | referencia `${{Postgres.DATABASE_URL}}` (red privada, ya cargada) |
+| `B2_KEY_ID`       | keyID de la app key de Backblaze                             |
+| `B2_APP_KEY`      | applicationKey de Backblaze                                  |
+| `B2_BUCKET`       | nombre del bucket                                            |
+| `B2_S3_ENDPOINT`  | endpoint S3 (con `https://`)                                 |
+| `B2_REGION`       | región del bucket                                            |
 
-### 4. Probar
-Repo → Actions → "DB Backup to Backblaze B2" → Run workflow. Verificar que
-aparezca el `.dump` en `daily/` del bucket.
+Config del servicio: root directory `/infra/db-backup`, cron `0 6 * * *`,
+sin dominio. Cada push que toque `infra/db-backup/` lo reconstruye.
+
+### 4. Secrets en GitHub (solo para el respaldo manual)
+Repo → Settings → Secrets and variables → Actions. Mismas `B2_*` de arriba más
+`DATABASE_PUBLIC_URL` (connection string pública de Railway Postgres: desde
+GitHub no se llega a la red privada).
+
+### 5. Probar
+- Railway: servicio `db-backup` → Deployments → logs de la última corrida.
+  Debe terminar en `Backup OK` y aparecer el `.dump` en `daily/` del bucket.
+- Manual: repo → Actions → "DB Backup to Backblaze B2" → Run workflow.
 
 ## Restore (recuperar la base desde un backup)
 
@@ -63,8 +80,10 @@ aparezca el `.dump` en `daily/` del bucket.
 
 ## Notas de seguridad
 
-- Los secrets viven solo en GitHub Actions, nunca en el repo.
+- Los secrets viven solo en las variables del servicio de Railway y en GitHub
+  Actions, nunca en el repo.
 - Si alguna credencial se expuso (chat, captura, log), rotarla: app key nueva en
-  Backblaze y/o nueva contraseña de Postgres en Railway, y actualizar el secret.
+  Backblaze y/o nueva contraseña de Postgres en Railway, y actualizarla en los
+  dos lugares.
 - El bucket es privado + SSE-B2 (cifrado en reposo). El dump contiene datos de
   pacientes: no copiarlo a lugares sin cifrar ni compartir links públicos.

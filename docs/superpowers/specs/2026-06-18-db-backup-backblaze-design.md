@@ -1,7 +1,8 @@
 # Backups periódicos de Postgres (Railway) → Backblaze B2
 
 > Fecha: 2026-06-18
-> Estado: aprobado, pendiente de implementación/owner setup
+> Estado: implementado. Actualizado 2026-10-13: la ejecución diaria pasó de
+> GitHub Actions a un cron service de Railway (ver sección final).
 
 ## Objetivo
 
@@ -90,3 +91,43 @@ Ningún valor de secreto vive en el repo; el workflow solo referencia nombres.
 4. Cargar los 6 secrets en GitHub Actions.
 5. Tener a mano la `DATABASE_PUBLIC_URL` de Railway.
 6. Disparar el workflow manual una vez y validar el restore.
+
+## Cambio 2026-10-13: el cron diario corre en Railway
+
+**Problema:** GitHub desactiva los workflows con `schedule` tras 60 días sin
+commits en el repo. Ocurrió el 2026-10-11 (último commit 2026-08-11): los
+backups del 12 y 13 de octubre no corrieron hasta reactivar el workflow a
+mano. Con el producto estable, esto se repetiría cada vez que el repo quede
+quieto dos meses.
+
+**Decisión:** mover la ejecución diaria a un cron service de Railway, que no
+depende de la actividad del repo. El workflow de GitHub se conserva solo con
+`workflow_dispatch`, como respaldo manual desde otro proveedor.
+
+**Implementación:**
+
+- `infra/db-backup/Dockerfile`: `postgres:18-alpine` (pg_dump de la misma major
+  que el server) + `aws-cli`. `ENTRYPOINT` = `backup.sh`; el contenedor termina
+  al acabar, como exige Railway para cron services.
+- `infra/db-backup/backup.sh`: mismo flujo que el workflow (dump `-Fc` →
+  guard > 1 KB → `daily/` y `weekly/` los domingos, SSE-B2). Valida que estén
+  las variables, reintenta `pg_dump` 3 veces (la red privada puede tardar un
+  instante al arrancar) y sale con error si algo falla.
+- Servicio Railway `db-backup` (proyecto Consultech, production): source = este
+  repo, root directory `/infra/db-backup`, cron `0 6 * * *` (Railway evalúa en
+  UTC), watch paths solo `infra/db-backup/**`.
+- `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`: dump por red privada, sin pasar
+  por el proxy TCP público.
+- Las `B2_*` se cargan como variables del servicio (mismos nombres que en
+  GitHub).
+
+**Lo que no cambia:** retención por lifecycle rules de B2, formato del dump,
+runbook de restore.
+
+**Diferencias operativas:**
+
+- Railway salta una corrida si la anterior sigue viva (equivale al
+  `concurrency` del workflow).
+- Fallos: GitHub mandaba email; en Railway la corrida queda como deployment
+  FAILED. Si hace falta alerta activa, agregar un webhook del proyecto
+  (email/Discord) en un cambio aparte.

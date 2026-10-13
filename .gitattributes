@@ -1,0 +1,4 @@
+# Scripts que corren dentro de contenedores Linux: siempre LF, aunque el
+# checkout sea en Windows (core.autocrlf=true los convertiría a CRLF y
+# romperían el shebang).
+*.sh text eol=lf

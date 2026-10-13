@@ -1,15 +1,18 @@
 name: DB Backup to Backblaze B2
 
-# Respaldo periódico de la base Postgres de producción (Railway) hacia un bucket
+# Respaldo MANUAL de la base Postgres de producción (Railway) hacia un bucket
 # privado de Backblaze B2. Solo lectura sobre la DB (pg_dump): no borra ni
 # modifica datos de producción.
+#
+# El respaldo diario corre como cron service en Railway (infra/db-backup/).
+# Este workflow queda solo como respaldo bajo demanda desde otro proveedor
+# (si Railway está caído, igual se puede sacar un dump desde GitHub). Ya no
+# tiene `schedule`: GitHub desactiva los crons tras 60 días sin commits en el
+# repo (pasó el 2026-10-11) y eso dejaba días sin backup.
 # Spec: docs/superpowers/specs/2026-06-18-db-backup-backblaze-design.md
 # Restore: docs/BACKUPS.md
 
 on:
-  schedule:
-    # 06:00 UTC = 02:00 America/La_Paz (UTC-4, sin horario de verano)
-    - cron: '0 6 * * *'
   workflow_dispatch: {}
 
 concurrency:
