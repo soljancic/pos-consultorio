@@ -11,7 +11,7 @@ set -eu
 # B2_APP_KEY       applicationKey de Backblaze
 # B2_BUCKET        nombre del bucket
 # B2_S3_ENDPOINT   endpoint S3 (con o sin https://)
-# B2_REGION        región del bucket
+# B2_REGION        región del bucket, ej. us-east-005 (sin el prefijo "s3." del endpoint)
 for v in DATABASE_URL B2_KEY_ID B2_APP_KEY B2_BUCKET B2_S3_ENDPOINT B2_REGION; do
   eval "val=\${$v:-}"
   if [ -z "$val" ]; then

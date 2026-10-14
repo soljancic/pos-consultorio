@@ -42,7 +42,7 @@ Railway → proyecto Consultech → servicio `db-backup` → Variables:
 | `B2_APP_KEY`      | applicationKey de Backblaze                                  |
 | `B2_BUCKET`       | nombre del bucket                                            |
 | `B2_S3_ENDPOINT`  | endpoint S3 (con `https://`)                                 |
-| `B2_REGION`       | región del bucket                                            |
+| `B2_REGION`       | región del bucket, solo el código: `us-east-005` (NO `s3.us-east-005`) |
 
 Config del servicio: root directory `/infra/db-backup`, cron `0 6 * * *`,
 sin dominio. Cada push que toque `infra/db-backup/` lo reconstruye.
